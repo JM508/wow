@@ -1,74 +1,24 @@
-<!DOCTYPE html>
-<html lang="en" dir="auto" data-theme="auto">
+<!-- ══════════════════════════════════════════════════════════════════════════
+     年龄验证门禁 Age Gate · 单文件零依赖版
+     ──────────────────────────────────────────────────────────────────────────
+     本文件是 Hugo PaperMod 的 head 挂载点：layouts/_partials/extend_head.html
+     PaperMod 会在每个页面的 </head> 之前自动引入它，因此无需改动主题文件，
+     全站（首页、文章页、分类页、404…）自动生效。
 
-<head><meta charset="utf-8">
-<meta http-equiv="X-UA-Compatible" content="IE=edge">
-<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<meta name="robots" content="index, follow">
-<title>Tags | Wow 娱乐小站</title>
-<meta name="keywords" content="">
-<meta name="description" content="">
-<meta name="author" content="">
-<link rel="canonical" href="https://wow-d9s.pages.dev/tags/">
-<link crossorigin="anonymous" href="/assets/css/stylesheet.89ca4972ab5e6aaa05e9a0dae0c4bb64b26585bc79e36f5cf33614eea0283abe.css" integrity="sha256-icpJcqteaqoF6aDa4MS7ZLJlhbx5429c8zYU7qAoOr4=" rel="preload stylesheet" as="style">
-<link rel="icon" href="https://wow-d9s.pages.dev/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="https://wow-d9s.pages.dev/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="https://wow-d9s.pages.dev/favicon-32x32.png">
-<link rel="apple-touch-icon" href="https://wow-d9s.pages.dev/apple-touch-icon.png">
-<link rel="mask-icon" href="https://wow-d9s.pages.dev/safari-pinned-tab.svg">
-<meta name="theme-color" content="#2e2e33">
-<meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="https://wow-d9s.pages.dev/tags/index.xml" title="rss">
-<link rel="alternate" hreflang="en" href="https://wow-d9s.pages.dev/tags/">
-<noscript>
-    <style>
-        #theme-toggle,
-        .top-link {
-            display: none;
-        }
+     ⚠️ Hugo 会把本文件当模板解析：请勿在下面的 JS/CSS 里出现「连续两个左花括号」
+        （Hugo 的模板起始标记），否则 hugo 构建会直接报错。
 
-    </style>
-    <style>
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --theme: rgb(29, 30, 32);
-                --entry: rgb(46, 46, 51);
-                --primary: rgb(218, 218, 219);
-                --secondary: rgb(155, 156, 157);
-                --tertiary: rgb(65, 66, 68);
-                --content: rgb(196, 196, 197);
-                --code-block-bg: rgb(46, 46, 51);
-                --code-bg: rgb(55, 56, 62);
-                --border: rgb(51, 51, 51);
-                color-scheme: dark;
-            }
-
-            .list {
-                background: var(--theme);
-            }
-
-            .toc {
-                background: var(--entry);
-            }
-        }
-
-    </style>
-</noscript>
-<script>
-    if (localStorage.getItem("pref-theme") === "dark") {
-        document.querySelector("html").dataset.theme = 'dark';
-    } else if (localStorage.getItem("pref-theme") === "light") {
-       document.querySelector("html").dataset.theme = 'light';
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.querySelector("html").dataset.theme = 'dark';
-    } else {
-        document.querySelector("html").dataset.theme = 'light';
-    }
-
-</script>
+     行为逻辑
+       未验证  → 全屏遮罩，询问「您是否已满 18 周岁？」
+       选「是」→ 记住选择 14 天（localStorage + Cookie 双写），淡出并进入网站
+       选「否」→ 不写入任何缓存，随机跳转到哔哩哔哩 / 快手 / 抖音等短视频官网
+     手动重置验证（方便自己调试）
+       访问任意页面加 ?agegate=reset，例如 https://wow-d9s.pages.dev/?agegate=reset
+       或浏览器控制台执行 window.AgeGate.reset()
+     ══════════════════════════════════════════════════════════════════════════ -->
 
 <style id="ag-style">
-   
+  /* 未验证时：正文内容不可见且不可滚动，避免内容"闪现"（visibility:hidden 同时使其脱离 Tab 焦点链） */
   html[data-ag="pending"] body > *:not(#ag-root) { visibility: hidden !important; }
   html[data-ag="pending"], html[data-ag="pending"] body { overflow: hidden !important; }
 
@@ -213,19 +163,19 @@
 (function () {
   "use strict";
 
-   
+  /* ═══════════════════ 可配置项：只改这一段 ═══════════════════ */
   var CFG = {
-    ver: 1,          
-    days: 14,        
-    minAge: 18,      
+    ver: 1,          // 规则版本号。改成 2，所有已通过的访客会重新验证一次
+    days: 14,        // 记住选择的天数（14 天 = 两周）
+    minAge: 18,      // 最低年龄
 
     title: "年龄验证",
     yesText: "是，我已满 18 周岁",
     noText: "否，我未满 18 周岁",
 
-    yesRedirect: "", 
+    yesRedirect: "", // 选「是」后额外跳转的地址，留空 = 留在当前页
 
-    
+    // 选「否」时随机跳转的目标（可自由增删）
     noTargets: [
       { name: "哔哩哔哩", url: "https://www.bilibili.com/" },
       { name: "快手",     url: "https://www.kuaishou.com/" },
@@ -233,7 +183,7 @@
       { name: "小红书",   url: "https://www.xiaohongshu.com/" },
       { name: "西瓜视频", url: "https://www.ixigua.com/" }
     ],
-    noDelay: 1100    
+    noDelay: 1100    // 选「否」后停留多久（毫秒）再跳转
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
@@ -241,19 +191,19 @@
              CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
   var NOTE = "选择「是」后，本设备将在 <b>" + CFG.days +
              " 天（两周）</b>内免于重复验证。";
-   
+  /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
   var html = document.documentElement;
 
-   
+  /* ---------- 读写状态 ---------- */
   function readStore() {
     try {
       var raw = localStorage.getItem(KEY);
       if (!raw) return false;
       var o = JSON.parse(raw);
       if (o && typeof o.exp === "number" && o.exp > Date.now()) return true;
-      localStorage.removeItem(KEY);          
+      localStorage.removeItem(KEY);          // 已过期：顺手清掉
     } catch (e) {}
     return false;
   }
@@ -281,7 +231,7 @@
       document.cookie = KEY + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
     } catch (e) {}
   }
-  
+  // 清理旧版本号遗留的键，避免长期堆积
   function purgeOld() {
     try {
       for (var i = localStorage.length - 1; i >= 0; i--) {
@@ -293,7 +243,7 @@
 
   var passed = function () { return readStore() || readCookie(); };
 
-   
+  /* ---------- 遮罩渲染 ---------- */
   function render() {
     if (document.getElementById("ag-root")) return;
 
@@ -320,15 +270,15 @@
     var card = el.querySelector(".ag-card");
     var yes = el.querySelector("#ag-yes");
     var no = el.querySelector("#ag-no");
-    var busy = false;                          
+    var busy = false;                          // 防重复点击
 
-    
+    // 选「是」：写入 14 天缓存 → 淡出 → 进入网站
     yes.addEventListener("click", function () {
       if (busy) return;
       busy = true;
       writeStore();
       purgeOld();
-      html.removeAttribute("data-ag");       
+      html.removeAttribute("data-ag");       // 先解除正文隐藏，让遮罩淡出时正好露出内容
       el.classList.add("ag-out");
       setTimeout(function () {
         if (el.parentNode) el.parentNode.removeChild(el);
@@ -336,7 +286,7 @@
       }, 320);
     });
 
-    
+    // 选「否」：不写入任何缓存 → 随机跳转短视频官网
     no.addEventListener("click", function () {
       if (busy) return;
       busy = true;
@@ -354,7 +304,7 @@
       document.documentElement.style.overflow = "hidden";
       card.classList.add("ag-bye");
 
-      
+      // 立即锁死两个按钮，避免跳转等待期间被重复点击
       var acts = el.querySelector(".ag-actions");
       if (acts) acts.style.display = "none";
       yes.disabled = true;
@@ -370,14 +320,14 @@
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
   }
 
-   
+  /* ---------- 启动 ---------- */
   if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
   purgeOld();
 
   if (passed()) {
-    html.setAttribute("data-ag", "ok");       
+    html.setAttribute("data-ag", "ok");       // 已通过：不遮罩，正文正常显示
   } else {
-    html.setAttribute("data-ag", "pending");  
+    html.setAttribute("data-ag", "pending");  // 未通过：立刻隐藏正文，等 DOM 好了再画遮罩
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", render);
     } else {
@@ -385,7 +335,7 @@
     }
   }
 
-  
+  // 调试 / 手动控制入口
   window.AgeGate = {
     reset: function () { clearStore(); location.reload(); },
     open:  function () { html.setAttribute("data-ag", "pending"); render(); },
@@ -394,136 +344,4 @@
   };
 })();
 </script>
-
-<meta property="og:url" content="https://wow-d9s.pages.dev/tags/">
-  <meta property="og:site_name" content="Wow 娱乐小站">
-  <meta property="og:title" content="Tags">
-  <meta property="og:locale" content="zh_cn">
-  <meta property="og:type" content="website">
-
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Tags">
-
-</head>
-<body class="list" id="top">
-    <header class="header">
-    <nav class="header-nav">
-        <div class="logo">
-            <a href="https://wow-d9s.pages.dev/" accesskey="h" title="Wow 娱乐小站 (Alt + H)">Wow 娱乐小站</a>
-            <div class="logo-switches">
-                <button id="theme-toggle" class="theme-toggle" accesskey="t" title="(Alt + T)" aria-label="Toggle theme">
-                    <svg class="moon" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                    </svg>
-                    <svg class="sun" xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-                    </svg>
-                </button>
-            </div>
-        </div>
-        <ul id="menu" class="menu">
-        </ul>
-    </nav>
-</header>
-<main class="main">
-<header class="page-header">
-    <h1>Tags</h1>
-</header>
-
-<ul class="terms-tags">
-</ul>
-    </main>
-    
-<footer class="footer">
-        <span>&copy; 2026 <a href="https://wow-d9s.pages.dev/">Wow 娱乐小站</a></span> · 
-
-    
-    
-    <span>
-        Powered by
-        <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
-        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
-    </span>
-</footer>
-<a href="#top" id="top-link" class="top-link hidden" aria-label="go to top" title="Go to Top (Alt + G)" accesskey="g">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round" class="feather feather-chevrons-up">
-        <polyline points="17 11 12 6 7 11"></polyline>
-        <polyline points="17 18 12 13 7 18"></polyline>
-    </svg>
-</a>
-
-<script>
-    let menu = document.getElementById('menu');
-    if (menu) {
-        
-        const scrollPosition = localStorage.getItem("menu-scroll-position");
-        if (scrollPosition) {
-            menu.scrollLeft = parseInt(scrollPosition, 10);
-        }
-        
-        menu.onscroll = function () {
-            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
-        }
-    }
-
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener("click", function (e) {
-            e.preventDefault();
-            var id = this.getAttribute("href").substr(1);
-            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
-                    behavior: "smooth"
-                });
-            } else {
-                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
-            }
-            if (id === "top") {
-                history.replaceState(null, null, " ");
-            } else {
-                history.pushState(null, null, `#${id}`);
-            }
-        });
-    });
-
-</script>
-<script>
-    var toplink = document.getElementById("top-link");
-    window.onscroll = function () {
-        const scrollThreshold = window.innerHeight;
-        if (document.body.scrollTop > scrollThreshold || document.documentElement.scrollTop > scrollThreshold) {
-            toplink.classList.remove("hidden");
-        } else {
-            toplink.classList.add("hidden");
-        }
-    };
-
-</script>
-<script>
-    document.getElementById("theme-toggle").addEventListener("click", () => {
-        const html = document.querySelector("html");
-        if (html.dataset.theme === "dark") {
-            html.dataset.theme = 'light';
-            localStorage.setItem("pref-theme", 'light');
-        } else {
-            html.dataset.theme = 'dark';
-            localStorage.setItem("pref-theme", 'dark');
-        }
-    })
-
-</script>
-</body>
-
-</html>
+<!-- ══════════════════ 年龄验证门禁 结束 ══════════════════ -->
