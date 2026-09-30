@@ -10,7 +10,8 @@
 
      行为逻辑
        未验证  → 全屏遮罩，询问「您是否已满 18 周岁？」
-       选「是」→ 记住选择 14 天（localStorage + Cookie 双写），淡出并进入网站
+       选「是」→ 仅在当前浏览会话内记住（sessionStorage，关掉标签页即失效），
+                 淡出并进入网站；不做任何长期缓存
        选「否」→ 不写入任何缓存，随机跳转到哔哩哔哩 / 快手 / 抖音等短视频官网
      手动重置验证（方便自己调试）
        访问任意页面加 ?agegate=reset，例如 https://wow-d9s.pages.dev/?agegate=reset
@@ -165,8 +166,7 @@
 
   /* ═══════════════════ 可配置项：只改这一段 ═══════════════════ */
   var CFG = {
-    ver: 1,          // 规则版本号。改成 2，所有已通过的访客会重新验证一次
-    days: 14,        // 记住选择的天数（14 天 = 两周）
+    ver: 1,          // 规则版本号
     minAge: 18,      // 最低年龄
 
     title: "年龄验证",
@@ -189,59 +189,38 @@
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
   CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
              CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
-  var NOTE = "选择「是」后，本设备将在 <b>" + CFG.days +
-             " 天（两周）</b>内免于重复验证。";
+  var NOTE = "本次浏览期间不会重复询问；关闭浏览器后将重新验证。";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
   var html = document.documentElement;
 
-  /* ---------- 读写状态 ---------- */
+  /* ---------- 读写状态（仅当前浏览会话，无长期缓存） ---------- */
   function readStore() {
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return false;
-      var o = JSON.parse(raw);
-      if (o && typeof o.exp === "number" && o.exp > Date.now()) return true;
-      localStorage.removeItem(KEY);          // 已过期：顺手清掉
-    } catch (e) {}
-    return false;
+    try { return sessionStorage.getItem(KEY) === "1"; } catch (e) { return false; }
   }
   function writeStore() {
-    var exp = Date.now() + CFG.days * 86400000, ts = Date.now();
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ exp: exp, ts: ts }));
-    } catch (e) {}
-    try {
-      var d = new Date(exp).toUTCString();
-      document.cookie = KEY + "=1; expires=" + d + "; max-age=" + (CFG.days * 86400) +
-                        "; path=/; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
-    } catch (e) {}
-  }
-  function readCookie() {
-    try {
-      return document.cookie.split(/\s*;\s*/).some(function (c) {
-        return c.split("=")[0] === KEY;
-      });
-    } catch (e) { return false; }
+    try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
   }
   function clearStore() {
-    try { localStorage.removeItem(KEY); } catch (e) {}
-    try {
-      document.cookie = KEY + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
-    } catch (e) {}
+    try { sessionStorage.removeItem(KEY); } catch (e) {}
   }
-  // 清理旧版本号遗留的键，避免长期堆积
+  // 清理旧版本遗留的键：sessionStorage 旧版本号 + 老版本的 localStorage / Cookie（14 天缓存时期的残留）
   function purgeOld() {
     try {
-      for (var i = localStorage.length - 1; i >= 0; i--) {
-        var k = localStorage.key(i);
-        if (k && k.indexOf("age_ok_v") === 0 && k !== KEY) localStorage.removeItem(k);
+      for (var i = sessionStorage.length - 1; i >= 0; i--) {
+        var k = sessionStorage.key(i);
+        if (k && k.indexOf("age_ok_v") === 0 && k !== KEY) sessionStorage.removeItem(k);
       }
+      for (var j = localStorage.length - 1; j >= 0; j--) {
+        var lk = localStorage.key(j);
+        if (lk && lk.indexOf("age_ok_v") === 0) localStorage.removeItem(lk);
+      }
+      document.cookie = "age_ok_v1=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
     } catch (e) {}
   }
 
-  var passed = function () { return readStore() || readCookie(); };
+  var passed = readStore;
 
   /* ---------- 遮罩渲染 ---------- */
   function render() {
@@ -272,7 +251,7 @@
     var no = el.querySelector("#ag-no");
     var busy = false;                          // 防重复点击
 
-    // 选「是」：写入 14 天缓存 → 淡出 → 进入网站
+    // 选「是」：写入会话级标记 → 淡出 → 进入网站
     yes.addEventListener("click", function () {
       if (busy) return;
       busy = true;
