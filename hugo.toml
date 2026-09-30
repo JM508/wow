@@ -1,5 +1,6 @@
 baseURL = "https://wow-d9s.pages.dev/"
-languageCode = "zh-cn"
+locale = "zh-CN"
+defaultContentLanguage = "zh-cn"
 title = "Wow 娱乐小站"
 theme = "PaperMod"
 

@@ -1,0 +1,13 @@
+# ── Hugo 构建产物 ──────────────────────────────────────────────
+# Cloudflare Pages 会在每次推送后从源码重新构建，产物无需提交
+/public/
+/resources/_gen/
+/.hugo_build.lock
+/hugo_stats.json
+
+# ── 操作系统 / 编辑器 ──────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
