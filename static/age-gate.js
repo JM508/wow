@@ -29,6 +29,11 @@
     /* 验证范围：默认只在网站首页（根路径）拦截，站内文章等子页面直接放行 */
     homeOnly: true,
 
+    /* 首页右下角「看背景图」按钮：进入后隐藏正文与游戏入口、去掉蒙版露出原图，
+       点屏幕任意处恢复（仅首页可用，站内页不出现，避免遮挡游戏操作） */
+    viewText: "🖼 看背景图",
+    viewExitText: "✕ 退出看图",
+
     // 选「否」时随机跳转的目标（可自由增删）
     noTargets: [
       { name: "哔哩哔哩", url: "https://www.bilibili.com/" },
@@ -122,8 +127,11 @@
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     document.body.appendChild(el);
     document.documentElement.setAttribute("data-ag-bg", "1");
-    // 「下载背景图」按钮只在首页出现（isHome 在下方启动段赋值，此处必然已就绪）
-    if (isHome) setupDownload(el);
+    // 首页专属的两个悬浮按钮：左下「下载背景图」、右下「看背景图」
+    if (isHome) {
+      setupDownload(el);
+      setupViewer(el);
+    }
   }
 
   /* ---------- 遮罩渲染 ---------- */
@@ -203,7 +211,7 @@
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
   }
 
-  /* ---------- 右下角「下载背景图」按钮 + 是/否确认弹窗 ---------- */
+  /* ---------- 左下角「下载背景图」按钮 + 是/否确认弹窗 ---------- */
   function setupDownload(bg) {
     if (document.getElementById("ag-dl") || !bg) return;
 
@@ -265,6 +273,54 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !modal.hidden) closeModal();
     });
+  }
+
+  /* ---------- 右下角「看背景图」按钮：专注看原图 ----------
+     进入：html[data-ag-view="1"]（CSS 负责隐正文 + 去蒙版 + 锁滚动）
+     退出：点屏幕任意处 / 再点按钮 / Esc；两个按钮与下载弹窗内的点击不算「点屏幕」 */
+  function setupViewer(bg) {
+    if (!bg || document.getElementById("ag-view")) return;
+
+    var root = document.documentElement;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "ag-view";
+    btn.textContent = CFG.viewText;
+    btn.setAttribute("aria-pressed", "false");
+    document.body.appendChild(btn);
+
+    function inView() { return root.getAttribute("data-ag-view") === "1"; }
+    function enter() {
+      root.setAttribute("data-ag-view", "1");
+      btn.textContent = CFG.viewExitText;
+      btn.setAttribute("aria-pressed", "true");
+    }
+    function exit() {
+      root.removeAttribute("data-ag-view");
+      btn.textContent = CFG.viewText;
+      btn.setAttribute("aria-pressed", "false");
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (inView()) exit(); else enter();
+    });
+
+    // 点屏幕任意处恢复（capture 阶段，最先拿到事件）；
+    // target 落在两个悬浮按钮或下载弹窗内 → 不动，交给它们自己的逻辑
+    document.addEventListener("click", function (e) {
+      if (!inView()) return;
+      var t = e.target;
+      if (t && t.closest && t.closest("#ag-dl, #ag-view, #ag-dl-modal")) return;
+      exit();
+    }, true);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && inView()) exit();
+    });
+
+    // 供调试 / 测试
+    window.AgeGateView = { enter: enter, exit: exit, active: inView, button: btn };
   }
 
   /* ---------- 启动 ---------- */

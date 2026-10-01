@@ -189,10 +189,10 @@
   html[data-ag-bg] body,
   html[data-ag-bg] .list { background: transparent !important; }
 
-  /* ── 右下角「下载背景图」按钮（半透明，悬停时变清晰） ── */
-  #ag-dl {
+  /* ── 左下角「下载背景图」+ 右下角「看背景图」按钮（半透明，悬停时变清晰） ── */
+  #ag-dl,
+  #ag-view {
     position: fixed;
-    right: 16px;
     bottom: 16px;
     z-index: 900;
     padding: 9px 16px;
@@ -214,18 +214,38 @@
     appearance: none;
     transition: opacity 0.2s ease, background 0.2s ease, transform 0.12s ease;
   }
-  #ag-dl:hover {
+  #ag-dl { left: 16px; }
+  #ag-view { right: 16px; }
+  #ag-dl:hover,
+  #ag-view:hover {
     opacity: 1;
     background: rgba(255, 255, 255, 0.72);
     transform: translateY(-1px);
   }
-  #ag-dl:active { transform: translateY(0); }
-  #ag-dl:focus-visible { opacity: 1; outline: 2px solid #ff5f6d; outline-offset: 2px; }
-  [data-theme="dark"] #ag-dl {
+  #ag-dl:active,
+  #ag-view:active { transform: translateY(0); }
+  #ag-dl:focus-visible,
+  #ag-view:focus-visible { opacity: 1; outline: 2px solid #ff5f6d; outline-offset: 2px; }
+  [data-theme="dark"] #ag-dl,
+  [data-theme="dark"] #ag-view {
     background: rgba(0, 0, 0, 0.32);
     border-color: rgba(255, 255, 255, 0.22);
   }
-  [data-theme="dark"] #ag-dl:hover { background: rgba(0, 0, 0, 0.62); }
+  [data-theme="dark"] #ag-dl:hover,
+  [data-theme="dark"] #ag-view:hover { background: rgba(0, 0, 0, 0.62); }
+
+  /* ── 「看背景图」专注模式：隐正文（文字/游戏入口）、去掉蒙版露出原图 ──
+     点屏幕任意处（或再点按钮 / 按 Esc）恢复；两个按钮与下载弹窗不触发恢复，
+     保证还能下载或退出。锁定滚动，画面更干净。 */
+  html[data-ag-view="1"] body > *:not(#ag-bg):not(#ag-dl):not(#ag-view):not(#ag-dl-modal) {
+    visibility: hidden !important;
+  }
+  html[data-ag-view="1"],
+  html[data-ag-view="1"] body { overflow: hidden !important; }
+  html[data-ag-view="1"] #ag-bg::after { opacity: 0; }
+  /* 看图时按钮更清晰，别让人找不到出口 */
+  html[data-ag-view="1"] #ag-dl,
+  html[data-ag-view="1"] #ag-view { opacity: 0.85; }
 
   /* ── 下载确认弹窗（是 / 否） ── */
   #ag-dl-modal {
