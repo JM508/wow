@@ -8,6 +8,9 @@
      （全站 CSP 是 script-src 'self' 白名单，不用公共 CDN）
    · 所有错误都翻译成中文可读提示：网络失败 / 未登录 / 无权限 /
      域名未绑定 / 表不存在 …… 任何一条都不会静默失败
+   · 双域名：云服务端只认「发布域 + 本地回环」，其他域名（Cloudflare
+     主站 wow-d9s.pages.dev）自动改走本站同源代理 /.cloud/*，
+     由仓库根目录 functions/_middleware.js 改写 Origin 后转发
    ══════════════════════════════════════════════════════════════ */
 (function (global) {
   "use strict";
@@ -17,6 +20,28 @@
     endpoint: "https://wow-blog.app.workbuddy.host",
     publishableKey: "wbpk_dGlKhLDrZRLF6YuQQJWWWV_kdS84808B2F9Y1Wq6jVQpWQPvEASGH4c"
   };
+
+  /* ═══════════ 数据面地址选择 ═══════════
+     云服务端对 Origin 做精确匹配，白名单 = 发布域 + 本地回环：
+       · 发布域 / 本地预览 → 直连（原样使用 publicConfig.endpoint）
+       · 其他域名        → 改用 location.origin，让请求变成同源 /.cloud/*
+                           再交给 Pages Function 转发（见 functions/_middleware.js）
+     这样两个域名都能用云功能，且不需要把任何密钥放到前端。 */
+  var API = PUBLIC_CONFIG.endpoint;
+  var VIA_PROXY = false;
+  (function pickEndpoint() {
+    try {
+      if (!/^https?:$/.test(location.protocol)) return;         // file:// 等：保持直连
+      if (location.origin === PUBLIC_CONFIG.endpoint) return;    // 发布域：直连
+      var host = location.hostname;
+      var loopback = host === "localhost" || host === "127.0.0.1" ||
+                     host === "::1" || host === "[::1]";
+      if (loopback) return;                                     // 本地预览：直连
+      API = location.origin;                                    // 其余域名：同源代理
+      VIA_PROXY = true;
+    } catch (e) { /* 拿不到 location 时按直连处理 */ }
+  })();
+  function publishHost() { return PUBLIC_CONFIG.endpoint.replace(/^https?:\/\//, ""); }
 
   var TABLE_WALLETS = "runner_wallets";   // 钱包云存档（仅本人可读写）
   var TABLE_SCORES  = "runner_scores";    // 排行榜成绩（所有人可看，仅本人可提交）
@@ -37,7 +62,7 @@
     }
     try {
       client = sdk.createWorkBuddyCloud({
-        endpoint: PUBLIC_CONFIG.endpoint,
+        endpoint: API,
         publishableKey: PUBLIC_CONFIG.publishableKey
       });
     } catch (e) {
@@ -63,11 +88,25 @@
     var gate = err.error || "";
     var gateDesc = err.error_description || "";
     if (gate === "access_denied" || /origin is not allowed/i.test(gateDesc)) {
-      return "当前域名（" + location.host + "）未绑定云服务，请改用 " +
-        PUBLIC_CONFIG.endpoint.replace(/^https?:\/\//, "") + " 访问";
+      return VIA_PROXY
+        ? "本站到云服务的转发未通过校验，请刷新重试；若一直失败可改用 " + publishHost() + " 访问"
+        : "当前域名（" + location.host + "）未绑定云服务，请改用 " + publishHost() + " 访问";
     }
     if (gate === "unauthorized" || gate === "invalid_token" || gate === "invalid_grant") {
       return "登录状态已失效，请重新登录";
+    }
+    /* 代理层的来源校验拒绝：非本站页面发起，或浏览器过旧没带来源信息 */
+    if (gate === "forbidden_origin") {
+      return "本站的云服务转发拒绝了这次请求，请刷新重试；若一直失败可改用 " + publishHost() + " 访问";
+    }
+    if (gate === "upstream_unreachable") {
+      return "云服务暂时连不上，请稍后重试";
+    }
+    /* 代理模式下的典型故障：转发函数没生效，请求被静态站点当成不存在的页面，
+       拿回来的是 HTML，SDK 解析 JSON 失败。这条要排在通用分支前面，
+       否则会被 invalid-request 吃掉、只丢回一句英文原文。 */
+    if (VIA_PROXY && /json|parse|unexpected|<!doctype|html/i.test(String(err.message || "") + " " + kind)) {
+      return "本站的云服务转发未生效，请刷新重试；若一直失败可改用 " + publishHost() + " 访问";
     }
     if (gateDesc) return String(gateDesc);
     if (gate) return "云服务拒绝了这次请求（" + gate + "）";
@@ -81,8 +120,9 @@
     if (kind === "unauthenticated") return "登录状态已过期，请重新登录";
     if (kind === "permission-denied") {
       /* 网关层的 403 多半是「当前域名没绑定到这个应用」 */
-      return "当前域名未绑定云服务（" + location.host + "），请在 " +
-        PUBLIC_CONFIG.endpoint.replace(/^https?:\/\//, "") + " 下使用云存档与排行榜";
+      return VIA_PROXY
+        ? "云服务拒绝了本站的转发请求，请刷新重试；若一直失败可改用 " + publishHost() + " 访问"
+        : "当前域名未绑定云服务（" + location.host + "），请在 " + publishHost() + " 下使用云存档与排行榜";
     }
     if (kind === "rate-limited") return "操作太频繁，请稍后再试";
     if (kind === "backend-unavailable") return "云服务暂时不可用，请稍后重试";
@@ -330,6 +370,9 @@
   /* ═══════════ 对外接口 ═══════════ */
   global.WowCloud = {
     PUBLIC_CONFIG: PUBLIC_CONFIG,
+    /* 实际使用的数据面地址 / 是否走的同源代理（调试与测试用） */
+    endpoint: function () { return API; },
+    viaProxy: function () { return VIA_PROXY; },
     TABLES: { wallets: TABLE_WALLETS, scores: TABLE_SCORES },
     LEADER_LIMIT: LEADER_LIMIT,
     NICK_MAX: NICK_MAX,
