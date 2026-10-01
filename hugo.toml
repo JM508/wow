@@ -3,6 +3,7 @@ locale = "zh-CN"
 defaultContentLanguage = "zh-cn"
 title = "Wow 娱乐小站"
 theme = "PaperMod"
+enableRobotsTXT = true
 
 [params]
   homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "分享搞笑段子、游戏攻略和动漫推荐。"}
