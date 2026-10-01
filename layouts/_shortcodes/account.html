@@ -1,0 +1,134 @@
+<!-- 账号与云存档：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
+<link rel="stylesheet" href="/account.css">
+<div id="ac-root">
+  <div class="ac-head">
+    <h2>账号与云存档</h2>
+    <p class="ac-sub">
+      邮箱登录后：金币与已购皮肤存进云端（换设备也不丢），跑酷成绩自动进入云端排行榜。
+      未登录也可以照常玩，只是数据只保存在这台设备上。
+    </p>
+  </div>
+
+  <!-- ═══ 未登录：密码登录 / 验证码登录 / 注册 / 找回密码 ═══ -->
+  <div id="ac-guest">
+    <div class="ac-tabs" role="tablist" aria-label="登录方式">
+      <button type="button" class="ac-tab is-on" id="ac-tab-pw" role="tab" aria-selected="true" data-tab="pw">密码登录</button>
+      <button type="button" class="ac-tab" id="ac-tab-otp" role="tab" aria-selected="false" data-tab="otp">验证码登录</button>
+      <button type="button" class="ac-tab" id="ac-tab-reg" role="tab" aria-selected="false" data-tab="reg">注册</button>
+      <button type="button" class="ac-tab" id="ac-tab-find" role="tab" aria-selected="false" data-tab="find">找回密码</button>
+    </div>
+
+    <!-- ① 邮箱 + 密码登录 -->
+    <form class="ac-form" id="ac-form-pw" data-pane="pw">
+      <label class="ac-field">邮箱
+        <input id="ac-pw-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <label class="ac-field">密码
+        <input id="ac-pw-pass" type="password" autocomplete="current-password" placeholder="登录密码" required>
+      </label>
+      <button type="submit" class="ac-go" id="ac-pw-go">登录</button>
+    </form>
+
+    <!-- ② 邮箱验证码登录 -->
+    <form class="ac-form hidden" id="ac-form-otp" data-pane="otp">
+      <label class="ac-field">邮箱
+        <input id="ac-otp-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <div class="ac-row">
+        <label class="ac-field">验证码
+          <input id="ac-otp-code" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位验证码" required>
+        </label>
+        <button type="button" class="ac-side" id="ac-otp-send">获取验证码</button>
+      </div>
+      <button type="submit" class="ac-go" id="ac-otp-go">登录 / 注册</button>
+    </form>
+
+    <!-- ③ 注册（邮箱验证码 + 自设密码） -->
+    <form class="ac-form hidden" id="ac-form-reg" data-pane="reg">
+      <label class="ac-field">邮箱
+        <input id="ac-reg-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <div class="ac-row">
+        <label class="ac-field">验证码
+          <input id="ac-reg-code" inputmode="numeric" autocomplete="one-time-code" placeholder="6 位验证码" required>
+        </label>
+        <button type="button" class="ac-side" id="ac-reg-send">获取验证码</button>
+      </div>
+      <label class="ac-field">设置密码
+        <input id="ac-reg-pass" type="password" autocomplete="new-password" placeholder="至少 8 位" required>
+      </label>
+      <p class="ac-note">注册需要验证码 + 密码：密码用于以后直接登录。</p>
+      <button type="submit" class="ac-go" id="ac-reg-go">注册并登录</button>
+    </form>
+
+    <!-- ④ 找回密码 -->
+    <form class="ac-form hidden" id="ac-form-find" data-pane="find">
+      <label class="ac-field">邮箱
+        <input id="ac-find-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+      </label>
+      <div class="ac-row">
+        <label class="ac-field">验证码
+          <input id="ac-find-code" inputmode="numeric" placeholder="6 位验证码" required>
+        </label>
+        <button type="button" class="ac-side" id="ac-find-send">发送验证码</button>
+      </div>
+      <label class="ac-field">新密码
+        <input id="ac-find-pass" type="password" autocomplete="new-password" placeholder="至少 8 位" required>
+      </label>
+      <button type="submit" class="ac-go" id="ac-find-go">重设密码并登录</button>
+    </form>
+
+    <p class="ac-msg" id="ac-msg" role="status" aria-live="polite"></p>
+  </div>
+
+  <!-- ═══ 已登录：身份 / 云存档 / 昵称 / 改密 / 退出 ═══ -->
+  <div id="ac-user" class="hidden">
+    <div class="ac-id">
+      <span class="ac-avatar" aria-hidden="true">☁️</span>
+      <div class="ac-id-text">
+        <strong id="ac-who">已登录</strong>
+        <span class="ac-sub2">登录状态已保存，下次打开自动识别</span>
+      </div>
+    </div>
+
+    <ul class="ac-facts" id="ac-facts"></ul>
+
+    <div class="ac-actions">
+      <button type="button" class="ac-go" id="ac-sync">立即同步云存档</button>
+      <button type="button" class="ac-side" id="ac-reload">刷新云端数据</button>
+      <button type="button" class="ac-side" id="ac-signout">退出登录</button>
+    </div>
+
+    <div class="ac-nick">
+      <label class="ac-field" for="ac-nick">排行榜昵称
+        <input id="ac-nick" type="text" maxlength="16" placeholder="上榜显示的名字">
+      </label>
+      <button type="button" class="ac-side" id="ac-nick-save">保存昵称</button>
+    </div>
+
+    <details class="ac-details">
+      <summary>修改密码</summary>
+      <form class="ac-form" id="ac-form-chpw">
+        <label class="ac-field">当前密码
+          <input id="ac-old" type="password" autocomplete="current-password" required>
+        </label>
+        <label class="ac-field">新密码
+          <input id="ac-new" type="password" autocomplete="new-password" placeholder="至少 8 位" required>
+        </label>
+        <button type="submit" class="ac-go" id="ac-chpw-go">确认修改</button>
+      </form>
+    </details>
+
+    <p class="ac-msg" id="ac-msg2" role="status" aria-live="polite"></p>
+  </div>
+
+  <p class="ac-foot">
+    网页端目前只支持邮箱登录（手机号/短信登录仅微信小程序支持）。云端数据按账号隔离，
+    只有你能读写自己的云存档；排行榜只公开昵称与分数。
+  </p>
+</div>
+
+<script src="/vendor/workbuddy-cloud-sdk.global.js" defer></script>
+<script src="/cloud.js" defer></script>
+<script src="/skins.js" defer></script>
+<script src="/account.js" defer></script>

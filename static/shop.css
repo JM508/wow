@@ -1,0 +1,276 @@
+/* ══════════════════════════════════════════════════════════════
+   皮肤商店 · 样式
+   · 商店以弹层形式开在《火柴人快跑》页面里（见文件末尾 .run-shop-*）
+   · 颜色尽量复用 PaperMod 主题变量，自动适配明暗模式
+   · 无外部字体/图片依赖（CSP 同源白名单）
+   ══════════════════════════════════════════════════════════════ */
+
+#shop-root,
+.run-shop {
+  --shop-accent: #4f7cff;
+  --shop-accent2: #7b5cff;
+  --shop-coin: #e8a70e;
+}
+
+#shop-root {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+/* ── 钱包条 ── */
+.shop-wallet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 22px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--shop-accent), var(--shop-accent2));
+  border-radius: 14px;
+  box-shadow: 0 14px 30px -18px rgba(79, 124, 255, 0.95);
+}
+.shop-wallet-label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  opacity: 0.86;
+}
+.shop-wallet-num {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+.shop-go {
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #4636b8;
+  white-space: nowrap;
+  text-decoration: none;
+  background: #ffffff;
+  border-radius: 999px;
+  transition: transform 0.12s ease, filter 0.15s ease;
+}
+.shop-go:hover { filter: brightness(0.97); transform: translateY(-1px); }
+.shop-go:active { transform: translateY(0); }
+
+/* ── 提示条 ── */
+.shop-hint {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--secondary, #5b6470);
+  background: var(--tertiary, #eef1f6);
+  border-radius: 10px;
+}
+.shop-hint.shop-warn {
+  color: #c62828;
+  background: rgba(255, 95, 109, 0.14);
+}
+
+/* ── 分组 ── */
+.shop-sec { margin-top: 26px; }
+.shop-sec-title {
+  margin: 0 0 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  padding-left: 11px;
+  border-left: 4px solid var(--shop-accent);
+  line-height: 1.2;
+}
+
+/* ── 商品网格 ── */
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(186px, 1fr));
+  gap: 14px;
+}
+
+.shop-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  transition: transform 0.14s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.shop-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px -20px rgba(0, 0, 0, 0.75);
+}
+.shop-card.is-using {
+  border-color: var(--shop-accent);
+  box-shadow: 0 0 0 1px var(--shop-accent) inset;
+}
+
+.shop-prev {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 4px;
+  background:
+    radial-gradient(circle at 50% 26%, var(--tertiary, #eef1f6), transparent 72%),
+    var(--entry, #ffffff);
+}
+.shop-canvas {
+  display: block;
+  width: 100%;
+  max-width: 152px;
+  height: auto;
+}
+
+.shop-info { flex: 1; padding: 0 14px 10px; }
+.shop-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 5px;
+  font-size: 15px;
+  color: var(--primary, #1f1f1f);
+}
+.shop-tag {
+  padding: 1px 7px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--shop-accent), var(--shop-accent2));
+  border-radius: 999px;
+}
+.shop-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--secondary, #5b6470);
+}
+
+.shop-act { padding: 0 14px 14px; }
+.shop-btn {
+  width: 100%;
+  padding: 9px 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #f5bb3c, var(--shop-coin));
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+.shop-btn:hover { filter: brightness(1.06); }
+.shop-btn:active { transform: translateY(1px); }
+.shop-btn.is-own { background: linear-gradient(135deg, var(--shop-accent), var(--shop-accent2)); }
+.shop-btn.is-on {
+  color: var(--secondary, #5b6470);
+  background: var(--tertiary, #ececec);
+  cursor: default;
+}
+.shop-btn.is-poor { opacity: 0.6; }
+.shop-btn:disabled { cursor: default; }
+.shop-btn.is-poor:hover,
+.shop-btn.is-on:hover { filter: none; }
+
+/* ── 页脚说明 ── */
+.shop-foot {
+  margin: 26px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--secondary, #6b7280);
+}
+.shop-foot a { color: var(--shop-accent); font-weight: 700; text-decoration: none; }
+.shop-foot a:hover { text-decoration: underline; }
+
+/* ── 商店页在大屏放宽一点，让网格多排两列（与扫雷/跑酷页同理） ── */
+@media (min-width: 900px) {
+  .main:has(#shop-root) { max-width: min(1100px, 94vw); }
+}
+
+@media (max-width: 480px) {
+  .shop-wallet { padding: 14px 16px; }
+  .shop-wallet-num { font-size: 25px; }
+  .shop-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 11px; }
+  .shop-canvas { max-width: 124px; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   游戏内商店弹层 —— 盖在跑酷页面上，点「🛍 商店」打开
+   ══════════════════════════════════════════════════════════════ */
+.run-shop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;                 /* 高于主题的「回到顶部」按钮（99）与页头 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(8, 14, 24, 0.66);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  animation: run-shop-in 0.16s ease;
+}
+.run-shop.hidden { display: none; }
+
+@keyframes run-shop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.run-shop-box {
+  width: min(900px, 100%);
+  max-height: min(88vh, 940px);
+  overflow-y: auto;
+  padding: 16px 20px 22px;
+  background: var(--theme, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 16px;
+  box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.72);
+  -webkit-overflow-scrolling: touch;
+}
+
+.run-shop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border, #e0e0e0);
+}
+.run-shop-head strong { font-size: 17px; color: var(--primary, #1f1f1f); }
+
+.run-shop-x {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 50%;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: filter 0.15s ease;
+}
+.run-shop-x:hover { filter: brightness(0.94); }
+
+/* 弹层里余额条不需要那么大 */
+.run-shop .shop-wallet { margin-top: 14px; }
+.run-shop .shop-sec:first-of-type { margin-top: 18px; }
+
+@media (max-width: 560px) {
+  .run-shop { padding: 10px; }
+  .run-shop-box { padding: 13px 14px 18px; max-height: 92vh; }
+}

@@ -11,8 +11,10 @@
   # CSP 纯同源白名单，无 unsafe-inline、无哈希（评级 A+）。
   # 主题自带的内联脚本在 pages.dev 上被此策略拦截，其行为已由 static/theme.js
   # 外置复刻（theme.js 内置 CSP 探测，避免在无 CSP 的镜像站双重绑定）。
+  # connect-src 额外放行本应用自己的云服务域名（账号登录 / 云存档 / 排行榜），
+  # 该域名由开通云服务时返回，不是第三方；SDK 本体随站点同源分发，无需放行 CDN。
   # ⚠️ 今后新增任何内联 <script>/<style> 或第三方代码前，必须先调整此策略。
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   # 注意：不能在 /* 里写 Cache-Control——Pages 会把多条规则的同名头拼接而非覆盖。
   # Pages 对 HTML 默认即为 no-cache（max-age=0, must-revalidate），无需手动设置。

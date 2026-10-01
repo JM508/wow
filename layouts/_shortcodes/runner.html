@@ -1,0 +1,92 @@
+<!-- 火柴人快跑：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
+<link rel="stylesheet" href="/runner.css">
+<link rel="stylesheet" href="/shop.css">
+<link rel="stylesheet" href="/rank.css">
+<div id="run-root" aria-label="火柴人快跑小游戏">
+  <div class="run-hud">
+    <div class="run-brand">
+      <strong>火柴人快跑</strong>
+      <span>一根线条，跑出极限</span>
+    </div>
+    <div class="run-board">
+      <span id="run-score" aria-live="polite">SCORE: 00000</span>
+      <span id="run-best">HI: 00000</span>
+      <span id="run-coins" title="本局收集的金币">🪙 0</span>
+    </div>
+    <div class="run-tools">
+      <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">🏆 排行榜</button>
+      <button type="button" class="run-shop-btn" id="run-shop-btn" data-open-shop title="用金币兑换皮肤">🛍 商店</button>
+      <button type="button" id="run-mute" aria-pressed="false" title="音效开关">🔊 音效</button>
+      <button type="button" id="run-help" title="玩法说明">玩法</button>
+    </div>
+  </div>
+
+  <div class="run-stage" id="run-stage">
+    <canvas id="run-canvas" width="960" height="360" aria-label="游戏画面"></canvas>
+    <div class="run-overlay" id="run-overlay">
+      <div class="run-card">
+        <h3 id="run-ov-title">火柴人快跑</h3>
+        <div id="run-ov-text" class="run-ov-text"></div>
+        <button type="button" id="run-ov-btn" class="run-primary">开始奔跑</button>
+        <div id="run-records" class="run-records"></div>
+      </div>
+    </div>
+    <div class="run-toast" id="run-toast" role="status" aria-live="polite"></div>
+  </div>
+
+  <div class="run-controls">
+    <button type="button" id="run-jump" class="run-ctl">跳跃</button>
+    <button type="button" id="run-duck" class="run-ctl">下蹲</button>
+  </div>
+
+  <p class="run-foot">
+    键盘：<kbd>空格</kbd>/<kbd>↑</kbd>/<kbd>W</kbd> 起跳（长按跳更高），<kbd>↓</kbd>/<kbd>S</kbd> 下蹲，
+    <kbd>P</kbd> 暂停，<kbd>M</kbd> 静音。手机：点屏幕起跳，向下滑动或按「下蹲」躲飞行物。
+  </p>
+  <p class="run-foot run-wallet-bar">
+    <span id="run-wallet">钱包 0</span> ·
+    <button type="button" class="run-link-btn" data-open-shop>🛍 皮肤商店</button> ·
+    <button type="button" class="run-link-btn" data-open-rank>🏆 云端排行榜</button>
+    —— 每局收集的金币都会存进钱包，可在这里兑换火柴人皮肤与金币皮肤；登录后钱包与成绩还能同步到云端。
+  </p>
+</div>
+
+<!-- ═══ 皮肤商店弹层：开在本页里，不跳页（商品与购买逻辑由 /shop.js 填充） ═══ -->
+<div id="run-shop" class="run-shop hidden" data-shop-panel role="dialog" aria-modal="true" aria-labelledby="run-shop-title">
+  <div class="run-shop-box">
+    <div class="run-shop-head">
+      <strong id="run-shop-title">🛍 皮肤商店</strong>
+      <button type="button" class="run-shop-x" id="run-shop-close" title="关闭商店" aria-label="关闭商店">✕</button>
+    </div>
+    <div id="shop-root" aria-label="皮肤商店商品"></div>
+  </div>
+</div>
+
+<!-- ═══ 云端排行榜弹层：数据来自云服务（所有访客可看，登录后自动上传成绩） ═══ -->
+<div id="run-rank" class="run-rank hidden" data-rank-panel role="dialog" aria-modal="true" aria-labelledby="run-rank-title">
+  <div class="run-rank-box">
+    <div class="run-rank-head">
+      <strong id="run-rank-title">🏆 云端排行榜</strong>
+      <button type="button" class="run-rank-x" id="run-rank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
+    </div>
+    <div class="rank-status" id="rank-status" role="status" aria-live="polite"></div>
+    <div class="rank-nick-row">
+      <label for="rank-nick">上榜昵称</label>
+      <input id="rank-nick" type="text" maxlength="16" placeholder="跑出好成绩后显示的名字" autocomplete="nickname">
+      <button type="button" id="rank-nick-save">保存</button>
+    </div>
+    <ol class="rank-list" id="rank-list" aria-label="排行榜前 20 名"></ol>
+    <div class="rank-mine" id="rank-mine"></div>
+    <p class="rank-foot">
+      排行榜对所有访客可见（只显示昵称与分数）；提交成绩需要邮箱登录，登录后每局结束自动上传。
+      登录还会开启<b>云存档</b>：金币与已购皮肤会同步到云端，换设备也不丢。
+    </p>
+  </div>
+</div>
+
+<script src="/vendor/workbuddy-cloud-sdk.global.js" defer></script>
+<script src="/cloud.js" defer></script>
+<script src="/skins.js" defer></script>
+<script src="/shop.js" defer></script>
+<script src="/rank.js" defer></script>
+<script src="/runner.js" defer></script>

@@ -97,7 +97,8 @@
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     document.body.appendChild(el);
     document.documentElement.setAttribute("data-ag-bg", "1");
-    setupDownload(el);
+    // 「下载背景图」按钮只在首页出现（isHome 在下方启动段赋值，此处必然已就绪）
+    if (isHome) setupDownload(el);
   }
 
   /* ---------- 遮罩渲染 ---------- */
@@ -245,7 +246,7 @@
   if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
   purgeOld();
 
-  // 验证范围：默认只拦首页（根路径），文章等子页面直接放行
+  /* 当前是否首页：① 年龄门禁默认只拦首页；② 「下载背景图」按钮只在首页出现 */
   var p = location.pathname.replace(/index\.html?$/i, "");
   var isHome = (p === "/" || p === "");
 
