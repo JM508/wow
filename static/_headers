@@ -1,0 +1,31 @@
+# Cloudflare Pages 安全与缓存头配置
+# 本文件会被 Hugo 原样复制到站点根目录，Cloudflare Pages 自动读取生效
+# 注意：全部为响应头级别的防护，访客零感知，不改变页面行为
+
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  Strict-Transport-Security: max-age=31536000
+  # HTML 不长缓存，保证发新内容访客立刻可见
+  Cache-Control: public, max-age=0, must-revalidate
+
+# 带内容指纹的静态资源：可以放心缓存一年
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 背景图等图片：缓存 30 天
+/images/*
+  Cache-Control: public, max-age=2592000
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+
+/robots.txt
+  Cache-Control: public, max-age=3600
+
+/index.xml
+  Cache-Control: public, max-age=3600
