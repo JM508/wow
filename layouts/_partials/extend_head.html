@@ -91,7 +91,7 @@
     line-height: 1.75;
     color: var(--secondary, #6b6b6b);
   }
-  #ag-root .ag-desc b, #ag-root .ag-question b, #ag-root .ag-foot b { color: var(--primary, #1f1f1f); }
+  #ag-root .ag-desc b, #ag-root .ag-question b { color: var(--primary, #1f1f1f); }
 
   #ag-root .ag-actions { display: flex; flex-direction: column; gap: 10px; }
 
@@ -124,13 +124,6 @@
     color: var(--secondary, #6b6b6b);
   }
   #ag-root .ag-no:hover { opacity: 0.8; }
-
-  #ag-root .ag-foot {
-    margin: 18px 0 0;
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--secondary, #9a9a9a);
-  }
 
   #ag-root .ag-loading {
     display: none;
@@ -189,7 +182,6 @@
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
   CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
              CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
-  var NOTE = "本次浏览期间不会重复询问；关闭浏览器后将重新验证。";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -241,7 +233,6 @@
           '<button type="button" class="ag-btn ag-yes" id="ag-yes">' + CFG.yesText + '</button>' +
           '<button type="button" class="ag-btn ag-no" id="ag-no">' + CFG.noText + '</button>' +
         '</div>' +
-        '<p class="ag-foot">' + NOTE + '</p>' +
         '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
       '</div>';
     document.body.appendChild(el);
