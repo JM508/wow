@@ -21,8 +21,10 @@
     /* 视口 ≤ 此宽度改用手机版小图 bgN-m.webp（1440 宽 webp，约为原图 1/4 体积）：
        手机上加载 300KB 的 1920 宽原图很慢，而背景还盖着一层蒙版，看不出差别。 */
     bgMobileMax: 820,
-    bgDimLight: 0.68, // 白天模式白色蒙版浓度：0 = 原图，1 = 纯白（越大图片越淡）
+    bgDimLight: 0.68, // 白天模式蒙版浓度：0 = 原图，1 = 纯色（越大图片越淡）
     bgDimDark: 0.4,   // 夜间模式黑色蒙版浓度
+    bgTintLight: "#cfd5dd", // 白天模式蒙版颜色：浅灰蓝（原纯白太刺眼，压暗一档；
+                            // 想更暗就换成更深的灰，如 #c0c7d1）
 
     /* 验证范围：默认只在网站首页（根路径）拦截，站内文章等子页面直接放行 */
     homeOnly: true,
@@ -115,6 +117,7 @@
     el.style.backgroundImage = 'url("' + bgUrlFor(idx) + '")';
     el.style.setProperty("--ag-dim", String(CFG.bgDimLight));
     el.style.setProperty("--ag-dim-dark", String(CFG.bgDimDark));
+    if (CFG.bgTintLight) el.style.setProperty("--ag-tint", String(CFG.bgTintLight));
     el.dataset.src = url;                        // 供「下载背景图」按钮使用
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     document.body.appendChild(el);

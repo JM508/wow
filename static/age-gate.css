@@ -169,7 +169,8 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: #ffffff;
+    /* 白天蒙版：浅灰蓝（--ag-tint 由 age-gate.js 注入，原纯白太亮） */
+    background: var(--ag-tint, #cfd5dd);
     opacity: var(--ag-dim, 0.55);
   }
   /* 夜间模式用黑色蒙版，浓度独立控制（--ag-dim-dark） */
@@ -179,7 +180,7 @@
   }
   /* 验证遮罩显示期间一律用白天蒙版（与上面的「验证=白天模式」一致） */
   html[data-ag="pending"] #ag-bg::after {
-    background: #ffffff;
+    background: var(--ag-tint, #cfd5dd);
     opacity: var(--ag-dim, 0.68);
   }
   /* 通过验证后由白天切回夜间时不硬跳，蒙版缓缓过渡 */
