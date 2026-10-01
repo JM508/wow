@@ -142,7 +142,8 @@
   }
 
   function updateMineCounter() {
-    minesEl.textContent = String(S.mines - S.flags);
+    /* 超插旗时夹在 0：显示 -5 会让人以为出了 bug（经典扫雷允许负数，但这里宁可收敛） */
+    minesEl.textContent = String(Math.max(0, S.mines - S.flags));
   }
 
   function onCell(r, c, mode) {

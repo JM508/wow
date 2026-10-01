@@ -58,11 +58,13 @@
   function isEmail(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
   function validPass(v) { return String(v || "").length >= 8; }
 
-  /* 登录成功后的跳转目标（只允许站内相对路径） */
+  /* 登录成功后的跳转目标（只允许站内相对路径）
+     ⚠️ 还要挡反斜杠：location.assign("/\\evil.com") 会被浏览器把 \ 规范化成 /，
+     变成 //evil.com → 协议相对地址 → 跳去外站（开放重定向）。 */
   function nextPath() {
     try {
       var n = new URLSearchParams(location.search).get("next") || "";
-      if (n.charAt(0) === "/" && n.charAt(1) !== "/") return n;
+      if (n.charAt(0) === "/" && n.charAt(1) !== "/" && n.charAt(1) !== "\\") return n;
     } catch (e) {}
     return "";
   }

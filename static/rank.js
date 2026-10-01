@@ -185,7 +185,14 @@
   if (btnClose) btnClose.addEventListener("click", close);
   panel.addEventListener("click", function (e) { if (e.target === panel) close(); });
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && isOpen()) close();
+    if (e.key === "Escape" && isOpen()) {
+      /* runner.js 也监听了 Escape（暂停/继续）。面板开着时这里必须把事件截住，
+         否则关面板的动作会被 runner 再处理一次 → 面板关了却又弹出「已暂停」。
+         rank.js 先于 runner.js 注册，stopImmediatePropagation 恰好只拦住后者。 */
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      close();
+    }
   });
   if (elNick) {
     elNick.value = CLOUD.nick();

@@ -278,16 +278,30 @@
     push(c.owned);
 
     var coins = Math.max(Math.floor(Number(local.coins) || 0), Math.floor(Number(c.coins) || 0));
-    var pickEquip = function (mine, theirs) {
-      if (mine && owned.indexOf(mine) >= 0) return mine;
-      if (theirs && owned.indexOf(theirs) >= 0) return theirs;
+    /* ⚠️ 已购清单存的是「带前缀的键」（p:xxx / c:xxx），而 equipped() 给的是裸 id。
+       直接 indexOf 永远匹配不上 → 装备永远同步不过去，而且回传时会把云端的
+       skin / coin_skin 覆盖成 null（等于每次同步都把装备抹掉）。这里统一补前缀再比对。
+       优先级：已购款 > 默认款（price 0 的皮肤不在已购清单里，可能是「从没选过」
+       而不是「明确选了它」，所以本地是默认款时应让位给云端的已购款）；
+       两边都是已购款时本地优先（本地是刚操作过的那台）。 */
+    var sk = global.RunnerSkins;
+    var keyOf = function (kind, id) { return (kind === "coin" ? "c:" : "p:") + id; };
+    var isDefault = function (kind, id) {
+      try {
+        var def = sk && sk.get ? sk.get(kind, id) : null;
+        return !!def && def.price === 0;
+      } catch (e) { return false; }
+    };
+    var pickEquip = function (kind, mine, theirs) {
+      if (mine && owned.indexOf(keyOf(kind, mine)) >= 0) return mine;
+      if (theirs && (owned.indexOf(keyOf(kind, theirs)) >= 0 || isDefault(kind, theirs))) return theirs;
       return null;
     };
     return {
       coins: coins,
       owned: owned,
-      skin: pickEquip(local.skin, c.skin),
-      coinSkin: pickEquip(local.coinSkin, c.coin_skin),
+      skin: pickEquip("player", local.skin, c.skin),
+      coinSkin: pickEquip("coin", local.coinSkin, c.coin_skin),
       ownerName: nick() || c.owner_name || ""
     };
   }

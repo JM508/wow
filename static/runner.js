@@ -45,7 +45,8 @@
     SHIELD_TIME: 3.6,       // 护盾无敌时长（秒）
     BOOST_MULT: 1.18,       // 无敌期间速度倍率（冲刺也要留反应余地，不能快到「无敌一过就撞墙」）
     BOOST_TAIL: 1.10,       // 冲刺收尾期（秒）：这 1.1 秒不再生成新障碍，把前方跑空
-    BOOST_CLEAR: 220,       // 归零兜底：清掉玩家前方这么近的残留障碍（正常情况下前方本就该是空的）
+    BOOST_CLEAR: 40,        // 归零兜底：只清「几乎已经贴到身上」的障碍（真正的应急，正常不触发）
+    END_GRACE: 0.30,        // 归零宽限（秒）：前方还有 <0.3s 就撞上的障碍时，无敌再续这么一小段
 
     /* 无敌冲刺「金币雨」：冲刺期间贴地成排出金币，随出随扫 */
     DASH_GAP_MIN: 460,      // 两排金币的最小间隔（px）
@@ -96,14 +97,33 @@
      冲刺时速度本就偏快，障碍又一直在生成。如果恰好在障碍面前归零，
      玩家一帧之内根本来不及起跳 —— 这就是「无敌时间一过直接撞死」的原因。
      解法分两层：
-       ① 收尾期 BOOST_TAIL 秒内不再生成新障碍，前方自然跑空（主要手段）；
-       ② 归零那一帧再做一次兜底清扫，并把下一波障碍的生成点推远，
-          让玩家平稳接回正常节奏，而不是立刻面对新障碍。 */
+       ① 收尾期 BOOST_TAIL 秒内不再生成新障碍，前方自然跑空（主要手段，
+          实测关掉 ② 之后 26/26 次归零前方都是空的，它自己就够）；
+       ② 归零那一帧再做一次极窄的兜底清扫（只碰几乎贴到身上的障碍），
+          并把下一波障碍的生成点推远，让玩家平稳接回正常节奏。
+     ② 的窗口必须很小：以前是 220px，一旦触发就是「前方障碍凭空消失」，
+     比它要防的问题还显眼。 */
   function endBoost() {
+    /* 归零宽限：判定盒跟着画面收窄之后，个别障碍会比以前晚一帧才被撞碎，
+       归零瞬间它可能还悬在脸前（实测最差只剩 0.08s 反应）。
+       与其把远处障碍清掉（那就是「凭空消失」），不如让无敌再续一小段，
+       玩家会把它自然撞碎 —— 对玩家隐形，也不欠公平。 */
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o.x + o.w <= CFG.PX) continue;
+      if (o.kind === "air" && P.duck) continue;          // 蹲着能钻过去的就不用续
+      var gap = o.x - (CFG.PX + CFG.BODY_W / 2);
+      if (gap / Math.max(1, S.speed) < CFG.END_GRACE) {
+        S.boost = CFG.END_GRACE;
+        return;
+      }
+    }
+
     var cleared = 0;
     for (var i = obstacles.length - 1; i >= 0; i--) {
       var o = obstacles[i];
       if (o.x + o.w > CFG.PX - 24 && o.x < CFG.PX + CFG.BOOST_CLEAR) {
+        addDebris(o);
         sparkle(o.x + o.w / 2, o.y + o.h / 2, 10, "#8ab4ff");
         obstacles.splice(i, 1);
         cleared++;
@@ -130,6 +150,7 @@
   var btnHelp   = document.getElementById("run-help");
   var elShop    = document.getElementById("run-shop");        // 商店弹层（骨架在页面里，内容由 shop.js 填）
   var btnShopX  = document.getElementById("run-shop-close");
+  var elRank    = document.getElementById("run-rank");        // 云端排行榜弹层（内容由 rank.js 填）
 
   var KEY_BEST = "runner-best";
   var KEY_SCORES = "runner-scores";
@@ -347,6 +368,7 @@
   var S = null;               // 局面数据
   var P = null;               // 角色
   var obstacles = [], items = [], parts = [];
+  var debris = [];                             // 被无敌撞碎的障碍：短暂存活、被打飞、淡出
   var input = { jumpHeld: false, duckHeld: false };
   var shake = 0, overAt = 0, lastBest = 0, prevState = "ready";
   var bgDist = 0;             // 背景滚动距离（非游戏中也缓慢流动）
@@ -365,7 +387,7 @@
   function resetGame() {
     S = newState();
     P = { y: CFG.GROUND, vy: 0, onGround: true, duck: false, coyote: 0, run: 0 };
-    obstacles.length = 0; items.length = 0; parts.length = 0;
+    obstacles.length = 0; items.length = 0; parts.length = 0; debris.length = 0;
     itemLog.length = 0;                            // 道具出生记录也一起清
     input.jumpHeld = false; input.duckHeld = false;
     shake = 0;
@@ -619,6 +641,7 @@
   var shopPrev = null;                       // 进商店前的游戏状态
 
   function shopOpen() { return !!elShop && !elShop.classList.contains("hidden"); }
+  function rankOpen() { return !!elRank && !elRank.classList.contains("hidden"); }
 
   function refreshSkin() {                   // 换上的皮肤立刻生效
     skinPlayer = Skins.getPlayer(Skins.equipped ? Skins.equipped("player") : null);
@@ -690,6 +713,7 @@
     if (state !== "playing") {
       bgDist += 40 * dt;
       updateParticles(dt);
+      updateDebris(dt);
       if (shake > 0) shake = Math.max(0, shake - 60 * dt);
       return;
     }
@@ -780,6 +804,7 @@
       if (o.x + o.w < -40) { obstacles.splice(i, 1); continue; }
       if (hit(o)) {
         if (boosting) {
+          addDebris(o);                            // 击飞表现：障碍本体翻滚着飞出去
           sparkle(o.x + o.w / 2, o.y, 14, "#ffd166");
           S.score += 8;
           shake = Math.max(shake, 6);
@@ -830,6 +855,7 @@
     }
 
     updateParticles(dt);
+    updateDebris(dt);
     if (shake > 0) shake = Math.max(0, shake - 60 * dt);
     updateHud();
   }
@@ -878,7 +904,15 @@
     var pw = CFG.BODY_W - CFG.HIT_PAD * 2;
     var ph = curH() - CFG.HIT_PAD * 2;
     var px = CFG.PX - pw / 2, py = P.y - CFG.HIT_PAD - ph;
-    var ox = o.x + 3, oy = o.y + 3, ow = o.w - 6, oh = o.h - 6;
+    /* 横向判定宽度必须跟**画面**一致：
+       地面障碍换成贴图后，图片是按高度定比例的细长条（巧乐兹宽高比 0.42），
+       画出来比碰撞盒窄 18px 左右；若还按碰撞盒算，玩家会在离障碍还有十几像素
+       时就看到它碎掉（无敌冲刺撞碎时特别刺眼）。
+       画面比碰撞盒宽的（空中雪碧瓶）仍按碰撞盒算——那是偏袒玩家的宽容。 */
+    var vis = obVisual(o);
+    var ow = vis ? Math.min(o.w, vis.w) : o.w;
+    var ox = o.x + (o.w - ow) / 2;                // 图片以碰撞盒中心为轴，左右对称
+    var oy = o.y + 3, oh = o.h - 6;
     return px < ox + ow && px + pw > ox && py < oy + oh && py + ph > oy;
   }
 
@@ -890,6 +924,56 @@
       p.vy += p.g * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
       if (state === "playing") p.x -= S.speed * dt * 0.55;
+    }
+  }
+
+  /* ── 无敌撞碎的「击飞」表现 ──
+     以前障碍被撞就是当帧整个消失，只留几个小光点 —— 玩家看到的是
+     「障碍还在眼前，下一帧凭空没了」，尤其冲刺速度快，观感是「没碰到就碎」。
+     现在把障碍本体变成碎块：往后上方翻滚飞出、重力下坠、淡出，
+     眼睛能看到「它被撞飞了」，而不是「它没了」。 */
+  function addDebris(o) {
+    var vis = obVisual(o);
+    var im = vis ? vis.im : null;
+    var w = vis ? vis.w : o.w, h = vis ? vis.h : o.h;
+    var cy = o.kind === "ground" ? CFG.GROUND - h / 2 : o.y + o.h / 2;
+    debris.push({
+      im: im, w: w, h: h, kind: o.kind,
+      x: o.x + o.w / 2,
+      y: cy,
+      /* 撞击点就在角色脸上，碎块必须立刻离开角色：先向上抛起，
+         再随世界后掠（约 0.75 倍世界速度）从角色**身后**扫过去 ——
+         碎块画在角色图层之下，看起来就是「撞碎了、残骸从身后飞走」 */
+      vx: rnd(-60, 140), vy: -rnd(200, 400),
+      rot: 0, vr: rnd(3.5, 9) * (random() < 0.5 ? -1 : 1),
+      life: rnd(0.35, 0.5), max: 0.5
+    });
+    if (debris.length > 20) debris.shift();    // 兜底，防止极端情况堆积
+  }
+
+  function updateDebris(dt) {
+    for (var i = debris.length - 1; i >= 0; i--) {
+      var b = debris[i];
+      b.life -= dt;
+      if (b.life <= 0) { debris.splice(i, 1); continue; }
+      b.x += (b.vx - (state === "playing" ? S.speed * 0.75 : 0)) * dt;
+      b.y += b.vy * dt;
+      b.vy += 1100 * dt;
+      b.rot += b.vr * dt;
+    }
+  }
+
+  function drawDebris() {
+    for (var i = 0; i < debris.length; i++) {
+      var b = debris[i];
+      var a = clamp(b.life / b.max, 0, 1);
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.rot);
+      if (b.im) ctx.drawImage(b.im, -b.w / 2, -b.h / 2, b.w, b.h);
+      else { ctx.fillStyle = "#b9c4cf"; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); }
+      ctx.restore();
     }
   }
 
@@ -913,6 +997,7 @@
     drawGround(pal);
     for (var k = 0; k < items.length; k++) drawItem(items[k]);
     for (var m = 0; m < obstacles.length; m++) drawObstacle(obstacles[m], pal);
+    drawDebris();
     drawPlayer(pal);
     drawParticles();
     drawBoostFx();
@@ -1020,48 +1105,60 @@
   })();
   function obImgOk(im) { return !!im && im.complete && im.naturalWidth > 0; }
 
-  /* 障碍「看起来多大」的参数：只影响画面，碰撞盒 / 生成参数一个字不动。
-     地面障碍按碰撞盒高定画面高（略大一点点，保证判定区不会露在画面外面），
+  /* 障碍「看起来多大」的参数。地面障碍按碰撞盒高定画面高（略大一点点），
      空中障碍按碰撞盒宽定画面宽。 */
   var OB_VIS = {
     ghScale: 1.12, ghPad: 8, ghMin: 48, ghMax: 82,     // 地面：画面高 = clamp(h × 1.12 + 8, 48, 82)
     airScale: 1.05, airPad: 4                          // 空中：画面宽 = w × 1.05 + 4
   };
 
+  /* ⚠️ 绘制与判定**共用同一份几何**（hit() 也调它）。
+     曾经两边各算各的：画面按高度定比例画出 27px 宽，判定还按 46px 的碰撞盒算，
+     结果「人还没碰到障碍它就碎了」——无敌冲刺撞碎时最明显。
+     图片没加载出来（含无图测试环境）时返回 null，两边一起退回矢量画法 / 碰撞盒。 */
+  function obVisual(o) {
+    var im, w, h;
+    if (o.kind === "ground") {
+      im = (o.id === "box" || o.id === "stack") ? OB_IMG.qiaoleziAlt : OB_IMG.qiaolezi;
+      if (!obImgOk(im)) return null;
+      h = clamp(o.h * OB_VIS.ghScale + OB_VIS.ghPad, OB_VIS.ghMin, OB_VIS.ghMax);
+      w = h * im.naturalWidth / im.naturalHeight;
+    } else {
+      im = OB_IMG.sprite;
+      if (!obImgOk(im)) return null;
+      w = o.w * OB_VIS.airScale + OB_VIS.airPad;
+      h = w * im.naturalHeight / im.naturalWidth;
+    }
+    return { im: im, w: w, h: h };
+  }
+
   /* ── 障碍绘制 ── */
   function drawObstacle(o, pal) {
     ctx.save();
 
-    /* 图片外观：画面略大于判定区（宽松判定，和原版 hitPad 同思路），
-       但只大一点点 —— 以前按「碰撞盒宽 ×2」定比例，画出来 90~112px 高，
-       比角色还高一倍，看着太唬人，现在跟着碰撞盒走 */
-    if (o.kind === "ground") {
-      var gim = (o.id === "box" || o.id === "stack") ? OB_IMG.qiaoleziAlt : OB_IMG.qiaolezi;
-      var gw = 0, gh = 0;
-      if (obImgOk(gim)) {
-        gh = clamp(o.h * OB_VIS.ghScale + OB_VIS.ghPad, OB_VIS.ghMin, OB_VIS.ghMax);
-        gw = gh * gim.naturalWidth / gim.naturalHeight;
-      }
-      /* 影子跟着画面宽度走（图没加载时退回碰撞盒宽度） */
-      ctx.fillStyle = "rgba(0,0,0,0.16)";
-      ctx.beginPath();
-      ctx.ellipse(o.x + o.w / 2, CFG.GROUND + 3, (gw || o.w) * 0.55, 5, 0, 0, 6.2832);
-      ctx.fill();
-      if (gw) {
-        ctx.drawImage(gim, o.x + o.w / 2 - gw / 2, CFG.GROUND - gh, gw, gh);
-        ctx.restore();
-        return;
-      }
-    } else {
-      var sim = OB_IMG.sprite;
-      if (obImgOk(sim)) {
+    /* 图片外观：跟着碰撞盒走（以前按「碰撞盒宽 ×2」定比例，画出来 90~112px 高，
+       比角色还高一倍，看着太唬人） */
+    var vis = obVisual(o);
+    if (vis) {
+      if (o.kind === "ground") {
+        /* 影子跟着画面宽度走 */
+        ctx.fillStyle = "rgba(0,0,0,0.16)";
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.w / 2, CFG.GROUND + 3, vis.w * 0.55, 5, 0, 0, 6.2832);
+        ctx.fill();
+        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
+      } else {
+        /* 贴图底边锚在「碰撞盒底再往上抬 10px」，而不是中心对齐：
+           · 空中障碍碰撞盒只有 26~30px 高，按中心对齐时 42~57px 高的瓶子图会往下
+             多出 8~14px，正好压进下蹲角色的头部 —— 看着像穿模；
+           · 下蹲姿态的可见头顶（精灵皮肤 252 / 矢量 267）也比碰撞盒顶（266）高，
+             底边只锚到盒底（256±浮动 3.5）仍会蹭到精灵皮肤的头发，
+             抬 10px 后瓶子最低点 249.5，与可见头顶最少留 2.5px。 */
         var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
-        var sw2 = o.w * OB_VIS.airScale + OB_VIS.airPad;
-        var sh2 = sw2 * sim.naturalHeight / sim.naturalWidth;
-        ctx.drawImage(sim, o.x + o.w / 2 - sw2 / 2, o.y + o.h / 2 - sh2 / 2 + bob, sw2, sh2);
-        ctx.restore();
-        return;
+        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, o.y + o.h - vis.h - 10 + bob, vis.w, vis.h);
       }
+      ctx.restore();
+      return;
     }
 
     var x = o.x, y = o.y, w = o.w, h = o.h;
@@ -1229,6 +1326,12 @@
     if (shopOpen()) {
       if (k === "Escape" || k === "p" || k === "P") { e.preventDefault(); closeShop(); }
       else if (k === "m" || k === "M") toggleMute();
+      return;
+    }
+    /* 排行榜弹层同理：开着时按键不穿透到游戏，否则空格会在面板后面把游戏跑起来，
+       玩家看不见角色、直接撞死。Escape 由 rank.js 自己处理（关面板），这里不再触发暂停。 */
+    if (rankOpen()) {
+      if (k === "m" || k === "M") toggleMute();
       return;
     }
 
