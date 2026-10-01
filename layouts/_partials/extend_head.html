@@ -125,6 +125,13 @@
   }
   #ag-root .ag-no:hover { opacity: 0.8; }
 
+  #ag-root .ag-foot {
+    margin: 18px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--secondary, #9a9a9a);
+  }
+
   #ag-root .ag-loading {
     display: none;
     height: 4px;
@@ -210,6 +217,7 @@
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
   CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
              CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
+  CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -286,6 +294,7 @@
           '<button type="button" class="ag-btn ag-no" id="ag-no">' + CFG.noText + '</button>' +
         '</div>' +
         '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
+        '<p class="ag-foot">' + CFG.foot + '</p>' +
       '</div>';
     document.body.appendChild(el);
 
