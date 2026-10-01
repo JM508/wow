@@ -8,7 +8,11 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+  # CSP 采用 sha256 哈希白名单（无 unsafe-inline）：放行 PaperMod 主题的 4 段
+  # 内联脚本与 2 段内联样式。⚠️ 哈希对内容逐字节敏感——主题升级或修改内联代码后
+  # 必须重新计算（age-gate/_dev/check_csp.js 可校验），否则相关功能会被 CSP 拦截。
+  # JSON-LD（application/ld+json）是数据块不会执行，无需放行。
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'sha256-TSj5uhFRIzdF2b3GY81HdCLk9vdSIQz++nldNDE361A=' 'sha256-HVY33bW5RQ7Do8FpyrDYYIYVQs90a837IiVyXt2P+v0=' 'sha256-oLYaBhOn87v+An+A499HU4yYM9zrrSmXCEGifb3TaT4=' 'sha256-NrHaE+KH4n+/8xC6UtwdJhbEAusnYXDTZG15usgdsSY='; style-src 'self' 'sha256-JKnJm8FYu7v7Qg4rY91l7iwvFCFwxrL4GCRH984ssvM=' 'sha256-YtwC8QhYa0vZ43yRYEyITE7q5iWuI0wCAh5XxAbI7kE='; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   # 注意：不能在 /* 里写 Cache-Control——Pages 会把多条规则的同名头拼接而非覆盖。
   # Pages 对 HTML 默认即为 no-cache（max-age=0, must-revalidate），无需手动设置。

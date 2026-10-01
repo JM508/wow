@@ -1,0 +1,161 @@
+
+  /* 未验证时：正文内容不可见且不可滚动，避免内容"闪现"（visibility:hidden 同时使其脱离 Tab 焦点链） */
+  html[data-ag="pending"] body > *:not(#ag-root) { visibility: hidden !important; }
+  html[data-ag="pending"], html[data-ag="pending"] body { overflow: hidden !important; }
+
+  #ag-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--theme, #ffffff);
+    color: var(--primary, #1f1f1f);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    animation: ag-fade 0.25s ease both;
+  }
+  #ag-root, #ag-root *, #ag-root *::before, #ag-root *::after { box-sizing: border-box; }
+  #ag-root.ag-out { opacity: 0; transition: opacity 0.3s ease; }
+
+  @keyframes ag-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  #ag-root .ag-card {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    padding: 38px 30px 30px;
+    text-align: center;
+    background: var(--entry, #ffffff);
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.18), 0 4px 14px -6px rgba(0, 0, 0, 0.10);
+  }
+
+  #ag-root .ag-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 18px;
+    font-size: 30px;
+    line-height: 1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    box-shadow: 0 8px 22px -8px rgba(255, 95, 109, 0.7);
+  }
+
+  #ag-root .ag-title {
+    margin: 0 0 10px;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--primary, #1f1f1f);
+  }
+
+  #ag-root .ag-question {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--primary, #1f1f1f);
+  }
+
+  #ag-root .ag-desc {
+    margin: 0 0 26px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-root .ag-desc b, #ag-root .ag-question b { color: var(--primary, #1f1f1f); }
+
+  #ag-root .ag-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  #ag-root .ag-btn {
+    width: 100%;
+    padding: 13px 18px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    border: 0;
+    border-radius: 11px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+  #ag-root .ag-btn:active { transform: scale(0.985); }
+  #ag-root .ag-btn:focus-visible { outline: 2px solid #ff5f6d; outline-offset: 2px; }
+
+  #ag-root .ag-yes {
+    background: linear-gradient(135deg, #ff5f6d, #ff8a5b);
+    color: #ffffff;
+    box-shadow: 0 8px 20px -10px rgba(255, 95, 109, 0.9);
+  }
+  #ag-root .ag-yes:hover { box-shadow: 0 10px 26px -10px rgba(255, 95, 109, 1); }
+
+  #ag-root .ag-no {
+    background: transparent;
+    border: 1px solid var(--border, #e6e6e6);
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-root .ag-no:hover { opacity: 0.8; }
+
+  #ag-root .ag-foot {
+    margin: 18px 0 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--secondary, #9a9a9a);
+  }
+
+  #ag-root .ag-loading {
+    display: none;
+    height: 4px;
+    margin: 4px 0 0;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--tertiary, #e2e2e2);
+  }
+  #ag-root .ag-card.ag-bye .ag-loading { display: block; }
+  #ag-root .ag-loading span {
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #ff5f6d, #ff8a5b);
+    animation: ag-slide 1s ease-in-out infinite;
+  }
+  @keyframes ag-slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(280%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #ag-root { animation: none; }
+    #ag-root .ag-loading span { animation-duration: 1.8s; }
+  }
+
+  /* ── 会话背景图 ── */
+  #ag-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  #ag-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    opacity: var(--ag-dim, 0.4);
+  }
+  [data-theme="dark"] #ag-bg::after { background: #000000; }
+  /* 让正文容器透明，露出背景图（卡片仍保留自己的底色） */
+  html[data-ag-bg] body,
+  html[data-ag-bg] .list { background: transparent !important; }
