@@ -20,11 +20,12 @@
 
   /* ── 1) 主题初始化（对应 head.html 的内联脚本，defaultTheme = "dark"）──
      必须在任何渲染发生前执行：本文件同步加载于 <head>
-     默认暗色：只有访客手动切过浅色（pref-theme=light）才用浅色，
-     不再跟随系统偏好（hugo.toml 里 defaultTheme = "dark"，
-     主题 baseof 也会直接输出 <html data-theme="dark">，两者保持一致） */
+     默认暗色；手动切浅色只记住「当前浏览会话」（sessionStorage），
+     重开浏览器恢复黑色，不做永久记忆。
+     旧版把偏好写在 localStorage，这里顺带清掉，让老访客也回归默认黑。 */
   try {
-    var pref = localStorage.getItem("pref-theme");
+    localStorage.removeItem("pref-theme");
+    var pref = sessionStorage.getItem("pref-theme");
     if (pref === "light") html.dataset.theme = "light";
     else html.dataset.theme = "dark";
   } catch (e) {}
@@ -86,10 +87,10 @@
       toggle.addEventListener("click", function () {
         if (html.dataset.theme === "dark") {
           html.dataset.theme = "light";
-          try { localStorage.setItem("pref-theme", "light"); } catch (e) {}
+          try { sessionStorage.setItem("pref-theme", "light"); } catch (e) {}
         } else {
           html.dataset.theme = "dark";
-          try { localStorage.setItem("pref-theme", "dark"); } catch (e) {}
+          try { sessionStorage.setItem("pref-theme", "dark"); } catch (e) {}
         }
       });
     }
