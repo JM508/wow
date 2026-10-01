@@ -1,11 +1,158 @@
 <!-- ══════════════════════════════════════════════════════════════════════════
-     全站挂载：会话背景图轮换 + 年龄声明样式
-     · 年龄声明文案在 layouts/_partials/extend_footer.html（PaperMod 页脚挂载点）
-     · Hugo 会把本文件当模板解析：请勿出现「连续两个左花括号」，否则构建报错
+     年龄验证门禁 Age Gate · 单文件零依赖版
+     ──────────────────────────────────────────────────────────────────────────
+     本文件是 Hugo PaperMod 的 head 挂载点：layouts/_partials/extend_head.html
+     PaperMod 会在每个页面的 </head> 之前自动引入它，因此无需改动主题文件，
+     全站（首页、文章页、分类页、404…）自动生效。
+
+     ⚠️ Hugo 会把本文件当模板解析：请勿在下面的 JS/CSS 里出现「连续两个左花括号」
+        （Hugo 的模板起始标记），否则 hugo 构建会直接报错。
+
+     行为逻辑
+       未验证  → 全屏遮罩，询问「您是否已满 18 周岁？」
+       选「是」→ 仅在当前浏览会话内记住（sessionStorage，关掉标签页即失效），
+                 淡出并进入网站；不做任何长期缓存
+       选「否」→ 不写入任何缓存，随机跳转到哔哩哔哩 / 快手 / 抖音等短视频官网
+     手动重置验证（方便自己调试）
+       访问任意页面加 ?agegate=reset，例如 https://wow-d9s.pages.dev/?agegate=reset
+       或浏览器控制台执行 window.AgeGate.reset()
      ══════════════════════════════════════════════════════════════════════════ -->
 
 <style id="ag-style">
-  /* ── 会话背景图：每次新开浏览器随机换一张，白色蒙版保证正文可读 ── */
+  /* 未验证时：正文内容不可见且不可滚动，避免内容"闪现"（visibility:hidden 同时使其脱离 Tab 焦点链） */
+  html[data-ag="pending"] body > *:not(#ag-root) { visibility: hidden !important; }
+  html[data-ag="pending"], html[data-ag="pending"] body { overflow: hidden !important; }
+
+  #ag-root {
+    position: fixed;
+    inset: 0;
+    z-index: 2147483000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--theme, #ffffff);
+    color: var(--primary, #1f1f1f);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    animation: ag-fade 0.25s ease both;
+  }
+  #ag-root, #ag-root *, #ag-root *::before, #ag-root *::after { box-sizing: border-box; }
+  #ag-root.ag-out { opacity: 0; transition: opacity 0.3s ease; }
+
+  @keyframes ag-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  #ag-root .ag-card {
+    position: relative;
+    width: 100%;
+    max-width: 430px;
+    padding: 38px 30px 30px;
+    text-align: center;
+    background: var(--entry, #ffffff);
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 18px;
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.18), 0 4px 14px -6px rgba(0, 0, 0, 0.10);
+  }
+
+  #ag-root .ag-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 18px;
+    font-size: 30px;
+    line-height: 1;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff5f6d, #ffc371);
+    box-shadow: 0 8px 22px -8px rgba(255, 95, 109, 0.7);
+  }
+
+  #ag-root .ag-title {
+    margin: 0 0 10px;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--primary, #1f1f1f);
+  }
+
+  #ag-root .ag-question {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--primary, #1f1f1f);
+  }
+
+  #ag-root .ag-desc {
+    margin: 0 0 26px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-root .ag-desc b, #ag-root .ag-question b { color: var(--primary, #1f1f1f); }
+
+  #ag-root .ag-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  #ag-root .ag-btn {
+    width: 100%;
+    padding: 13px 18px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    border: 0;
+    border-radius: 11px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.2s ease;
+  }
+  #ag-root .ag-btn:active { transform: scale(0.985); }
+  #ag-root .ag-btn:focus-visible { outline: 2px solid #ff5f6d; outline-offset: 2px; }
+
+  #ag-root .ag-yes {
+    background: linear-gradient(135deg, #ff5f6d, #ff8a5b);
+    color: #ffffff;
+    box-shadow: 0 8px 20px -10px rgba(255, 95, 109, 0.9);
+  }
+  #ag-root .ag-yes:hover { box-shadow: 0 10px 26px -10px rgba(255, 95, 109, 1); }
+
+  #ag-root .ag-no {
+    background: transparent;
+    border: 1px solid var(--border, #e6e6e6);
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-root .ag-no:hover { opacity: 0.8; }
+
+  #ag-root .ag-loading {
+    display: none;
+    height: 4px;
+    margin: 4px 0 0;
+    overflow: hidden;
+    border-radius: 99px;
+    background: var(--tertiary, #e2e2e2);
+  }
+  #ag-root .ag-card.ag-bye .ag-loading { display: block; }
+  #ag-root .ag-loading span {
+    display: block;
+    width: 40%;
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #ff5f6d, #ff8a5b);
+    animation: ag-slide 1s ease-in-out infinite;
+  }
+  @keyframes ag-slide {
+    0%   { transform: translateX(-110%); }
+    100% { transform: translateX(280%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #ag-root { animation: none; }
+    #ag-root .ag-loading span { animation-duration: 1.8s; }
+  }
+
+  /* ── 会话背景图 ── */
   #ag-bg {
     position: fixed;
     inset: 0;
@@ -25,33 +172,75 @@
   /* 让正文容器透明，露出背景图（卡片仍保留自己的底色） */
   html[data-ag-bg] body,
   html[data-ag-bg] .list { background: transparent !important; }
-
-  /* ── 页脚年龄声明 ── */
-  .ag-declare {
-    margin: 0;
-    padding: 4px 16px 30px;
-    text-align: center;
-    font-size: 13px;
-    line-height: 1.8;
-    color: var(--secondary, #6b6b6b);
-  }
-  .ag-declare b { color: var(--primary, #1f1f1f); }
 </style>
 
 <script id="ag-script">
 (function () {
   "use strict";
 
-  /* ═══════════════ 可配置项：只改这一段 ═══════════════ */
+  /* ═══════════════════ 可配置项：只改这一段 ═══════════════════ */
   var CFG = {
+    ver: 1,          // 规则版本号
+    minAge: 18,      // 最低年龄
+
+    title: "年龄验证",
+    yesText: "是，我已满 18 周岁",
+    noText: "否，我未满 18 周岁",
+
+    yesRedirect: "", // 选「是」后额外跳转的地址，留空 = 留在当前页
+
     /* 站点背景图：/images/bg/bg1.jpg ~ bg{bgCount}.jpg
        每次新开浏览器访问随机换一张（保证与上一张不同） */
     bgCount: 10,
     bgFolder: "/images/bg/bg",
     bgExt: ".jpg",
-    bgDim: 0.4      // 白色蒙版浓度：0 = 原图，1 = 纯白
+    bgDim: 0.4,      // 白色蒙版浓度：0 = 原图，1 = 纯白。调低文字可读性变差
+
+    // 选「否」时随机跳转的目标（可自由增删）
+    noTargets: [
+      { name: "哔哩哔哩", url: "https://www.bilibili.com/" },
+      { name: "快手",     url: "https://www.kuaishou.com/" },
+      { name: "抖音",     url: "https://www.douyin.com/" },
+      { name: "小红书",   url: "https://www.xiaohongshu.com/" },
+      { name: "西瓜视频", url: "https://www.ixigua.com/" }
+    ],
+    noDelay: 1100    // 选「否」后停留多久（毫秒）再跳转
   };
-  /* ═══════════════════════════════════════════════════ */
+
+  CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
+  CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
+             CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
+  /* ═══════════════════════════════════════════════════════════ */
+
+  var KEY = "age_ok_v" + CFG.ver;
+  var html = document.documentElement;
+
+  /* ---------- 读写状态（仅当前浏览会话，无长期缓存） ---------- */
+  function readStore() {
+    try { return sessionStorage.getItem(KEY) === "1"; } catch (e) { return false; }
+  }
+  function writeStore() {
+    try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
+  }
+  function clearStore() {
+    try { sessionStorage.removeItem(KEY); } catch (e) {}
+  }
+  // 清理旧版本遗留的键：sessionStorage 旧版本号 + 老版本的 localStorage / Cookie（14 天缓存时期的残留）
+  function purgeOld() {
+    try {
+      for (var i = sessionStorage.length - 1; i >= 0; i--) {
+        var k = sessionStorage.key(i);
+        if (k && k.indexOf("age_ok_v") === 0 && k !== KEY) sessionStorage.removeItem(k);
+      }
+      for (var j = localStorage.length - 1; j >= 0; j--) {
+        var lk = localStorage.key(j);
+        if (lk && lk.indexOf("age_ok_v") === 0) localStorage.removeItem(lk);
+      }
+      document.cookie = "age_ok_v1=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
+    } catch (e) {}
+  }
+
+  var passed = readStore;
 
   /* ---------- 会话背景图：每次新开浏览器随机换一张（与上次不同） ---------- */
   function applyBg() {
@@ -77,12 +266,110 @@
     document.documentElement.setAttribute("data-ag-bg", "1");
   }
 
+  /* ---------- 遮罩渲染 ---------- */
+  function render() {
+    if (document.getElementById("ag-root")) return;
+
+    var el = document.createElement("div");
+    el.id = "ag-root";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-labelledby", "ag-title");
+    el.innerHTML =
+      '<div class="ag-card">' +
+        '<div class="ag-badge" aria-hidden="true">🔞</div>' +
+        '<h1 class="ag-title" id="ag-title">' + CFG.title + '</h1>' +
+        '<p class="ag-question" id="ag-text">' + CFG.question + '</p>' +
+        '<p class="ag-desc">' + CFG.desc + '</p>' +
+        '<div class="ag-actions">' +
+          '<button type="button" class="ag-btn ag-yes" id="ag-yes">' + CFG.yesText + '</button>' +
+          '<button type="button" class="ag-btn ag-no" id="ag-no">' + CFG.noText + '</button>' +
+        '</div>' +
+        '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
+      '</div>';
+    document.body.appendChild(el);
+
+    var card = el.querySelector(".ag-card");
+    var yes = el.querySelector("#ag-yes");
+    var no = el.querySelector("#ag-no");
+    var busy = false;                          // 防重复点击
+
+    // 选「是」：写入会话级标记 → 淡出 → 进入网站
+    yes.addEventListener("click", function () {
+      if (busy) return;
+      busy = true;
+      writeStore();
+      purgeOld();
+      html.removeAttribute("data-ag");       // 先解除正文隐藏，让遮罩淡出时正好露出内容
+      el.classList.add("ag-out");
+      setTimeout(function () {
+        if (el.parentNode) el.parentNode.removeChild(el);
+        if (CFG.yesRedirect) location.href = CFG.yesRedirect;
+      }, 320);
+    });
+
+    // 选「否」：不写入任何缓存 → 随机跳转短视频官网
+    no.addEventListener("click", function () {
+      if (busy) return;
+      busy = true;
+      clearStore();
+      var list = CFG.noTargets && CFG.noTargets.length ? CFG.noTargets : [{ name: "短视频平台", url: "https://www.douyin.com/" }];
+      var t = list[Math.floor(Math.random() * list.length)];
+
+      var titleEl = el.querySelector("#ag-title");
+      var textEl = el.querySelector("#ag-text");
+      if (titleEl) titleEl.textContent = "正在跳转…";
+      if (textEl) {
+        textEl.innerHTML = "未满 " + CFG.minAge + " 周岁的访客无法浏览本站，正在带你前往 <b>" +
+                           t.name + "</b> …";
+      }
+      document.documentElement.style.overflow = "hidden";
+      card.classList.add("ag-bye");
+
+      // 立即锁死两个按钮，避免跳转等待期间被重复点击
+      var acts = el.querySelector(".ag-actions");
+      if (acts) acts.style.display = "none";
+      yes.disabled = true;
+      no.disabled = true;
+      yes.style.pointerEvents = "none";
+      no.style.pointerEvents = "none";
+      yes.setAttribute("aria-hidden", "true");
+      no.setAttribute("aria-hidden", "true");
+
+      setTimeout(function () { location.replace(t.url); }, CFG.noDelay);
+    });
+
+    setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
+  }
+
   /* ---------- 启动 ---------- */
+  if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
+  purgeOld();
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", applyBg);
   } else {
     applyBg();
   }
+
+  if (passed()) {
+    html.setAttribute("data-ag", "ok");       // 已通过：不遮罩，正文正常显示
+  } else {
+    html.setAttribute("data-ag", "pending");  // 未通过：立刻隐藏正文，等 DOM 好了再画遮罩
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", render);
+    } else {
+      render();
+    }
+  }
+
+  // 调试 / 手动控制入口
+  window.AgeGate = {
+    reset: function () { clearStore(); location.reload(); },
+    open:  function () { html.setAttribute("data-ag", "pending"); render(); },
+    clear: clearStore,
+    config: CFG
+  };
 })();
 </script>
-<!-- ══════════════════ 全站挂载结束 ══════════════════ -->
+<!-- ══════════════════ 年龄验证门禁 结束 ══════════════════ -->
