@@ -189,18 +189,20 @@
   html[data-ag-bg] body,
   html[data-ag-bg] .list { background: transparent !important; }
 
-  /* ── 左下角「下载背景图」+ 右下角「看背景图」按钮（半透明，悬停时变清晰） ── */
+  /* ── 左下角「⬇」+ 右下角「👁」两个悬浮按钮（纯图标圆形，半透明，悬停变清晰） ── */
   #ag-dl,
   #ag-view {
     position: fixed;
     bottom: 16px;
     z-index: 900;
-    padding: 9px 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.4;
     color: var(--primary, #1f1f1f);
     background: rgba(255, 255, 255, 0.32);
     border: 1px solid rgba(120, 120, 120, 0.32);
@@ -216,6 +218,13 @@
   }
   #ag-dl { left: 16px; }
   #ag-view { right: 16px; }
+  /* 图标本身：20px 线性图标，stroke 走 currentColor，明暗主题都清楚 */
+  #ag-dl .ag-ico,
+  #ag-view .ag-ico { display: block; width: 20px; height: 20px; }
+  /* 右下角按钮：默认「眼睛」，进入专注模式后变「眼睛加一道杠」 */
+  #ag-view .ag-ico-eye-off { display: none; }
+  #ag-view[aria-pressed="true"] .ag-ico-eye { display: none; }
+  #ag-view[aria-pressed="true"] .ag-ico-eye-off { display: block; }
   #ag-dl:hover,
   #ag-view:hover {
     opacity: 1;

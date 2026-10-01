@@ -30,10 +30,12 @@
     /* 验证范围：默认只在网站首页（根路径）拦截，站内文章等子页面直接放行 */
     homeOnly: true,
 
-    /* 首页右下角「看背景图」按钮：进入后隐藏正文与游戏入口、去掉蒙版露出原图，
-       点屏幕任意处恢复（仅首页可用，站内页不出现，避免遮挡游戏操作） */
-    viewText: "🖼 看背景图",
-    viewExitText: "✕ 退出看图",
+    /* 首页两个悬浮按钮（纯图标，无文字）：
+       左下 = ⬇ 下载背景图；右下 = 眼睛 → 点击后隐去正文/游戏入口、去掉蒙版只看原图，
+       图标随之变成「眼睛加一道杠」；点屏幕任意处恢复（仅首页可用，站内页不出现） */
+    dlLabel: "下载背景图",
+    viewLabel: "只看背景图（隐藏页面其他内容）",
+    viewExitLabel: "退出看图（恢复页面）",
 
     // 选「否」时随机跳转的目标（可自由增删）
     noTargets: [
@@ -101,6 +103,29 @@
     }
     return base;
   }
+
+  /* ---------- 悬浮按钮图标（内联 SVG，stroke 用 currentColor，跟随明暗主题） ---------- */
+  var ICON_DL =
+    '<svg class="ag-ico ag-ico-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+    ' aria-hidden="true" focusable="false"><path d="M12 4.5v13"/>' +
+    '<path d="M6.6 12.4 12 17.8l5.4-5.4"/></svg>';
+
+  var ICON_EYE_BODY =
+    '<path d="M2.2 12S6 5.6 12 5.6 21.8 12 21.8 12 18 18.4 12 18.4 2.2 12 2.2 12Z"/>' +
+    '<circle cx="12" cy="12" r="3"/>';
+
+  var ICON_EYE =
+    '<svg class="ag-ico ag-ico-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+    ' aria-hidden="true" focusable="false">' + ICON_EYE_BODY + '</svg>';
+
+  // 眼睛 + 一道杠（专注看图时显示）
+  var ICON_EYE_OFF =
+    '<svg class="ag-ico ag-ico-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+    ' aria-hidden="true" focusable="false">' + ICON_EYE_BODY +
+    '<path d="M4.6 4.6 19.4 19.4"/></svg>';
 
   function applyBg() {
     var n = CFG.bgCount;
@@ -212,7 +237,7 @@
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
   }
 
-  /* ---------- 左下角「下载背景图」按钮 + 是/否确认弹窗 ---------- */
+  /* ---------- 左下角「⬇」（下载背景图，纯图标）+ 是/否确认弹窗 ---------- */
   function setupDownload(bg) {
     if (document.getElementById("ag-dl") || !bg) return;
 
@@ -220,7 +245,9 @@
     btn.type = "button";
     btn.id = "ag-dl";
     btn.setAttribute("aria-haspopup", "dialog");
-    btn.textContent = "⬇ 下载背景图";
+    btn.setAttribute("aria-label", CFG.dlLabel);
+    btn.title = CFG.dlLabel;                 // 图标按钮：靠 title 提示含义
+    btn.innerHTML = ICON_DL;
     document.body.appendChild(btn);
 
     var modal = document.createElement("div");
@@ -276,7 +303,7 @@
     });
   }
 
-  /* ---------- 右下角「看背景图」按钮：专注看原图 ----------
+  /* ---------- 右下角「👁」按钮：专注看原图（进入后图标变「眼睛加一道杠」） ----------
      进入：html[data-ag-view="1"]（CSS 负责隐正文 + 去蒙版 + 锁滚动）
      退出：点屏幕任意处 / 再点按钮 / Esc；两个按钮与下载弹窗内的点击不算「点屏幕」 */
   function setupViewer(bg) {
@@ -286,20 +313,24 @@
     var btn = document.createElement("button");
     btn.type = "button";
     btn.id = "ag-view";
-    btn.textContent = CFG.viewText;
+    btn.innerHTML = ICON_EYE + ICON_EYE_OFF; // 两个图标都放进按钮，由 CSS 按状态切换
     btn.setAttribute("aria-pressed", "false");
+    btn.setAttribute("aria-label", CFG.viewLabel);
+    btn.title = CFG.viewLabel;
     document.body.appendChild(btn);
 
     function inView() { return root.getAttribute("data-ag-view") === "1"; }
     function enter() {
       root.setAttribute("data-ag-view", "1");
-      btn.textContent = CFG.viewExitText;
       btn.setAttribute("aria-pressed", "true");
+      btn.setAttribute("aria-label", CFG.viewExitLabel);
+      btn.title = CFG.viewExitLabel;
     }
     function exit() {
       root.removeAttribute("data-ag-view");
-      btn.textContent = CFG.viewText;
       btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-label", CFG.viewLabel);
+      btn.title = CFG.viewLabel;
     }
 
     btn.addEventListener("click", function (e) {
