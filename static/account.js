@@ -69,6 +69,14 @@
     return "";
   }
 
+  /* 右上角返回叉：从排行榜「去登录」跳来时回到来源页（跑酷页），否则回首页。
+     手机上主题导航折叠成汉堡按钮，没这个叉用户容易卡在登录页出不去。 */
+  var elBack = $("ac-back");
+  if (elBack) {
+    var from = nextPath();
+    if (from) elBack.setAttribute("href", from);
+  }
+
   /* ═══════════ 标签页 ═══════════ */
   var tabs = document.querySelectorAll(".ac-tab");
   function showPane(name) {

@@ -15,9 +15,12 @@
 
     /* 站点背景图：/images/bg/bg1.jpg ~ bg{bgCount}.jpg
        每次新开浏览器访问随机换一张（保证与上一张不同） */
-    bgCount: 10,
+    bgCount: 20,
     bgFolder: "/images/bg/bg",
     bgExt: ".jpg",
+    /* 视口 ≤ 此宽度改用手机版小图 bgN-m.webp（1440 宽 webp，约为原图 1/4 体积）：
+       手机上加载 300KB 的 1920 宽原图很慢，而背景还盖着一层蒙版，看不出差别。 */
+    bgMobileMax: 820,
     bgDimLight: 0.68, // 白天模式白色蒙版浓度：0 = 原图，1 = 纯白（越大图片越淡）
     bgDimDark: 0.4,   // 夜间模式黑色蒙版浓度
 
@@ -72,6 +75,25 @@
   var passed = readStore;
 
   /* ---------- 会话背景图：每次新开浏览器随机换一张（与上次不同） ---------- */
+  /* 浏览器是否支持 webp（不支持就退回原图，别让手机背景开天窗） */
+  var webpSupport = null;
+  function canWebp() {
+    if (webpSupport !== null) return webpSupport;
+    try {
+      var c = document.createElement("canvas");
+      webpSupport = !!(c.toDataURL && c.toDataURL("image/webp").indexOf("data:image/webp") === 0);
+    } catch (e) { webpSupport = false; }
+    return webpSupport;
+  }
+  /* 窄屏（手机）→ 小图 bgN-m.webp；桌面 → 原图 */
+  function bgUrlFor(idx) {
+    var base = CFG.bgFolder + (idx + 1) + CFG.bgExt;
+    if (CFG.bgMobileMax && window.innerWidth <= CFG.bgMobileMax && canWebp()) {
+      return base.replace(/\.jpg$/, "-m.webp");
+    }
+    return base;
+  }
+
   function applyBg() {
     var n = CFG.bgCount;
     if (!n) return;
@@ -90,7 +112,7 @@
     el.id = "ag-bg";
     el.setAttribute("aria-hidden", "true");
     var url = CFG.bgFolder + (idx + 1) + CFG.bgExt;
-    el.style.backgroundImage = 'url("' + url + '")';
+    el.style.backgroundImage = 'url("' + bgUrlFor(idx) + '")';
     el.style.setProperty("--ag-dim", String(CFG.bgDimLight));
     el.style.setProperty("--ag-dim-dark", String(CFG.bgDimDark));
     el.dataset.src = url;                        // 供「下载背景图」按钮使用

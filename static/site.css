@@ -59,6 +59,31 @@
   .home-info .entry-content a[href*="/runner/"] { display: inline-block; margin: 8px 6px 0; }
 }
 
+/* ══ 站内子页面的「返回首页」按钮 ══
+   手机端主题导航折叠成汉堡按钮、菜单项为空时不明显，游戏页里给一个一键回首页的入口。
+   跑酷工具条 / 扫雷工具条 / 账号页都用它，样式统一、明暗主题自动适配。 */
+.site-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--primary, #1f1f1f);
+  text-decoration: none;
+  white-space: nowrap;
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: filter 0.15s ease, transform 0.12s ease;
+}
+.site-back:hover { filter: brightness(0.96); }
+.site-back:active { transform: translateY(1px); }
+
 /* ══ 扫雷页（含 #ms-root 的页面）在大屏放宽内容宽度 ══
    主题默认 --main-width 720px，高级棋盘 30 列放不下，放宽到最多约 1180px；
    只影响扫雷这一页，其他文章页保持原宽度。 */

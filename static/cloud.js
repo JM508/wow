@@ -47,7 +47,8 @@
   var TABLE_SCORES  = "runner_scores";    // 排行榜成绩（所有人可看，仅本人可提交）
   var NICK_KEY      = "runner-nick";      // 昵称本地缓存（提交成绩用）
   var NICK_MAX      = 16;
-  var LEADER_LIMIT  = 20;
+  var LEADER_PAGE   = 20;                 // 排行榜每页人数
+  var LEADER_LIMIT  = 100;                // 榜单总席位 = 5 页 × 20
 
   /* ═══════════ 客户端（只建一次） ═══════════ */
   var client = null;
@@ -137,13 +138,21 @@
   }
 
   /* ═══════════ 会话 ═══════════ */
-  var sessionCache = null;      // undefined = 未查过，null = 未登录，对象 = 已登录
+  var sessionCache = null;      // undefined = 未查过/上次查询失败，null = 确认未登录，对象 = 已登录
   function currentSession(force) {
     var a = auth();
     if (!a) return Promise.resolve({ data: null, error: envUnavailable() });
     if (!force && sessionCache !== undefined) return Promise.resolve({ data: sessionCache, error: null });
     return a.getSession().then(function (r) {
-      sessionCache = (r && r.error) ? null : ((r && r.data) || null);
+      if (r && r.error) {
+        /* ⚠️ 只有「确定没登录」才能缓存成 null。网络抖动/后端暂时不可用导致的
+           查询失败绝不能缓存成未登录——否则一次抖动就把已登录用户打成
+           「未登录」，而且本页再也不恢复（成绩上传、云存档全部静默失效）。 */
+        var k = (r.error && r.error.kind) || "";
+        sessionCache = (k === "unauthenticated") ? null : undefined;
+        return r;
+      }
+      sessionCache = (r && r.data) || null;
       return r;
     });
   }
@@ -389,6 +398,7 @@
     viaProxy: function () { return VIA_PROXY; },
     TABLES: { wallets: TABLE_WALLETS, scores: TABLE_SCORES },
     LEADER_LIMIT: LEADER_LIMIT,
+    LEADER_PAGE: LEADER_PAGE,
     NICK_MAX: NICK_MAX,
 
     available: function () { return !!build(); },

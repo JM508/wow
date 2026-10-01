@@ -189,10 +189,12 @@
 .shop-foot a { color: var(--shop-accent); font-weight: 700; text-decoration: none; }
 .shop-foot a:hover { text-decoration: underline; }
 
-/* ── 商店页在大屏放宽一点，让网格多排两列（与扫雷/跑酷页同理） ── */
-@media (min-width: 900px) {
-  .main:has(#shop-root) { max-width: min(1100px, 94vw); }
-}
+/* ⚠️ 这里原来有一条「商店页大屏放宽到 1100px」的规则：
+     @media (min-width: 900px) { .main:has(#shop-root) { max-width: min(1100px, 94vw); } }
+   独立商店页 /shop/ 已并入跑酷页，而 #shop-root（商品网格容器）就长在跑酷页里，
+   于是这条规则会在跑酷页上命中。shop.css 又排在 runner.css 之后、优先级相同，
+   结果把跑酷页的宽度死死按回 1100px —— 玩家反馈「游戏画面太小」的直接原因。
+   商店页已不存在，规则删除。 */
 
 @media (max-width: 480px) {
   .shop-wallet { padding: 14px 16px; }
@@ -230,7 +232,7 @@
   width: min(900px, 100%);
   max-height: min(88vh, 940px);
   overflow-y: auto;
-  padding: 16px 20px 22px;
+  padding: 0 20px 22px;   /* 顶部内边距交给吸顶头部 */
   background: var(--theme, #ffffff);
   border: 1px solid var(--border, #e0e0e0);
   border-radius: 16px;
@@ -238,12 +240,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* 与排行榜弹层同规格：头部吸顶，✕ 在手机上始终可见 */
 .run-shop-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
+  margin: 0 -20px;
+  padding: 16px 20px 10px;
+  background: var(--theme, #ffffff);
   border-bottom: 1px solid var(--border, #e0e0e0);
 }
 .run-shop-head strong { font-size: 17px; color: var(--primary, #1f1f1f); }
@@ -272,5 +280,7 @@
 
 @media (max-width: 560px) {
   .run-shop { padding: 10px; }
-  .run-shop-box { padding: 13px 14px 18px; max-height: 92vh; }
+  /* 窄屏内边距变小，吸顶头部要用同样的数值抵消，否则贴不住顶、还会横向溢出 */
+  .run-shop-box { padding: 0 14px 18px; max-height: 92vh; }
+  .run-shop-head { margin: 0 -14px; padding: 14px 14px 10px; }
 }

@@ -301,6 +301,21 @@
 .run-tools button#run-rank-btn:hover { filter: brightness(1.05); }
 
 /* ══ 跑酷页在大屏放宽正文宽度（与扫雷页同理） ══ */
+/* 游戏画面 = 正文宽度 × 3/8，所以「放大游戏」等价于「放宽正文」。
+   正文(.main)与顶部导航(.nav)一起放宽，页头与内容左右对齐才不别扭。
+   第三个上限是按视口高度反推的宽度：矮窗口里保证整块画面一屏能看完。
+   上限 1440px（原来 1100px），画面约放大 30%。 */
 @media (min-width: 900px) {
-  .main:has(#run-root) { max-width: min(1100px, 94vw); }
+  .main:has(#run-root),
+  body:has(#run-root) .header-nav {
+    max-width: min(1440px, 96vw, calc((100vh - 180px) * 8 / 3));
+  }
 }
+/* 中等屏幕（平板横屏 / 小笔记本）也尽量吃满宽度，别留大片空白 */
+@media (min-width: 700px) and (max-width: 899.98px) {
+  .main:has(#run-root),
+  body:has(#run-root) .header-nav {
+    max-width: 100%;
+  }
+}
+

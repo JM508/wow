@@ -14,6 +14,7 @@
       <span id="run-coins" title="本局收集的金币">🪙 0</span>
     </div>
     <div class="run-tools">
+      <a class="site-back" href="/" title="返回首页">← 首页</a>
       <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">🏆 排行榜</button>
       <button type="button" class="run-shop-btn" id="run-shop-btn" data-open-shop title="用金币兑换皮肤">🛍 商店</button>
       <button type="button" id="run-mute" aria-pressed="false" title="音效开关">🔊 音效</button>
@@ -75,10 +76,12 @@
       <input id="rank-nick" type="text" maxlength="16" placeholder="跑出好成绩后显示的名字" autocomplete="nickname">
       <button type="button" id="rank-nick-save">保存</button>
     </div>
-    <ol class="rank-list" id="rank-list" aria-label="排行榜前 20 名"></ol>
+    <ol class="rank-list" id="rank-list" aria-label="排行榜前 100 名，每页 20 名"></ol>
+    <nav class="rank-pager" id="rank-pager" aria-label="排行榜分页"></nav>
     <div class="rank-mine" id="rank-mine"></div>
     <p class="rank-foot">
-      排行榜对所有访客可见（只显示昵称与分数）；提交成绩需要邮箱登录，登录后每局结束自动上传。
+      排行榜展示<b>前 100 名</b>（每页 20 名，共 5 页），对所有访客可见（只显示昵称与分数）；
+      提交成绩需要邮箱登录，登录后每局结束自动上传。
       登录还会开启<b>云存档</b>：金币与已购皮肤会同步到云端，换设备也不丢。
     </p>
   </div>

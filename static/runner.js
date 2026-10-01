@@ -43,14 +43,20 @@
     COIN_SCORE: 10,         // 每枚金币分值
 
     SHIELD_TIME: 3.6,       // 护盾无敌时长（秒）
+    SHIELD_CHANCE: 0.08,    // 每次道具生成时「出护盾」的概率（其余出金币串）
+    SHIELD_COOLDOWN: 6500,  // 两次护盾之间的最小距离（px）：防止运气好时连着刷，
+                            // 中速约 11 秒，高速约 7 秒；概率已很低，这个只是削掉尾部
     BOOST_MULT: 1.18,       // 无敌期间速度倍率（冲刺也要留反应余地，不能快到「无敌一过就撞墙」）
     BOOST_TAIL: 1.10,       // 冲刺收尾期（秒）：这 1.1 秒不再生成新障碍，把前方跑空
     BOOST_CLEAR: 40,        // 归零兜底：只清「几乎已经贴到身上」的障碍（真正的应急，正常不触发）
     END_GRACE: 0.30,        // 归零宽限（秒）：前方还有 <0.3s 就撞上的障碍时，无敌再续这么一小段
 
-    /* 无敌冲刺「金币雨」：冲刺期间贴地成排出金币，随出随扫 */
-    DASH_GAP_MIN: 460,      // 两排金币的最小间隔（px）
-    DASH_GAP_MAX: 640,      // 两排金币的最大间隔（px）
+    /* 无敌冲刺「金币雨」：冲刺期间贴地成排出金币，随出随扫。
+       ⚠️ 排间距必须按**时间**给（秒 × 当前速度），不能用固定像素：
+       原来固定 460~640px，低速吃护盾时一排要跑 1.2~1.6 秒，3.6 秒窗口里
+       塞不下 3 排（实测 30% 只有 2 排）；高速时 0.5 秒就一排又糊满屏。 */
+    DASH_GAP_T_MIN: 0.80,   // 两排金币的时间间隔下限（秒）
+    DASH_GAP_T_MAX: 1.05,   // 时间间隔上限（秒）
     DASH_FIRST: 260,        // 吃到护盾后第一排金币最迟出现距离（px）
     DASH_COINS_MIN: 3,      // 每排最少颗数
     DASH_COINS_MAX: 5,      // 每排最多颗数
@@ -72,7 +78,7 @@
     COIN_PICK: 30,          // 金币拾取半径 = r + 30（比道具宽松一点）
 
     PHASE_DIST: 9000,       // 昼夜每阶段推进距离（px）
-    DPR_MAX: 2
+    DPR_MAX: 3               // 渲染像素密度上限（大屏放宽后要更高，否则画面被放大糊掉）
   };
 
   var AIR_TIME = 2 * Math.abs(CFG.JUMP_V) / CFG.GRAVITY;   // 一次完整跳跃的滞空时间 ≈ 0.655s
@@ -378,6 +384,7 @@
       speed: CFG.SPEED0, dist: 0, score: 0, coins: 0, earned: 0,
       spawnGap: 520, itemGap: 900, boost: 0, banked: false,
       itemHold: 0, waveHold: 0,                 // 障碍/道具互相避让的距离闸门
+      shieldHold: 0,                            // 下一个护盾最早出现的距离（护盾冷却）
       itemPending: false,                       // 金币到点待生成：障碍先让路
       waves: 0, groups: 0,                      // 本局生成的障碍波数 / 道具串数（调试用）
       time: 0, best: lastBest, isBest: false
@@ -774,7 +781,8 @@
       if (boosting) {
         /* 无敌 = 金币雨：冲刺的 3.6 秒里金币不断，随出随扫进兜里 */
         addDashLine(CFG.W + 260);
-        S.itemGap = rnd(CFG.DASH_GAP_MIN, CFG.DASH_GAP_MAX);
+        /* 按时间给间隔：换算成当前冲刺速度下的像素，低速/高速出币节奏一致 */
+        S.itemGap = S.speed * mul * rnd(CFG.DASH_GAP_T_MIN, CFG.DASH_GAP_T_MAX);
         S.groups++;
       } else {
         /* 金币落点的两个前提：
@@ -785,8 +793,17 @@
         S.itemPending = true;                    // 先占位：让障碍暂停生成，把跑道空出来
         if (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380)) {
           var w;
-          if (random() < 0.18) { addCoffee(CFG.W + 60); w = 28; }
-          else w = addFishArc(CFG.W + 60, 3 + Math.floor(random() * 3));
+          /* 护盾比金币「贵」：概率低（SHIELD_CHANCE）且带冷却（SHIELD_COOLDOWN）。
+             原来 18% 且无冷却，实测每分钟能吃到 4 个，一局大半个时间都在无敌冲刺里，
+             难度和乐趣都被削平；现在压到约每分钟 1.5 个。
+             roll 先取出来，保证每次生成消耗的随机数个数与旧版一致。 */
+          var roll = random();
+          if (S.dist >= S.shieldHold && roll < CFG.SHIELD_CHANCE) {
+            addCoffee(CFG.W + 60); w = 28;
+            S.shieldHold = S.dist + CFG.SHIELD_COOLDOWN;
+          } else {
+            w = addFishArc(CFG.W + 60, 3 + Math.floor(random() * 3));
+          }
           S.itemGap = rnd(900, 1700) + S.speed;
           S.waveHold = S.dist + w + waveRunway();
           S.groups++;
@@ -980,7 +997,12 @@
   /* ═══════════ 渲染 ═══════════ */
   var dpr = 1;
   function resize() {
-    dpr = Math.min(CFG.DPR_MAX, window.devicePixelRatio || 1);
+    /* 画布被 CSS 拉伸到容器宽度，所以像素密度要按「实际显示宽度」算：
+       dpr = 显示宽度 / 逻辑宽度 × 设备像素比。
+       否则大屏放宽后（如 1392px 显示 960 逻辑像素）画面会被放大糊掉。 */
+    var cssW = canvas.clientWidth || (canvas.getBoundingClientRect && canvas.getBoundingClientRect().width) || 0;
+    var need = (cssW > 0 ? cssW / CFG.W : 1) * (window.devicePixelRatio || 1);
+    dpr = Math.max(1, Math.min(CFG.DPR_MAX, need));
     canvas.width = Math.round(CFG.W * dpr);
     canvas.height = Math.round(CFG.H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

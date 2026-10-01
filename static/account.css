@@ -15,7 +15,29 @@
   color: var(--primary, #1f1f1f);
 }
 
+.ac-head { position: relative; padding-right: 46px; }
 .ac-head h2 { margin: 0 0 8px; font-size: 22px; }
+
+/* 右上角返回叉：手机上没有折叠菜单也能一眼看到出口 */
+.ac-back {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--primary, #1f1f1f);
+  text-decoration: none;
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 10px;
+  transition: filter 0.15s ease;
+}
+.ac-back:hover { filter: brightness(0.96); }
 .ac-sub {
   margin: 0 0 18px;
   font-size: 13px;

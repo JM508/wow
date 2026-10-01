@@ -17,6 +17,15 @@
 const UPSTREAM_ORIGIN = "https://wow-blog.app.workbuddy.host";
 const CLOUD_PREFIX = "/.cloud";
 
+/* 上游偶发连不通（Workers 出口 → 云服务偶尔超时/抖动）会直接把
+   upstream_unreachable 甩给页面，表现为「排行榜一会儿能看一会儿连不上」。
+   同一请求快速重试一次能消掉绝大部分抖动：
+   · 网络层异常（连接失败/超时，请求大概率没送达）→ 所有方法都重试；
+   · 上游明确回了 502/503/504 → 只对幂等的 GET/HEAD 重试，
+     避免 POST（提交成绩）在上游其实已写入时重复插入。 */
+const UPSTREAM_TIMEOUT_MS = 12000;
+const RETRY_DELAY_MS = 400;
+
 /* 转发时要剔除的逐跳头 / 会与新响应体冲突的头 */
 const STRIP_RESPONSE_HEADERS = [
   "content-encoding", "content-length", "transfer-encoding", "connection",
@@ -79,33 +88,49 @@ export async function onRequest(context) {
   headers.delete("Sec-Fetch-Dest");
   headers.delete("Sec-Fetch-User");
 
-  const init = {
+  /* body 先落地成 ArrayBuffer：可跨重试复用（流式 body 只能读一次） */
+  let body;
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    body = await request.arrayBuffer();
+  }
+
+  /* 带一次重试的转发；signal 每次尝试都要新建（旧的可能已 aborted） */
+  const attemptFetch = () => fetch(UPSTREAM_ORIGIN + url.pathname + url.search, {
     method: request.method,
     headers,
     redirect: "manual",
-    signal: AbortSignal.timeout(20000)
-  };
-  if (request.method !== "GET" && request.method !== "HEAD") {
-    init.body = await request.arrayBuffer();
-  }
+    body,
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)
+  });
 
   let res;
   try {
-    res = await fetch(UPSTREAM_ORIGIN + url.pathname + url.search, init);
+    res = await attemptFetch();
+    const retryable = request.method === "GET" || request.method === "HEAD";
+    if (retryable && res.status >= 502 && res.status <= 504) {
+      try { if (res.body) await res.body.cancel(); } catch (e) { /* 忽略 */ }
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      res = await attemptFetch();
+    }
   } catch (e) {
-    return new Response(
-      JSON.stringify({
-        error: "upstream_unreachable",
-        error_description: String((e && e.message) || e)
-      }),
-      {
-        status: 502,
-        headers: {
-          "content-type": "application/json; charset=utf-8",
-          "cache-control": "no-store"
+    try {
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      res = await attemptFetch();
+    } catch (e2) {
+      return new Response(
+        JSON.stringify({
+          error: "upstream_unreachable",
+          error_description: String((e2 && e2.message) || e2)
+        }),
+        {
+          status: 502,
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "no-store"
+          }
         }
-      }
-    );
+      );
+    }
   }
 
   /* Workers 的 fetch 会自动解压响应体，因此不能再原样带上 content-encoding */
