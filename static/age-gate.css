@@ -153,9 +153,117 @@
     position: absolute;
     inset: 0;
     background: #ffffff;
-    opacity: var(--ag-dim, 0.4);
+    opacity: var(--ag-dim, 0.55);
   }
-  [data-theme="dark"] #ag-bg::after { background: #000000; }
+  /* 夜间模式用黑色蒙版，浓度独立控制（--ag-dim-dark） */
+  [data-theme="dark"] #ag-bg::after {
+    background: #000000;
+    opacity: var(--ag-dim-dark, var(--ag-dim, 0.4));
+  }
   /* 让正文容器透明，露出背景图（卡片仍保留自己的底色） */
   html[data-ag-bg] body,
   html[data-ag-bg] .list { background: transparent !important; }
+
+  /* ── 右下角「下载背景图」按钮（半透明，悬停时变清晰） ── */
+  #ag-dl {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 900;
+    padding: 9px 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--primary, #1f1f1f);
+    background: rgba(255, 255, 255, 0.32);
+    border: 1px solid rgba(120, 120, 120, 0.32);
+    border-radius: 999px;
+    box-shadow: none;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    cursor: pointer;
+    opacity: 0.5;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.12s ease;
+  }
+  #ag-dl:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.72);
+    transform: translateY(-1px);
+  }
+  #ag-dl:active { transform: translateY(0); }
+  #ag-dl:focus-visible { opacity: 1; outline: 2px solid #ff5f6d; outline-offset: 2px; }
+  [data-theme="dark"] #ag-dl {
+    background: rgba(0, 0, 0, 0.32);
+    border-color: rgba(255, 255, 255, 0.22);
+  }
+  [data-theme="dark"] #ag-dl:hover { background: rgba(0, 0, 0, 0.62); }
+
+  /* ── 下载确认弹窗（是 / 否） ── */
+  #ag-dl-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2147482500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.35);
+    animation: ag-fade 0.18s ease both;
+  }
+  #ag-dl-modal[hidden] { display: none; }
+  #ag-dl-modal, #ag-dl-modal * { box-sizing: border-box; }
+
+  #ag-dl-modal .ag-dl-card {
+    width: 100%;
+    max-width: 340px;
+    padding: 26px 24px 22px;
+    text-align: center;
+    background: var(--entry, #ffffff);
+    color: var(--primary, #1f1f1f);
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 16px;
+    box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.25), 0 4px 14px -6px rgba(0, 0, 0, 0.10);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+  #ag-dl-modal .ag-dl-title {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  #ag-dl-modal .ag-dl-text {
+    margin: 0 0 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-dl-modal .ag-dl-actions { display: flex; gap: 10px; }
+  #ag-dl-modal .ag-dl-btn {
+    flex: 1;
+    padding: 11px 16px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: transform 0.12s ease, opacity 0.2s ease;
+  }
+  #ag-dl-modal .ag-dl-btn:active { transform: scale(0.97); }
+  #ag-dl-modal .ag-dl-yes {
+    background: linear-gradient(135deg, #ff5f6d, #ff8a5b);
+    color: #ffffff;
+    box-shadow: 0 8px 20px -10px rgba(255, 95, 109, 0.9);
+  }
+  #ag-dl-modal .ag-dl-no {
+    background: transparent;
+    border: 1px solid var(--border, #e6e6e6);
+    color: var(--secondary, #6b6b6b);
+  }
+  #ag-dl-modal .ag-dl-no:hover { opacity: 0.8; }

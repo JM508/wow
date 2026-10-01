@@ -18,7 +18,11 @@
     bgCount: 10,
     bgFolder: "/images/bg/bg",
     bgExt: ".jpg",
-    bgDim: 0.4,      // 白色蒙版浓度：0 = 原图，1 = 纯白。调低文字可读性变差
+    bgDimLight: 0.68, // 白天模式白色蒙版浓度：0 = 原图，1 = 纯白（越大图片越淡）
+    bgDimDark: 0.4,   // 夜间模式黑色蒙版浓度
+
+    /* 验证范围：默认只在网站首页（根路径）拦截，站内文章等子页面直接放行 */
+    homeOnly: true,
 
     // 选「否」时随机跳转的目标（可自由增删）
     noTargets: [
@@ -85,10 +89,15 @@
     var el = document.createElement("div");
     el.id = "ag-bg";
     el.setAttribute("aria-hidden", "true");
-    el.style.backgroundImage = 'url("' + CFG.bgFolder + (idx + 1) + CFG.bgExt + '")';
-    el.style.setProperty("--ag-dim", String(CFG.bgDim));
+    var url = CFG.bgFolder + (idx + 1) + CFG.bgExt;
+    el.style.backgroundImage = 'url("' + url + '")';
+    el.style.setProperty("--ag-dim", String(CFG.bgDimLight));
+    el.style.setProperty("--ag-dim-dark", String(CFG.bgDimDark));
+    el.dataset.src = url;                        // 供「下载背景图」按钮使用
+    el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     document.body.appendChild(el);
     document.documentElement.setAttribute("data-ag-bg", "1");
+    setupDownload(el);
   }
 
   /* ---------- 遮罩渲染 ---------- */
@@ -168,9 +177,77 @@
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
   }
 
+  /* ---------- 右下角「下载背景图」按钮 + 是/否确认弹窗 ---------- */
+  function setupDownload(bg) {
+    if (document.getElementById("ag-dl") || !bg) return;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "ag-dl";
+    btn.setAttribute("aria-haspopup", "dialog");
+    btn.textContent = "⬇ 下载背景图";
+    document.body.appendChild(btn);
+
+    var modal = document.createElement("div");
+    modal.id = "ag-dl-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "ag-dl-title");
+    modal.hidden = true;
+    modal.innerHTML =
+      '<div class="ag-dl-card">' +
+        '<h2 class="ag-dl-title" id="ag-dl-title">下载背景图片</h2>' +
+        '<p class="ag-dl-text">确认下载当前背景图片吗？</p>' +
+        '<div class="ag-dl-actions">' +
+          '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-yes">是</button>' +
+          '<button type="button" class="ag-dl-btn ag-dl-no" id="ag-dl-no">否</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(modal);
+
+    var yes = modal.querySelector("#ag-dl-yes");
+    var no = modal.querySelector("#ag-dl-no");
+
+    function openModal() { modal.hidden = false; setTimeout(function () { try { yes.focus(); } catch (e) {} }, 30); }
+    function closeModal() { modal.hidden = true; }
+
+    btn.addEventListener("click", openModal);              // 点「⬇ 下载背景图」→ 弹确认
+    yes.addEventListener("click", function () {            // 点「是」→ 下载
+      closeModal();
+      var url = bg.dataset.src ||
+                (bg.style.backgroundImage.match(/url\("?([^")]+)"?\)/) || [])[1];
+      if (!url) return;
+      var name = bg.dataset.name || "background.jpg";
+      fetch(url).then(function (r) {
+        if (!r.ok) throw new Error("http " + r.status);
+        return r.blob();
+      }).then(function (blob) {
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.parentNode.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      }).catch(function () {                               // 兜底：新标签打开原图
+        var w = window.open(url, "_blank");
+        if (!w) location.href = url;
+      });
+    });
+    no.addEventListener("click", closeModal);              // 点「否」→ 取消
+    modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !modal.hidden) closeModal();
+    });
+  }
+
   /* ---------- 启动 ---------- */
   if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
   purgeOld();
+
+  // 验证范围：默认只拦首页（根路径），文章等子页面直接放行
+  var p = location.pathname.replace(/index\.html?$/i, "");
+  var isHome = (p === "/" || p === "");
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", applyBg);
@@ -180,14 +257,15 @@
 
   if (passed()) {
     html.setAttribute("data-ag", "ok");       // 已通过：不遮罩，正文正常显示
-  } else {
-    html.setAttribute("data-ag", "pending");  // 未通过：立刻隐藏正文，等 DOM 好了再画遮罩
+  } else if (!CFG.homeOnly || isHome) {
+    html.setAttribute("data-ag", "pending");  // 未通过（且在首页）：隐藏正文，画遮罩
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", render);
     } else {
       render();
     }
   }
+  // 非首页未验证：不拦截、不写任何标记（进入首页时会重新验证）
 
   // 调试 / 手动控制入口
   window.AgeGate = {

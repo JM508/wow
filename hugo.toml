@@ -6,5 +6,6 @@ theme = "PaperMod"
 enableRobotsTXT = true
 
 [params]
-  homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "分享搞笑段子、游戏攻略和动漫推荐。"}
+  defaultTheme = "dark"
+  homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "分享搞笑段子、游戏攻略和动漫推荐。\n\n[🎮 开始玩扫雷](/minesweeper/)"}
   ShowReadingTime = true

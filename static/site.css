@@ -1,0 +1,50 @@
+/* ══ 站点自定义样式 ══
+   注：导航栏（.header-nav）保持主题默认布局——无菜单项时 logo/主题按钮靠左。
+   扫雷入口改为首页正文区的居中按钮（见下方规则）。 */
+
+/* ══ 首页正文区的扫雷快捷入口（居中大按钮） ══
+   入口来自 hugo.toml 的 homeInfoParams.Content 里的 markdown 链接，
+   渲染后是无 class 的 <a>，故用 :has() 选中其所在段落并居中。 */
+.home-info .entry-content p:has(a[href*="/minesweeper/"]) {
+  text-align: center;
+  margin-top: 1.6rem;
+}
+
+.home-info .entry-content a[href*="/minesweeper/"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 12px 30px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #ffffff;
+  text-decoration: none;
+  background: linear-gradient(135deg, #ff5f6d, #ff8a5b);
+  border-radius: 12px;
+  box-shadow: 0 10px 26px -12px rgba(255, 95, 109, 0.95);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.home-info .entry-content a[href*="/minesweeper/"]:hover {
+  filter: brightness(1.04);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px -12px rgba(255, 95, 109, 1);
+}
+
+.home-info .entry-content a[href*="/minesweeper/"]:active { transform: translateY(0); }
+
+/* 不支持 :has() 的老浏览器兜底：整块正文居中，按钮依然居中可见 */
+@supports not (selector(:has(*))) {
+  .home-info .entry-content { text-align: center; }
+}
+
+/* ══ 扫雷页（含 #ms-root 的页面）在大屏放宽内容宽度 ══
+   主题默认 --main-width 720px，高级棋盘 30 列放不下，放宽到最多约 1180px；
+   只影响扫雷这一页，其他文章页保持原宽度。 */
+@media (min-width: 900px) {
+  .main:has(#ms-root) {
+    max-width: min(1180px, 94vw);
+  }
+}

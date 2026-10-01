@@ -1,0 +1,153 @@
+/* 扫雷小游戏样式（明暗主题跟随 PaperMod 的 CSS 变量） */
+#ms-root {
+  max-width: 100%;
+  margin: 16px 0 24px;
+  padding: 16px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  background: var(--code-bg, #f6f6f6);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+#ms-root * { box-sizing: border-box; }
+
+.ms-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ms-bar-sub { align-items: center; }
+
+#ms-level {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--primary, #1f1f1f);
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ms-stat {
+  min-width: 74px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--primary, #1f1f1f);
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+}
+
+#ms-face, #ms-flagmode {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #1f1f1f);
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+#ms-face:active, #ms-flagmode:active { transform: scale(0.96); }
+
+#ms-flagmode[aria-pressed="true"] {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff5f6d, #ff8a5b);
+  border-color: transparent;
+}
+
+.ms-hint { font-size: 12px; color: var(--secondary, #888888); }
+
+/* 雷区：格子尺寸由 JS 按难度 + 容器宽度自适应设置（见 minesweeper.js fitCells） */
+#ms-board {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ms-cell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 1em;              /* 字号由棋盘容器的 font-size 决定（JS 设置） */
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  vertical-align: middle;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  /* 未翻开 */
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #e6e6e6);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12), inset 0 2px 0 rgba(255, 255, 255, 0.5);
+  transition: background 0.1s ease;
+}
+.ms-cell:hover { background: var(--code-bg, #dcdcdc); }
+.ms-cell:active { transform: scale(0.94); }
+.ms-cell:focus-visible { outline: 2px solid #ff5f6d; outline-offset: 1px; }
+
+/* 已翻开 */
+.ms-cell.open {
+  cursor: default;
+  background: var(--theme, #f3f3f3);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+.ms-cell.open:active { transform: none; }
+
+/* 数字配色（经典扫雷） */
+.ms-cell.n1 { color: #1976d2; }
+.ms-cell.n2 { color: #388e3c; }
+.ms-cell.n3 { color: #d32f2f; }
+.ms-cell.n4 { color: #7b1fa2; }
+.ms-cell.n5 { color: #c25e00; }
+.ms-cell.n6 { color: #00838f; }
+.ms-cell.n7 { color: #5d4037; }
+.ms-cell.n8 { color: #616161; }
+[data-theme="dark"] .ms-cell.n1 { color: #7ab3f5; }
+[data-theme="dark"] .ms-cell.n2 { color: #81c995; }
+[data-theme="dark"] .ms-cell.n3 { color: #f28b82; }
+[data-theme="dark"] .ms-cell.n4 { color: #c58af9; }
+[data-theme="dark"] .ms-cell.n5 { color: #fcad70; }
+[data-theme="dark"] .ms-cell.n6 { color: #78d9ec; }
+[data-theme="dark"] .ms-cell.n7 { color: #d7ccc8; }
+[data-theme="dark"] .ms-cell.n8 { color: #dadada; }
+
+/* 踩雷 / 误标 */
+.ms-cell.boom { background: #ef5350 !important; }
+.ms-cell.wrongflag { background: #ef9a9a !important; }
+[data-theme="dark"] .ms-cell.wrongflag { background: #8c4a4a !important; }
+
+.ms-cell:disabled { cursor: default; }
+
+.ms-msg {
+  margin: 12px 0 0;
+  min-height: 22px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--primary, #1f1f1f);
+}
+.ms-msg.win { color: #2e7d32; }
+.ms-msg.lose { color: #c62828; }

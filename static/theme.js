@@ -18,13 +18,15 @@
 
   var html = document.documentElement;
 
-  /* ── 1) 主题初始化（对应 head.html 的内联脚本，auto 模式）──
-     必须在任何渲染发生前执行：本文件同步加载于 <head> */
+  /* ── 1) 主题初始化（对应 head.html 的内联脚本，defaultTheme = "dark"）──
+     必须在任何渲染发生前执行：本文件同步加载于 <head>
+     默认暗色：只有访客手动切过浅色（pref-theme=light）才用浅色，
+     不再跟随系统偏好（hugo.toml 里 defaultTheme = "dark"，
+     主题 baseof 也会直接输出 <html data-theme="dark">，两者保持一致） */
   try {
     var pref = localStorage.getItem("pref-theme");
-    if (pref === "dark") html.dataset.theme = "dark";
-    else if (pref === "light") html.dataset.theme = "light";
-    else html.dataset.theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    if (pref === "light") html.dataset.theme = "light";
+    else html.dataset.theme = "dark";
   } catch (e) {}
 
   /* ── 2) CSP 探测 ── */
