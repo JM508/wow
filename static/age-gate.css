@@ -169,10 +169,17 @@
     content: "";
     position: absolute;
     inset: 0;
-    /* 白天蒙版：浅灰蓝（--ag-tint 由 age-gate.js 注入，原纯白太亮） */
-    background: var(--ag-tint, #cfd5dd);
-    opacity: var(--ag-dim, 0.476);
+    /* 白天蒙版：灰蓝（--ag-tint 由 age-gate.js 注入）。
+       ⚠️ 这层是白天「背景发白」的唯一来源：加白混合 = 提亮 + 去饱和，
+       浓度（--ag-dim）与颜色深浅（--ag-tint）共同决定发白程度 */
+    background: var(--ag-tint, #bcc6d4);
+    opacity: var(--ag-dim, 0.30);
   }
+  /* 白天给背景图补一点饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
+     夜间是加黑压暗、不失真，不需要补；「看背景图」模式要求显示真原图，也关闭） */
+  [data-theme="light"] #ag-bg,
+  html[data-ag="pending"] #ag-bg { filter: saturate(var(--ag-sat, 1)); }
+  html[data-ag-view="1"] #ag-bg { filter: none; }
   /* 夜间模式用黑色蒙版，浓度独立控制（--ag-dim-dark） */
   [data-theme="dark"] #ag-bg::after {
     background: #000000;
@@ -180,8 +187,8 @@
   }
   /* 验证遮罩显示期间一律用白天蒙版（与上面的「验证=白天模式」一致） */
   html[data-ag="pending"] #ag-bg::after {
-    background: var(--ag-tint, #cfd5dd);
-    opacity: var(--ag-dim, 0.476);
+    background: var(--ag-tint, #bcc6d4);
+    opacity: var(--ag-dim, 0.30);
   }
   /* 通过验证后由白天切回夜间时不硬跳，蒙版缓缓过渡 */
   #ag-bg::after { transition: background-color 0.45s ease, opacity 0.45s ease; }

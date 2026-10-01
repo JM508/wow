@@ -21,11 +21,14 @@
     /* 视口 ≤ 此宽度改用手机版小图 bgN-m.webp（1440 宽 webp，约为原图 1/4 体积）：
        手机上加载 300KB 的 1920 宽原图很慢，而背景还盖着一层蒙版，看不出差别。 */
     bgMobileMax: 820,
-    bgDimLight: 0.476, // 白天模式蒙版浓度：0 = 原图，1 = 纯色（越大图片越淡）
-                       // 0.476 = 原 0.68 下调 30%，背景图更透出来一些
+    bgDimLight: 0.30, // 白天模式蒙版浓度：0 = 原图，1 = 纯色（越大图片越淡）
+                      // ⚠️ 白天蒙版是「加白」混合：会同时提亮 + 把颜色往灰拉（发白的根源），
+                      // 与夜间的「加黑」压暗（只降亮度、不损色彩）天然不对称，所以白天要更低。
+                      // 0.30 ≈ 背景亮度只比原图高约 20%（0.476 时是 +37%）
     bgDimDark: 0.4,   // 夜间模式黑色蒙版浓度
-    bgTintLight: "#cfd5dd", // 白天模式蒙版颜色：浅灰蓝（原纯白太刺眼，压暗一档；
-                            // 想更暗就换成更深的灰，如 #c0c7d1）
+    bgTintLight: "#bcc6d4", // 白天蒙版颜色：灰蓝。越浅/越亮图就越「白」，
+                            // 想更通透可再调深（如 #a9b5c7）；想更亮则往 #d5dbe3 方向调
+    bgSaturateLight: 1.15,  // 白天给背景图补饱和度，抵消「加白」混合带来的发灰（1 = 不补）
 
     /* 验证范围：默认只在网站首页（根路径）拦截，站内文章等子页面直接放行 */
     homeOnly: true,
@@ -149,6 +152,8 @@
     el.style.setProperty("--ag-dim", String(CFG.bgDimLight));
     el.style.setProperty("--ag-dim-dark", String(CFG.bgDimDark));
     if (CFG.bgTintLight) el.style.setProperty("--ag-tint", String(CFG.bgTintLight));
+    if (CFG.bgSaturateLight && CFG.bgSaturateLight !== 1)
+      el.style.setProperty("--ag-sat", String(CFG.bgSaturateLight));
     el.dataset.src = url;                        // 供「下载背景图」按钮使用
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     document.body.appendChild(el);
