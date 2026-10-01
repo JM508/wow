@@ -63,6 +63,8 @@
     DASH_Y: 36,             // 冲刺币中心离地高度（站着跑就能吃到）
 
     AIR_GAP: 44,            // 飞行物底边离地高度（只能下蹲穿过）
+    AIR_TOP: -20,           // 飞行物碰撞盒顶（画面上沿之外）：整体吊在天花板上 → 跳不过去
+    AIR_LEAD: 0.25,         // 飞行物这一波额外后推的时间（秒）：留出「上一跳落地」的反应余量
     GAP_MIN: 0.80,          // 障碍间距系数下限（× 当前速度）
     GAP_MAX: 1.55,          // 障碍间距系数上限
 
@@ -129,8 +131,9 @@
     for (var i = obstacles.length - 1; i >= 0; i--) {
       var o = obstacles[i];
       if (o.x + o.w > CFG.PX - 24 && o.x < CFG.PX + CFG.BOOST_CLEAR) {
+        var bb = obBody(o);
         addDebris(o);
-        sparkle(o.x + o.w / 2, o.y + o.h / 2, 10, "#8ab4ff");
+        sparkle(bb.x + bb.w / 2, bb.y + bb.h / 2, 10, "#8ab4ff");
         obstacles.splice(i, 1);
         cleared++;
       }
@@ -420,9 +423,19 @@
     var h = hOverride || def.h;
     var o = {
       kind: kind, id: def.id, x: x, w: def.w, h: h,
-      y: kind === "air" ? CFG.GROUND - CFG.AIR_GAP - h : CFG.GROUND - h,
       phase: random() * 6.28
     };
+    if (kind === "air") {
+      /* 飞行物「吊」在天花板上：本体（瓶子/纸/无人机）高 h，但碰撞盒从画面上沿
+         一直垂到「下蹲缝隙」的上沿。于是跳起来只会迎面撞上去 —— 想过去只能下蹲。
+         （旧版只把本体当碰撞盒，最高点才到 230 左右，一次满跳脚底能抬到 144，
+          直接就从它上面飞过去了。） */
+      o.body = h;
+      o.y = CFG.AIR_TOP;
+      o.h = (CFG.GROUND - CFG.AIR_GAP) - CFG.AIR_TOP;
+    } else {
+      o.y = CFG.GROUND - h;
+    }
     obstacles.push(o);
     return o;
   }
@@ -611,7 +624,8 @@
 
   var HELP_HTML = "按 <b>空格</b>/<b>↑</b>/<b>W</b> 起跳，长按跳得更高；<br>" +
     "按 <b>↓</b>/<b>S</b> 下蹲，空中按下蹲可加速下落；<br>" +
-    "地面的障碍要 <b>跳过</b>，飞在空中的要 <b>下蹲</b> 躲开；<br>" +
+    "地面的障碍要 <b>跳过</b>；飞在空中的只能 <b>下蹲</b> 从下面钻过去" +
+    "（它吊在天花板上，跳起来会撞上吊索）；<br>" +
     "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
     "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
     "速度会越来越快，坚持越久分数越高。";
@@ -821,8 +835,9 @@
       if (o.x + o.w < -40) { obstacles.splice(i, 1); continue; }
       if (hit(o)) {
         if (boosting) {
+          var bb = obBody(o);
           addDebris(o);                            // 击飞表现：障碍本体翻滚着飞出去
-          sparkle(o.x + o.w / 2, o.y, 14, "#ffd166");
+          sparkle(bb.x + bb.w / 2, bb.y + bb.h / 2, 14, "#ffd166");
           S.score += 8;
           shake = Math.max(shake, 6);
           obstacles.splice(i, 1);
@@ -889,6 +904,12 @@
   function spawnWave() {
     var speed = S.speed;
     var from = CFG.W + 60;
+    var isAir = speed > 600 && random() < 0.32;
+    /* 飞行物这一波整体往后推一点时间：
+       它只能下蹲通过（跳起来会撞上去），万一玩家正为上一个地面障碍起跳、人还在半空，
+       落地前就会被它撞死。正常最小间距 0.80s 减掉一次完整跳跃的 0.655s 只剩 0.145s 反应，
+       对玩家太苛刻；多给 AIR_LEAD 秒，就有 0.4s 稳稳落地再蹲。 */
+    if (isAir) from += Math.round(speed * CFG.AIR_LEAD);
     var end = from;                                // 这一波最右侧（决定后方要留多少空档）
     function push(kind, x, h) {
       var o = addObstacle(kind, x, h);
@@ -896,7 +917,7 @@
       return o;
     }
 
-    if (speed > 600 && random() < 0.32) {
+    if (isAir) {
       push("air", from);                           // 飞行物：必须下蹲
     } else {
       var r = random();
@@ -915,6 +936,15 @@
     /* 这一波之后必须留够「落地 + 再起跳」的距离，才允许生成金币 */
     S.itemHold = S.dist + (end - from) + itemRunway();
     S.waves++;
+  }
+
+  /* 障碍「本体」矩形（瓶子 / 纸 / 无人机那一段）。
+     地面障碍的本体就是碰撞盒；空中障碍的碰撞盒是「吊到天花板的整条竖井」，
+     本体只是末端那一截 —— 绘制、碎块、撞碎粒子都得按本体走，
+     否则瓶子会被画成一根 276px 高的柱子、粒子会在屏幕顶上炸开。 */
+  function obBody(o) {
+    var h = o.kind === "air" ? (o.body || o.h) : o.h;
+    return { x: o.x, y: o.y + o.h - h, w: o.w, h: h };
   }
 
   function hit(o) {
@@ -951,9 +981,11 @@
      眼睛能看到「它被撞飞了」，而不是「它没了」。 */
   function addDebris(o) {
     var vis = obVisual(o);
+    var bb = obBody(o);
     var im = vis ? vis.im : null;
-    var w = vis ? vis.w : o.w, h = vis ? vis.h : o.h;
-    var cy = o.kind === "ground" ? CFG.GROUND - h / 2 : o.y + o.h / 2;
+    var w = vis ? vis.w : bb.w, h = vis ? vis.h : bb.h;
+    /* 空中障碍的本体挂在吊索末端（贴图底边还要再抬 10px），碎块从那儿飞出去 */
+    var cy = o.kind === "ground" ? CFG.GROUND - h / 2 : o.y + o.h - 10 - h / 2;
     debris.push({
       im: im, w: w, h: h, kind: o.kind,
       x: o.x + o.w / 2,
@@ -1154,6 +1186,28 @@
     return { im: im, w: w, h: h };
   }
 
+  /* ── 飞行物的吊索 ──
+     从画面上沿垂到本体顶端。它同时是**碰撞盒的可视化**：
+     碰撞盒就是这条竖井（一路顶到画面外），所以「跳过去」会撞在索上，
+     只有从下面的缝隙蹲过去才行 —— 让判定和画面说的是同一件事。 */
+  function drawAirRope(cx, y0, y1) {
+    if (!(y1 > y0)) return;
+    ctx.save();
+    ctx.strokeStyle = "rgba(132,146,164,0.75)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, y0);
+    ctx.lineTo(cx, y1);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(186,198,214,0.9)";
+    for (var y = y0 + 8; y < y1; y += 16) {
+      ctx.beginPath();
+      ctx.ellipse(cx, y, 4, 2.6, 0, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   /* ── 障碍绘制 ── */
   function drawObstacle(o, pal) {
     ctx.save();
@@ -1170,20 +1224,22 @@
         ctx.fill();
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
       } else {
-        /* 贴图底边锚在「碰撞盒底再往上抬 10px」，而不是中心对齐：
-           · 空中障碍碰撞盒只有 26~30px 高，按中心对齐时 42~57px 高的瓶子图会往下
-             多出 8~14px，正好压进下蹲角色的头部 —— 看着像穿模；
-           · 下蹲姿态的可见头顶（精灵皮肤 252 / 矢量 267）也比碰撞盒顶（266）高，
-             底边只锚到盒底（256±浮动 3.5）仍会蹭到精灵皮肤的头发，
-             抬 10px 后瓶子最低点 249.5，与可见头顶最少留 2.5px。 */
+        /* 贴图底边锚在「下蹲缝隙上沿再往上抬 10px」：
+           · 瓶子本体高 42~57px，若按中心对齐会压进下蹲角色的头部 —— 看着像穿模；
+           · 抬 10px 后瓶子最低点 246±3.5，与下蹲可见头顶最少留 2.5px。
+           上面再从画面上沿垂一条吊索到瓶口，「吊在天花板上」一眼可辨。 */
         var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
-        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, o.y + o.h - vis.h - 10 + bob, vis.w, vis.h);
+        var btm = o.y + o.h - 10 + bob;
+        drawAirRope(o.x + o.w / 2, o.y, btm - vis.h);
+        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, btm - vis.h, vis.w, vis.h);
       }
       ctx.restore();
       return;
     }
 
-    var x = o.x, y = o.y, w = o.w, h = o.h;
+    var bb = obBody(o);
+    var x = bb.x, y = bb.y, w = bb.w, h = bb.h;
+    if (o.kind === "air") drawAirRope(o.x + o.w / 2, o.y, y);
 
     if (o.id === "cup") {                        // 咖啡杯
       ctx.fillStyle = "#ffffff"; rr(ctx, x, y + 8, w, h - 8, 7); ctx.fill();
@@ -1541,7 +1597,11 @@
     /* 只读快照：供调试与「自动试跑」测试读取当前障碍分布 */
     obstacles: function () {
       return obstacles.map(function (o) {
-        return { kind: o.kind, id: o.id, x: o.x, y: o.y, w: o.w, h: o.h };
+        /* y/h 是碰撞盒（空中障碍=吊到天花板的整条竖井）；
+           by/bh 是本体（瓶子那一段）的顶边与高度，测试与工具看这个更直观 */
+        var bb = obBody(o);
+        return { kind: o.kind, id: o.id, x: o.x, y: o.y, w: o.w, h: o.h,
+                 by: bb.y, bh: bb.h };
       });
     },
     items: function () {
