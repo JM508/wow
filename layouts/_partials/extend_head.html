@@ -151,6 +151,27 @@
     #ag-root { animation: none; }
     #ag-root .ag-loading span { animation-duration: 1.8s; }
   }
+
+  /* ── 会话背景图 ── */
+  #ag-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  #ag-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #ffffff;
+    opacity: var(--ag-dim, 0.4);
+  }
+  [data-theme="dark"] #ag-bg::after { background: #000000; }
+  /* 让正文容器透明，露出背景图（卡片仍保留自己的底色） */
+  html[data-ag-bg] body,
+  html[data-ag-bg] .list { background: transparent !important; }
 </style>
 
 <script id="ag-script">
@@ -167,6 +188,13 @@
     noText: "否，我未满 18 周岁",
 
     yesRedirect: "", // 选「是」后额外跳转的地址，留空 = 留在当前页
+
+    /* 站点背景图：/images/bg/bg1.jpg ~ bg{bgCount}.jpg
+       每次新开浏览器访问随机换一张（保证与上一张不同） */
+    bgCount: 10,
+    bgFolder: "/images/bg/bg",
+    bgExt: ".jpg",
+    bgDim: 0.4,      // 白色蒙版浓度：0 = 原图，1 = 纯白。调低文字可读性变差
 
     // 选「否」时随机跳转的目标（可自由增删）
     noTargets: [
@@ -213,6 +241,30 @@
   }
 
   var passed = readStore;
+
+  /* ---------- 会话背景图：每次新开浏览器随机换一张（与上次不同） ---------- */
+  function applyBg() {
+    var n = CFG.bgCount;
+    if (!n) return;
+    var idx = -1, last = -1;
+    try { idx = parseInt(sessionStorage.getItem("ag_bg"), 10); } catch (e) {}
+    if (!(idx >= 0 && idx < n)) {                 // 本会话还没选过 → 选一张
+      try { last = parseInt(localStorage.getItem("ag_bg_last"), 10); } catch (e) {}
+      idx = Math.floor(Math.random() * n);
+      if (n > 1 && idx === last) idx = (idx + 1) % n;   // 不与上一张重复
+      try {
+        sessionStorage.setItem("ag_bg", String(idx));
+        localStorage.setItem("ag_bg_last", String(idx));
+      } catch (e) {}
+    }
+    var el = document.createElement("div");
+    el.id = "ag-bg";
+    el.setAttribute("aria-hidden", "true");
+    el.style.backgroundImage = 'url("' + CFG.bgFolder + (idx + 1) + CFG.bgExt + '")';
+    el.style.setProperty("--ag-dim", String(CFG.bgDim));
+    document.body.appendChild(el);
+    document.documentElement.setAttribute("data-ag-bg", "1");
+  }
 
   /* ---------- 遮罩渲染 ---------- */
   function render() {
@@ -293,6 +345,12 @@
   /* ---------- 启动 ---------- */
   if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
   purgeOld();
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyBg);
+  } else {
+    applyBg();
+  }
 
   if (passed()) {
     html.setAttribute("data-ag", "ok");       // 已通过：不遮罩，正文正常显示
