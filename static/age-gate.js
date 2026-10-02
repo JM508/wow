@@ -15,15 +15,14 @@
 
     /* 站点背景图：/images/bg/bg1.jpg ~ bg{bgCount}.jpg
        每次新开浏览器访问随机换一张（保证与上一张不同） */
-    bgCount: 4,
+    bgCount: 20,
     bgFolder: "/images/bg/bg",
     bgExt: ".jpg",
     /* 背景图的缓存穿透版本号：/images/* 是 30 天强缓存，换图必须换号，
        否则回访客户端会一直命中旧图的缓存（文件名不变时无感知更新）。 */
-    bgVer: 2,
-    /* 视口 ≤ 此宽度改用手机版小图 bgN-m.webp（1440 宽 webp，约为原图 1/4 体积）：
-       手机上加载 300KB 的 1920 宽原图很慢，而背景还盖着一层蒙版，看不出差别。 */
-    bgMobileMax: 820,
+    bgVer: 4,
+    /* 手机端用 1080x1440 竖版裁切小图（bgN-m.webp，见 bgUrlFor），
+       桌面端用 1920 宽横版原图。 */
     bgDimLight: 0.30, // 白天模式蒙版浓度：0 = 原图，1 = 纯色（越大图片越淡）
                       // ⚠️ 白天蒙版是「加白」混合：会同时提亮 + 把颜色往灰拉（发白的根源），
                       // 与夜间的「加黑」压暗（只降亮度、不损色彩）天然不对称，所以白天要更低。
@@ -91,22 +90,9 @@
   var passed = readStore;
 
   /* ---------- 会话背景图：每次新开浏览器随机换一张（与上次不同） ---------- */
-  /* 浏览器是否支持 webp（不支持就退回原图，别让手机背景开天窗） */
-  var webpSupport = null;
-  function canWebp() {
-    if (webpSupport !== null) return webpSupport;
-    try {
-      var c = document.createElement("canvas");
-      webpSupport = !!(c.toDataURL && c.toDataURL("image/webp").indexOf("data:image/webp") === 0);
-    } catch (e) { webpSupport = false; }
-    return webpSupport;
-  }
-  /* 窄屏（手机）→ 小图 bgN-m.webp；桌面 → 原图。全部带 bgVer 版本号穿透缓存 */
+  /* 全端统一用原图 bgN.jpg，带 bgVer 版本号穿透缓存 */
   function bgUrlFor(idx) {
     var base = CFG.bgFolder + (idx + 1) + CFG.bgExt;
-    if (CFG.bgMobileMax && window.innerWidth <= CFG.bgMobileMax && canWebp()) {
-      base = base.replace(/\.jpg$/, "-m.webp");
-    }
     return base + (CFG.bgVer ? "?v=" + CFG.bgVer : "");
   }
 
@@ -177,14 +163,30 @@
     if (CFG.bgTintLight) el.style.setProperty("--ag-tint", String(CFG.bgTintLight));
     if (CFG.bgSaturateLight && CFG.bgSaturateLight !== 1)
       el.style.setProperty("--ag-sat", String(CFG.bgSaturateLight));
-    el.dataset.src = url;                              // 展示中那张（手机可能是压缩版）
+    el.dataset.src = url;                              // 展示中那张（不带版本号）
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
     el.dataset.full = url;                             // 原图（jpg）
     el.dataset.fullName = "background" + (idx + 1) + CFG.bgExt;
-    el.dataset.lite = url.replace(/\.jpg$/, "-m.webp"); // 压缩版（webp，约 1/4 体积）
-    el.dataset.liteName = "background" + (idx + 1) + "-m.webp";
     document.body.appendChild(el);
     document.documentElement.setAttribute("data-ag-bg", "1");
+
+    /* 404 兜底：图片缺失（如部署不同步导致 bgCount 与线上张数不一致）时
+       会整块开天窗 —— 这里探测当前图，加载失败就按顺序换下一张，最多试 n 张 */
+    (function verifyBg(u, i, tried) {
+      var probe = new Image();
+      probe.onerror = function () {
+        var ni = (i + 1) % n;
+        if (tried + 1 < n) verifyBg(bgUrlFor(ni), ni, tried + 1);
+        var nu = CFG.bgFolder + (ni + 1) + CFG.bgExt;
+        el.style.backgroundImage = 'url("' + bgUrlFor(ni) + '")';
+        el.dataset.src = nu;
+        el.dataset.name = "background" + (ni + 1) + CFG.bgExt;
+        el.dataset.full = nu;
+        el.dataset.fullName = "background" + (ni + 1) + CFG.bgExt;
+      };
+      probe.src = u;
+    })(bgUrlFor(idx), idx, 0);
+
     // 首页专属的两个悬浮按钮：左下「下载背景图」、右下「看背景图」
     if (isHome) {
       setupDownload(el);
@@ -294,15 +296,13 @@
         '<p class="ag-dl-text">选择要下载的版本：</p>' +
         '<div class="ag-dl-actions">' +
           '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-full">原图下载</button>' +
-          '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-lite">压缩版下载</button>' +
           '<button type="button" class="ag-dl-btn ag-dl-no" id="ag-dl-no">取消</button>' +
         '</div>' +
-        '<p class="ag-dl-note">原图（约 300~500KB）画质最佳；压缩版（约 100KB）手机下载更快，桌面看效果几乎一样。</p>' +
+        '<p class="ag-dl-note">原图（约 300~500KB）画质最佳，手机与桌面下载的是同一张。</p>' +
       '</div>';
     document.body.appendChild(modal);
 
     var full = modal.querySelector("#ag-dl-full");
-    var lite = modal.querySelector("#ag-dl-lite");
     var no = modal.querySelector("#ag-dl-no");
 
     function openModal() { modal.hidden = false; setTimeout(function () { try { full.focus(); } catch (e) {} }, 30); }
@@ -332,9 +332,6 @@
     btn.addEventListener("click", openModal);              // 点「⬇ 下载背景图」→ 弹选择
     full.addEventListener("click", function () {           // 原图（jpg）
       doDownload(bg.dataset.full || bg.dataset.src, bg.dataset.fullName || "background.jpg");
-    });
-    lite.addEventListener("click", function () {           // 压缩版（webp）
-      doDownload(bg.dataset.lite, bg.dataset.liteName || "background-m.webp");
     });
     no.addEventListener("click", closeModal);              // 取消
     modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
