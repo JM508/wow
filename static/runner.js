@@ -4,7 +4,9 @@
    · 全部画面用 canvas 2D 程序化绘制，不依赖任何图片 / 字体文件
    · 音效用 WebAudio 实时合成，不依赖任何音频文件
      （本站 CSP 为纯同源白名单、无 unsafe-inline，禁止内联脚本）
-   · 逻辑分辨率固定 960×360，由 CSS 等比缩放适配各种屏幕
+   · 逻辑世界宽 960，高随画布实际形状而定（见 resize()）
+   · 画面由 CSS 决定画布盒子大小（宽铺满正文、高自适应视口），
+     渲染时按画布「实际宽高」反推缩放，所以画面永远是等比、不变形
    · 末尾暴露 window.Runner 供控制台调试与自动化测试驱动
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -20,7 +22,15 @@
   /* ═══════════ 可调参数 ═══════════ */
   var CFG = {
     W: 960, H: 360,
-    GROUND: 300,            // 地面线（逻辑坐标 y）
+    GROUND: 300,            // 地面线（逻辑坐标 y）—— 会随画布高度自适应，见 resize()
+    GROUND_STRIP: 60,       // 地面线以下固定留出的土层高度（世界单位）
+
+    /* ── 画布形状变化的两个闸门（详见 resize()）──
+       画布高度改成按视口自适应之后，画面就在「前方视野」和「放大倍数」之间取舍：
+       VIEW_MIN_W 是横向最少要能看到的世界宽度，再窄前方障碍就来不及反应；
+       VIEW_MAX_H 是纵向最多显示的世界高度，再多就是一大片空天空、反而更难看。 */
+    VIEW_MIN_W: 880,
+    VIEW_MAX_H: 500,
     PX: 148,                // 角色固定 x
 
     BODY_W: 30,             // 站立碰撞盒宽
@@ -81,7 +91,8 @@
     COIN_PICK: 30,          // 金币拾取半径 = r + 30（比道具宽松一点）
 
     PHASE_DIST: 9000,       // 昼夜每阶段推进距离（px）
-    DPR_MAX: 3               // 渲染像素密度上限（大屏放宽后要更高，否则画面被放大糊掉）
+    DPR_MAX: 3,             // 渲染像素密度上限（大屏放宽后要更高，否则画面被放大糊掉）
+    DPR_MAX_PX: 4200000     // 画布渲染总像素上限：画布又宽又高时别把低端机拖垮
   };
 
   var AIR_TIME = 2 * Math.abs(CFG.JUMP_V) / CFG.GRAVITY;   // 一次完整跳跃的滞空时间 ≈ 0.655s
@@ -1058,17 +1069,60 @@
   }
 
   /* ═══════════ 渲染 ═══════════ */
-  var dpr = 1;
+  var dpr = 1;                     // 每个 CSS 像素用几个渲染像素
+  var zoom = 1;                    // 每个世界单位占几个 CSS 像素
   function resize() {
-    /* 画布被 CSS 拉伸到容器宽度，所以像素密度要按「实际显示宽度」算：
-       dpr = 显示宽度 / 逻辑宽度 × 设备像素比。
-       否则大屏放宽后（如 1392px 显示 960 逻辑像素）画面会被放大糊掉。 */
-    var cssW = canvas.clientWidth || (canvas.getBoundingClientRect && canvas.getBoundingClientRect().width) || 0;
-    var need = (cssW > 0 ? cssW / CFG.W : 1) * (window.devicePixelRatio || 1);
-    dpr = Math.max(1, Math.min(CFG.DPR_MAX, need));
-    canvas.width = Math.round(CFG.W * dpr);
-    canvas.height = Math.round(CFG.H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* 画布的宽高由 CSS 决定（宽度铺满正文；宽屏下高度按视口高度自适应，
+       见 runner.css）。这里反推「世界单位 → CSS 像素」的缩放 zoom：
+         fit  = 画布宽 / 960           —— 再小世界就铺不满画布，右边会留白
+         上限 = 画布宽 / VIEW_MIN_W    —— 横向至少留出 VIEW_MIN_W 个世界单位，
+                                          再窄前方可视距离变短，高速下来不及反应
+         目标 = 尽量填满画布高度，但纵向最多显示 VIEW_MAX_H（再多就是空天空）
+       纵向可见高度 = 画布高 / zoom，所以画布不管什么形状，画面都等比、不变形。 */
+    var cssW = canvas.clientWidth || 0;
+    var cssH = canvas.clientHeight || 0;
+    if ((!cssW || !cssH) && canvas.getBoundingClientRect) {
+      var rect = canvas.getBoundingClientRect();
+      cssW = cssW || rect.width || 0;
+      cssH = cssH || rect.height || 0;
+    }
+
+    var prevGround = CFG.GROUND;
+    if (cssW > 0 && cssH > 0) {
+      var fit = cssW / CFG.W;
+      zoom = Math.max(fit, Math.min(Math.max(fit, cssH / CFG.VIEW_MAX_H),
+                                    cssW / CFG.VIEW_MIN_W));
+      /* 像素密度按设备像素比给足（画面被放大 zoom 倍，密度不够就糊），
+         再夹在 [1, DPR_MAX]，最后兜一道总像素上限。 */
+      dpr = Math.max(1, Math.min(CFG.DPR_MAX, window.devicePixelRatio || 1));
+      var pxCap = Math.sqrt(CFG.DPR_MAX_PX / (cssW * cssH));
+      if (pxCap < dpr) dpr = Math.max(1, pxCap);
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);      // 画布盒子的等比像素版
+      /* 后备像素是整数、画布盒子不是，取整会让世界差半个像素盖不满宽度
+         （右边缘漏一条白），所以按实际后备宽度把缩放抬回来一点点。 */
+      zoom = Math.max(zoom, canvas.width / (dpr * CFG.W));
+      CFG.H = canvas.height / (dpr * zoom);        // 画布内可见的世界高度
+      CFG.GROUND = Math.max(CFG.VIEW_MAX_H / 2, CFG.H - CFG.GROUND_STRIP);
+    } else {
+      /* 量不到尺寸（jsdom 等无布局环境）：退回原来的 960×360 逻辑尺寸 */
+      zoom = 1;
+      dpr = 1;
+      canvas.width = CFG.W;
+      canvas.height = CFG.H;
+    }
+    ctx.setTransform(dpr * zoom, 0, 0, dpr * zoom, 0, 0);
+
+    /* 地面线会随画布高度上下移动：把已经在场上的东西一起平移，
+       免得它们相对地面「悬空」（窗口尺寸变化时会走到这里）。 */
+    var dg = CFG.GROUND - prevGround;
+    if (dg) {
+      if (P) P.y += dg;
+      for (var i = 0; i < obstacles.length; i++) obstacles[i].y += dg;
+      for (var j = 0; j < items.length; j++) items[j].y += dg;
+      for (var k = 0; k < debris.length; k++) debris[k].y += dg;
+      for (var m = 0; m < parts.length; m++) parts[m].y += dg;
+    }
   }
 
   function worldDist() { return bgDist + (S ? S.dist : 0); }
@@ -1096,15 +1150,19 @@
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, CFG.W, CFG.GROUND);
 
+    /* 天空高度随画布变（GROUND 从 300 起），星星/云/日月的位置按同一个系数
+       纵向铺开，否则画布一高，它们全挤在天空下半截、上面空一大片。 */
+    var skyK = clamp(CFG.GROUND / 300, 1, 2);
+
     if (pal.star > 0.05) {                       // 星空
       ctx.fillStyle = "rgba(255,255,255," + (0.85 * pal.star) + ")";
       for (var i = 0; i < 46; i++) {
         var tw = 0.7 + 0.5 * Math.sin((S ? S.time : 0) * 2 + i);
-        ctx.fillRect((i * 137.5) % CFG.W, (i * 61.7) % 190, 1.7 * tw, 1.7 * tw);
+        ctx.fillRect((i * 137.5) % CFG.W, (i * 61.7) % (190 * skyK), 1.7 * tw, 1.7 * tw);
       }
     }
 
-    var orbX = CFG.W - 150, orbY = 74;           // 太阳 / 月亮
+    var orbX = CFG.W - 150, orbY = 74 * skyK;    // 太阳 / 月亮
     ctx.fillStyle = rgba(pal.orb, 0.26);
     ctx.beginPath(); ctx.arc(orbX, orbY, 40, 0, 6.2832); ctx.fill();
     ctx.fillStyle = pal.orb;
@@ -1118,7 +1176,7 @@
     var off = (worldDist() * 0.05) % 1500;
     for (var c = 0; c < CLOUDS.length; c++) {
       var cl = CLOUDS[c];
-      cloud(((cl.x - off) % 1500 + 1500) % 1500 - 150, cl.y, cl.s);
+      cloud(((cl.x - off) % 1500 + 1500) % 1500 - 150, cl.y * skyK, cl.s);
     }
   }
 

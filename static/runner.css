@@ -90,9 +90,23 @@
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 8 / 3;
+  aspect-ratio: 8 / 3;      /* 窄屏 / 竖屏沿用原来的宽扁比例（见下面的媒体查询） */
   touch-action: none;
   cursor: pointer;
+}
+
+/* ── 画布高度自适应（宽屏 / 横向窗口）──
+   不再锁死 8:3，改成「高度约占视口 75%」，宽度照旧铺满正文。
+   世界画面怎么换算在 runner.js 的 resize() 里：按画布**实际宽高**反推缩放，
+   横向至少留 VIEW_MIN_W 个世界单位（保住前方反应时间）、纵向最多 VIEW_MAX_H
+   （再多就是一片空天空），所以画布不管变成什么形状，画面都等比、不会被拉变形。
+   竖屏 / 窄屏（手机）继续用 8:3 的宽扁画面，避免出现大片空天空、人只有指甲盖大。 */
+@media (min-width: 700px) and (min-aspect-ratio: 4 / 3) {
+  #run-canvas {
+    aspect-ratio: auto;
+    height: 75vh;
+    height: 75dvh;          /* 支持动态视口的浏览器：工具栏收起后高度不跳 */
+  }
 }
 
 /* ── 遮罩层（开始 / 暂停 / 结束） ── */
@@ -301,16 +315,17 @@
 .run-tools button#run-rank-btn:hover { filter: brightness(1.05); }
 
 /* ══ 跑酷页在大屏放宽正文宽度（与扫雷页同理） ══ */
-/* 游戏画面 = 正文宽度 × 3/8，所以「放大游戏」等价于「放宽正文」。
-   正文(.main)与顶部导航(.nav)一起放宽，页头与内容左右对齐才不别扭。
-   第三个上限是按视口高度反推的宽度：矮窗口里保证整块画面一屏能看完。
-   上限 1440px（原来 1100px），画面约放大 30%。 */
+/* 画布宽度 = 正文宽度，画面的缩放由 runner.js 按画布宽高一起算，
+   所以「放大游戏」等价于「放宽正文」。正文(.main)与顶部导航(.nav)一起放宽，
+   页头与内容左右对齐才不别扭。上限 1440px（原来 1100px）。
+   ⚠️ 这里不再按视口高度反推宽度：高度现在由 CSS 的 75vh 直接定，
+   画布高过一屏是预期行为，再按 8:3 反推只会把游戏白白缩小。 */
 @media (min-width: 900px) {
   .main:has(#run-root),
   body:has(#run-root) .header-nav,
   /* 站名下方的「返回游戏合集」一行跟页头一起放宽，保持与站名左对齐 */
   body:has(#run-root) .header-back {
-    max-width: min(1440px, 96vw, calc((100vh - 180px) * 8 / 3));
+    max-width: min(1440px, 96vw);
   }
 }
 /* 中等屏幕（平板横屏 / 小笔记本）也尽量吃满宽度，别留大片空白 */
