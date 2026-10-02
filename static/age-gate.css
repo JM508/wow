@@ -328,3 +328,13 @@
     color: var(--secondary, #6b6b6b);
   }
   #ag-dl-modal .ag-dl-no:hover { opacity: 0.8; }
+  #ag-dl-modal .ag-dl-note {
+    margin: 10px 2px 0;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--secondary, #888888);
+  }
+  /* 三个按钮在窄屏竖排，别挤成一行小字 */
+  @media (max-width: 420px) {
+    #ag-dl-modal .ag-dl-actions { flex-direction: column; }
+  }

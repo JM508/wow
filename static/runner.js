@@ -624,8 +624,8 @@
 
   var HELP_HTML = "按 <b>空格</b>/<b>↑</b>/<b>W</b> 起跳，长按跳得更高；<br>" +
     "按 <b>↓</b>/<b>S</b> 下蹲，空中按下蹲可加速下落；<br>" +
-    "地面的障碍要 <b>跳过</b>；飞在空中的只能 <b>下蹲</b> 从下面钻过去" +
-    "（它吊在天花板上，跳起来会撞上吊索）；<br>" +
+    "地面的障碍要 <b>跳过</b>；天上的长柱只能 <b>下蹲</b> 从下面的缝隙钻过去" +
+    "（柱子从画面顶垂到贴地，跳起来会迎面撞上）；<br>" +
     "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
     "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
     "速度会越来越快，坚持越久分数越高。";
@@ -636,7 +636,7 @@
     elOverlay.classList.remove("hidden");
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
-      elOvText.innerHTML = "按 <b>空格</b> / <b>↑</b> 起跳，长按跳更高；<b>↓</b> 下蹲躲飞行物。<br>" +
+      elOvText.innerHTML = "按 <b>空格</b> / <b>↑</b> 起跳，长按跳更高；<b>↓</b> 下蹲钻过天上的长柱。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
         "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
@@ -1186,26 +1186,34 @@
     return { im: im, w: w, h: h };
   }
 
-  /* ── 飞行物的吊索 ──
-     从画面上沿垂到本体顶端。它同时是**碰撞盒的可视化**：
-     碰撞盒就是这条竖井（一路顶到画面外），所以「跳过去」会撞在索上，
-     只有从下面的缝隙蹲过去才行 —— 让判定和画面说的是同一件事。 */
-  function drawAirRope(cx, y0, y1) {
-    if (!(y1 > y0)) return;
-    ctx.save();
-    ctx.strokeStyle = "rgba(132,146,164,0.75)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cx, y0);
-    ctx.lineTo(cx, y1);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(186,198,214,0.9)";
-    for (var y = y0 + 8; y < y1; y += 16) {
-      ctx.beginPath();
-      ctx.ellipse(cx, y, 4, 2.6, 0, 0, 6.2832);
-      ctx.fill();
+  /* ── 飞行障碍的「长柱」本体 ──
+     从画面上沿一直垂到下蹲缝隙上沿，宽度与碰撞盒一致 —— 看到的就是撞到的。
+     （旧版只在末端画一段本体 + 一条吊索，玩家误以为只有那段本体才算数。） */
+  function drawAirShaft(cx, top, bottom, w, bob) {
+    if (!(bottom > top)) return;
+    var x = cx - w / 2;
+    var g = ctx.createLinearGradient(x, 0, x + w, 0);
+    g.addColorStop(0, "rgba(138,152,170,0.9)");
+    g.addColorStop(0.45, "rgba(206,218,232,0.96)");
+    g.addColorStop(1, "rgba(112,126,144,0.9)");
+    ctx.fillStyle = g;
+    rr(ctx, x, top - 6, w, bottom - top + 6 + bob * 0.4, Math.min(9, w / 2));
+    ctx.fill();
+    ctx.strokeStyle = "rgba(100,114,132,0.45)";
+    ctx.lineWidth = 1.4;
+    for (var i = 1; i <= 2; i++) {
+      var lx = x + (w * i) / 3;
+      ctx.beginPath(); ctx.moveTo(lx, top - 2); ctx.lineTo(lx, bottom + bob * 0.4); ctx.stroke();
     }
-    ctx.restore();
+    /* 柱身上的警示斜纹（每隔一段一道），远处也一眼能认出是障碍 */
+    ctx.strokeStyle = "rgba(255,122,89,0.35)";
+    ctx.lineWidth = 2.2;
+    for (var y = top + 14; y < bottom - 6; y += 46) {
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y + 8);
+      ctx.lineTo(x + w - 3, y);
+      ctx.stroke();
+    }
   }
 
   /* ── 障碍绘制 ── */
@@ -1224,13 +1232,12 @@
         ctx.fill();
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
       } else {
-        /* 贴图底边锚在「下蹲缝隙上沿再往上抬 10px」：
-           · 瓶子本体高 42~57px，若按中心对齐会压进下蹲角色的头部 —— 看着像穿模；
-           · 抬 10px 后瓶子最低点 246±3.5，与下蹲可见头顶最少留 2.5px。
-           上面再从画面上沿垂一条吊索到瓶口，「吊在天花板上」一眼可辨。 */
+        /* 空中障碍 = 整条「从顶垂下的长柱」：柱身宽度与碰撞盒一致，
+           底端保留原来的雪碧瓶贴图（贴图底边抬 10px，与下蹲头顶最少留 2.5px）。
+           柱身一路顶到画面外 —— 「不能跳过去」一眼可见。 */
         var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
         var btm = o.y + o.h - 10 + bob;
-        drawAirRope(o.x + o.w / 2, o.y, btm - vis.h);
+        drawAirShaft(o.x + o.w / 2, o.y, btm - vis.h + 6, o.w, bob);
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, btm - vis.h, vis.w, vis.h);
       }
       ctx.restore();
@@ -1239,7 +1246,7 @@
 
     var bb = obBody(o);
     var x = bb.x, y = bb.y, w = bb.w, h = bb.h;
-    if (o.kind === "air") drawAirRope(o.x + o.w / 2, o.y, y);
+    if (o.kind === "air") drawAirShaft(o.x + o.w / 2, o.y, y, o.w, 0);
 
     if (o.id === "cup") {                        // 咖啡杯
       ctx.fillStyle = "#ffffff"; rr(ctx, x, y + 8, w, h - 8, 7); ctx.fill();

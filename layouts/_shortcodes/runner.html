@@ -1,7 +1,7 @@
 <!-- 火柴人快跑：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
-<link rel="stylesheet" href="/runner.css">
-<link rel="stylesheet" href="/shop.css">
-<link rel="stylesheet" href="/rank.css">
+<link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/rank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="run-root" aria-label="火柴人快跑小游戏">
   <div class="run-hud">
     <div class="run-brand">
@@ -50,6 +50,10 @@
     <button type="button" class="run-link-btn" data-open-rank>🏆 云端排行榜</button>
     —— 每局收集的金币都会存进钱包，可在这里兑换火柴人皮肤与金币皮肤；登录后钱包与成绩还能同步到云端。
   </p>
+  <p class="run-foot">
+    游戏开源仓库：<a href="https://github.com/JM508/stick-runner" rel="noopener" target="_blank">github.com/JM508/stick-runner</a>
+    （游戏在此仓库独立开发，更新后本站自动同步）
+  </p>
 </div>
 
 <!-- ═══ 皮肤商店弹层：开在本页里，不跳页（商品与购买逻辑由 /shop.js 填充） ═══ -->
@@ -76,20 +80,21 @@
       <input id="rank-nick" type="text" maxlength="16" placeholder="跑出好成绩后显示的名字" autocomplete="nickname">
       <button type="button" id="rank-nick-save">保存</button>
     </div>
-    <ol class="rank-list" id="rank-list" aria-label="排行榜前 100 名，每页 20 名"></ol>
+    <ol class="rank-list" id="rank-list" aria-label="排行榜前 50 名，每页 10 名"></ol>
     <nav class="rank-pager" id="rank-pager" aria-label="排行榜分页"></nav>
     <div class="rank-mine" id="rank-mine"></div>
     <p class="rank-foot">
-      排行榜展示<b>前 100 名</b>（每页 20 名，共 5 页），对所有访客可见（只显示昵称与分数）；
-      提交成绩需要邮箱登录，登录后每局结束自动上传。
+      排行榜展示<b>前 50 名</b>（每页 10 名，共 5 页），对所有访客可见（只显示昵称与分数）；
+      未登录走<b>访客模式</b>：不能自己取名，成绩以「访客 N」自动上传；
+      登录后可用自己的昵称（榜上不允许重名）。
       登录还会开启<b>云存档</b>：金币与已购皮肤会同步到云端，换设备也不丢。
     </p>
   </div>
 </div>
 
-<script src="/vendor/workbuddy-cloud-sdk.global.js" defer></script>
-<script src="/cloud.js" defer></script>
-<script src="/skins.js" defer></script>
-<script src="/shop.js" defer></script>
-<script src="/rank.js" defer></script>
-<script src="/runner.js" defer></script>
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/rank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/runner.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

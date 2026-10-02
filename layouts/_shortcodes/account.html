@@ -1,5 +1,5 @@
 <!-- 账号与云存档：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
-<link rel="stylesheet" href="/account.css">
+<link rel="stylesheet" href="/account.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="ac-root">
   <div class="ac-head">
     <!-- 从排行榜「去登录」跳过来时，✕ 会回到来源页（见 account.js 的 next 处理） -->
@@ -130,7 +130,7 @@
   </p>
 </div>
 
-<script src="/vendor/workbuddy-cloud-sdk.global.js" defer></script>
-<script src="/cloud.js" defer></script>
-<script src="/skins.js" defer></script>
-<script src="/account.js" defer></script>
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/account.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

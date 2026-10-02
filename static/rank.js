@@ -25,16 +25,17 @@
   var elNickRow = document.getElementById("rank-nick-row");
   var elPager   = document.getElementById("rank-pager");
 
-  /* 榜单一次取满 100 条（= 5 页），翻页纯前端切片，不再发第二次请求 */
-  var PAGE_SIZE = CLOUD.LEADER_PAGE || 20;
-  var MAX_PAGES = Math.max(1, Math.ceil((CLOUD.LEADER_LIMIT || 100) / PAGE_SIZE));
+  /* 榜单一次取满 50 条（= 5 页 × 10），翻页纯前端切片，不再发第二次请求 */
+  var PAGE_SIZE = CLOUD.LEADER_PAGE || 10;
+  var MAX_PAGES = Math.max(1, Math.ceil((CLOUD.LEADER_LIMIT || 50) / PAGE_SIZE));
 
   var loaded = false;       // 是否已成功拉过榜单
   var lastSubmit = 0;       // 上一次【成功上传】的成绩，避免同一局重复上传
   var lastTop = null;       // 最近一次拉到的榜单（null = 还没拉到）
   var mineNames = null;     // 我的昵称集合（榜单里高亮「是我」）
-  var pending = null;       // 上传失败/暂未登录时暂存的一局成绩，登录后补传
+  var pending = null;       // 上传失败时暂存的一局成绩（登录成功 / 下一局自动补传）
   var page = 0;             // 当前页码（0 起）
+  var guestChecking = false; // 访客编号正在分配时，后续局稍等（避免并发重复查询）
 
   /* ═══════════ 小工具 ═══════════ */
   function esc(s) {
@@ -214,10 +215,13 @@
       if (!me) {
         mineNames = null;
         renderAll();
-        setStatus("未登录：可以先看榜，登录后成绩才会保存到云端 ｜ " + loginLine(), "warn");
+        /* 访客模式不能取名：昵称输入行只对登录用户开放 */
+        if (elNickRow) elNickRow.style.display = "none";
+        setStatus("未登录：<b>访客模式</b>已开启，成绩以「访客 N」自动上传上榜 ｜ " + loginLine(), "warn");
         renderMine([]);
         return;
       }
+      if (elNickRow) elNickRow.style.display = "";
       setStatus("已登录 <b>" + esc((me.email || "云账号").split("@")[0]) + "</b> ｜ 每局结束自动上传成绩", "ok");
       loadMine();
       flushPending();
@@ -225,26 +229,47 @@
   }
 
   /* ═══════════ 成绩自动上传（每局一次） ═══════════
-     ⚠️ 上传失败/当时还没登录时绝不静默丢弃：暂存这一局最好的成绩，
-     登录成功（或会话恢复）后自动补传。否则会出现「登录了、云存档也同步了，
-     排行榜上却始终没有我」——因为那一局正好赶上会话还没恢复完。 */
+     · 未登录 = 访客模式：自动取「访客 N」空号直接上传（服务端只放行这种名字）
+     · 已登录：上传前先查重名 —— 排行榜上不允许出现两个同名的人，
+       撞名时提示换名字，这局先暂存，改名后自动补传
+     · 上传失败绝不静默丢弃：暂存，之后自动补传 */
   function submit(entry) {
     var score = Math.floor((entry && entry.score) || 0);
     if (score <= 0 || score === lastSubmit) return;
     if (!CLOUD.user()) {
-      if (!pending || score > pending.score) {
-        pending = { score: score, coins: entry.coins, distance: entry.distance };
+      /* 访客模式：分配/复用访客编号后直接上传 */
+      if (guestChecking) {
+        if (!pending || score > pending.score) pending = { score: score, coins: entry.coins, distance: entry.distance, guest: true };
+        return;
       }
-      toast("☁️ 本局成绩已暂存，登录后自动上传云端");
+      guestChecking = true;
+      CLOUD.scores.guestName().then(function (name) {
+        guestChecking = false;
+        if (pending && pending.guest && pending.score > score) { flushPending(); return; }
+        doSubmit(score, entry, name, true);
+      });
       return;
     }
-    doSubmit(score, entry);
+    /* 已登录：先查重名 */
+    var name = CLOUD.nickOrDefault();
+    CLOUD.scores.nameTaken(name).then(function (r) {
+      if (r && r.data) {
+        if (!pending || score > pending.score) {
+          pending = { score: score, coins: entry.coins, distance: entry.distance, guest: false };
+        }
+        toast("⚠️ 榜上已有「" + name + "」，请换个昵称（下方输入框），改名后自动补传");
+        var nickInput = document.getElementById("rank-nick");
+        if (nickInput) { try { nickInput.focus(); } catch (e) {} }
+        return;
+      }
+      doSubmit(score, entry, null, false);
+    });
   }
 
-  function doSubmit(score, entry) {
+  function doSubmit(score, entry, guestName, isGuest) {
     if (score <= 0 || score === lastSubmit) return;
     CLOUD.scores.submit({
-      nickname: CLOUD.nickOrDefault(),
+      nickname: isGuest ? guestName : undefined,
       score: score,
       coins: entry && entry.coins,
       distance: entry && entry.distance
@@ -252,7 +277,7 @@
       if (r.error) {
         /* lastSubmit 只在成功后记账：失败的这局下一回还有机会补传 */
         if (!pending || score > pending.score) {
-          pending = { score: score, coins: entry && entry.coins, distance: entry && entry.distance };
+          pending = { score: score, coins: entry && entry.coins, distance: entry && entry.distance, guest: isGuest, guestName: guestName };
         }
         toast("☁️ 成绩上传失败：" + CLOUD.describe(r.error));
         return;
@@ -261,18 +286,21 @@
       if (pending && pending.score <= score) pending = null;
       CLOUD.scores.rankAbove(score).then(function (above) {
         var rank = above.error ? 0 : (Number(above.count) || 0) + 1;
-        toast(rank ? ("☁️ 已上榜：第 " + rank + " 名") : "☁️ 成绩已上传云端");
+        toast(rank ? (isGuest ? ("🏃 访客模式已上榜：第 " + rank + " 名") : ("☁️ 已上榜：第 " + rank + " 名"))
+                   : (isGuest ? "🏃 访客模式：成绩已上传" : "☁️ 成绩已上传云端"));
       });
       if (isOpen()) refresh();
     });
   }
 
-  /* 登录态就绪后补传暂存的成绩 */
+  /* 登录态就绪（或访客编号分配完成）后补传暂存的成绩 */
   function flushPending() {
-    if (!pending || !CLOUD.user()) return;
+    if (!pending) return;
+    if (!pending.guest && !CLOUD.user()) return;
     var p = pending;
     pending = null;
-    doSubmit(p.score, p);
+    if (p.guest) doSubmit(p.score, p, p.guestName || "访客 0", true);
+    else doSubmit(p.score, p, null, false);
   }
 
   /* ═══════════ 钱包云存档 ═══════════ */
@@ -329,9 +357,17 @@
     btnNick.addEventListener("click", function () {
       var v = CLOUD.setNick(elNick ? elNick.value : "");
       if (!v) { toast("昵称不能为空"); return; }
-      elNick.value = v;
-      toast("昵称已保存：" + v);
-      refresh();
+      /* 排行榜不许重名：改名字前先查榜上有没有人已经在用 */
+      CLOUD.scores.nameTaken(v).then(function (r) {
+        if (r && r.data) {
+          toast("⚠️ 「" + v + "」已在排行榜上被使用，请换一个名字");
+          return;
+        }
+        elNick.value = v;
+        toast("昵称已保存：" + v);
+        flushPending();              // 如果有因撞名暂存的成绩，现在可以补传了
+        refresh();
+      });
     });
   }
 

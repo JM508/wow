@@ -4,7 +4,7 @@
 
 /*
   X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
+  X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
   Cross-Origin-Opener-Policy: same-origin
@@ -13,19 +13,42 @@
   # 外置复刻（theme.js 内置 CSP 探测，避免在无 CSP 的镜像站双重绑定）。
   # connect-src 额外放行本应用自己的云服务域名（账号登录 / 云存档 / 排行榜），
   # 该域名由开通云服务时返回，不是第三方；SDK 本体随站点同源分发，无需放行 CDN。
+  # upgrade-insecure-requests + HSTS：全站强制 HTTPS，杜绝混合内容。
   # ⚠️ 今后新增任何内联 <script>/<style> 或第三方代码前，必须先调整此策略。
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   # 注意：不能在 /* 里写 Cache-Control——Pages 会把多条规则的同名头拼接而非覆盖。
   # Pages 对 HTML 默认即为 no-cache（max-age=0, must-revalidate），无需手动设置。
 
-# 带内容指纹的静态资源：可以放心缓存一年
-/assets/*
+# ═══ 静态资源长期缓存 ═══
+# JS / CSS：一年强缓存 + immutable。⚠️ 所有引用都带 ?v= 版本号
+# （hugo.toml 的 params.assetVer），改了代码必须换版本号，否则浏览器一年不更新。
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.css
   Cache-Control: public, max-age=31536000, immutable
 
-# 背景图等图片：缓存 30 天
+# 图片：立绘 / 图标等基本不变的长缓存；背景图 30 天（可能会换图）
+/*.webp
+  Cache-Control: public, max-age=31536000, immutable
+/*.png
+  Cache-Control: public, max-age=31536000, immutable
+/*.svg
+  Cache-Control: public, max-age=31536000, immutable
+/*.ico
+  Cache-Control: public, max-age=31536000, immutable
 /images/*
   Cache-Control: public, max-age=2592000
+
+# 字体（若有）
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# ═══ HTML / 元信息：短缓存或协商缓存 ═══
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
 
 /sitemap.xml
   Cache-Control: public, max-age=3600

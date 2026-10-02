@@ -8,7 +8,16 @@
      ⚠️ 若修改 static/age-gate.* 或主题内联代码，需同步更新 static/_headers
         里 CSP 的 sha256 哈希白名单（见 _dev/check_csp.js）。
      ══════════════════════════════════════════════════════════════════════ -->
-<script src="/theme.js"></script>
-<link rel="stylesheet" href="/site.css">
-<link rel="stylesheet" href="/age-gate.css">
-<script src="/age-gate.js"></script>
+<!-- 自定义静态资源统一带 ?v= 版本号：配合 _headers 对 /*.js、/*.css 的一年强缓存，
+     版本号变化即缓存穿透（值在 hugo.toml 的 params.assetVer） -->
+{{- $v := printf "?v=%s" (site.Params.assetVer | default "1") }}
+<script src="/theme.js{{ $v }}"></script>
+<link rel="stylesheet" href="/site.css{{ $v }}">
+<link rel="stylesheet" href="/age-gate.css{{ $v }}">
+<script src="/age-gate.js{{ $v }}"></script>
+<!-- 核心 Web 指标监控：采集真实用户的 LCP / CLS / INP / FCP / TTFB，匿名上报到自有云表 -->
+<script src="/vitals.js{{ $v }}" defer></script>
+<!-- 百度搜索资源平台站点验证（值配置在 hugo.toml params.baiduSiteVerification） -->
+{{- with site.Params.baiduSiteVerification }}
+<meta name="baidu-site-verification" content="{{ . }}">
+{{- end }}

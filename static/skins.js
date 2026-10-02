@@ -106,6 +106,21 @@
   }
   function imgOk(im) { return !!im && im.complete && im.naturalWidth > 0; }
 
+  /* ── 立绘全量预加载 ──
+     以前是「画到哪张才加载哪张」：跑动用 run 图，第一次下蹲才请求 duck 图，
+     图片还没下载完的那几秒里 imgOk() 为 false，只能回退经典火柴人——
+     表现为「一蹲下就变经典火柴人，起身又变回皮肤」。
+     现在脚本加载时就把所有立绘皮肤（跑 + 蹲）一起请求，
+     立绘总共只有几张小 webp，一次性预载没有负担。 */
+  (function preloadAll() {
+    for (var i = 0; i < PLAYERS.length; i++) {
+      var sp = PLAYERS[i].sprite;
+      if (!sp) continue;
+      if (sp.run) spriteImg(sp.run);
+      if (sp.duck) spriteImg(sp.duck);
+    }
+  })();
+
   /* ═══════════════ 金币皮肤 ═══════════════
      shape : coin 硬币 / gem 宝石 / star 星 / heart 心 / ring 甜甜圈
      dark  : 外圈（暗部）   face : 主体   hi : 高光

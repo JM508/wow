@@ -107,6 +107,35 @@
     return base;
   }
 
+  /* 选图在脚本一加载（head 阶段）就定下来，并立刻注入 <link rel=preload>：
+     背景是首屏最大的元素，以前要等 DOMContentLoaded 才开始下载，
+     手机上白白慢半屏 —— 提前到解析 head 时就开始拉图。 */
+  var bgPicked = (function pickBgIndex() {
+    var n = CFG.bgCount;
+    if (!n) return -1;
+    var idx = -1, last = -1;
+    try { idx = parseInt(sessionStorage.getItem("ag_bg"), 10); } catch (e) {}
+    if (!(idx >= 0 && idx < n)) {
+      try { last = parseInt(localStorage.getItem("ag_bg_last"), 10); } catch (e) {}
+      idx = Math.floor(Math.random() * n);
+      if (n > 1 && idx === last) idx = (idx + 1) % n;   // 不与上一张重复
+      try {
+        sessionStorage.setItem("ag_bg", String(idx));
+        localStorage.setItem("ag_bg_last", String(idx));
+      } catch (e) {}
+    }
+    return idx;
+  })();
+  if (bgPicked >= 0) {
+    try {
+      var agPre = document.createElement("link");
+      agPre.rel = "preload";
+      agPre.as = "image";
+      agPre.href = bgUrlFor(bgPicked);
+      document.head.appendChild(agPre);
+    } catch (e) {}
+  }
+
   /* ---------- 悬浮按钮图标（内联 SVG，stroke 用 currentColor，跟随明暗主题） ---------- */
   var ICON_DL =
     '<svg class="ag-ico ag-ico-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
@@ -133,17 +162,8 @@
   function applyBg() {
     var n = CFG.bgCount;
     if (!n) return;
-    var idx = -1, last = -1;
-    try { idx = parseInt(sessionStorage.getItem("ag_bg"), 10); } catch (e) {}
-    if (!(idx >= 0 && idx < n)) {                 // 本会话还没选过 → 选一张
-      try { last = parseInt(localStorage.getItem("ag_bg_last"), 10); } catch (e) {}
-      idx = Math.floor(Math.random() * n);
-      if (n > 1 && idx === last) idx = (idx + 1) % n;   // 不与上一张重复
-      try {
-        sessionStorage.setItem("ag_bg", String(idx));
-        localStorage.setItem("ag_bg_last", String(idx));
-      } catch (e) {}
-    }
+    var idx = bgPicked;
+    if (!(idx >= 0 && idx < n)) return;
     var el = document.createElement("div");
     el.id = "ag-bg";
     el.setAttribute("aria-hidden", "true");
@@ -154,8 +174,12 @@
     if (CFG.bgTintLight) el.style.setProperty("--ag-tint", String(CFG.bgTintLight));
     if (CFG.bgSaturateLight && CFG.bgSaturateLight !== 1)
       el.style.setProperty("--ag-sat", String(CFG.bgSaturateLight));
-    el.dataset.src = url;                        // 供「下载背景图」按钮使用
+    el.dataset.src = url;                              // 展示中那张（手机可能是压缩版）
     el.dataset.name = "background" + (idx + 1) + CFG.bgExt;
+    el.dataset.full = url;                             // 原图（jpg）
+    el.dataset.fullName = "background" + (idx + 1) + CFG.bgExt;
+    el.dataset.lite = url.replace(/\.jpg$/, "-m.webp"); // 压缩版（webp，约 1/4 体积）
+    el.dataset.liteName = "background" + (idx + 1) + "-m.webp";
     document.body.appendChild(el);
     document.documentElement.setAttribute("data-ag-bg", "1");
     // 首页专属的两个悬浮按钮：左下「下载背景图」、右下「看背景图」
@@ -264,27 +288,27 @@
     modal.innerHTML =
       '<div class="ag-dl-card">' +
         '<h2 class="ag-dl-title" id="ag-dl-title">下载背景图片</h2>' +
-        '<p class="ag-dl-text">确认下载当前背景图片吗？</p>' +
+        '<p class="ag-dl-text">选择要下载的版本：</p>' +
         '<div class="ag-dl-actions">' +
-          '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-yes">是</button>' +
-          '<button type="button" class="ag-dl-btn ag-dl-no" id="ag-dl-no">否</button>' +
+          '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-full">原图下载</button>' +
+          '<button type="button" class="ag-dl-btn ag-dl-yes" id="ag-dl-lite">压缩版下载</button>' +
+          '<button type="button" class="ag-dl-btn ag-dl-no" id="ag-dl-no">取消</button>' +
         '</div>' +
+        '<p class="ag-dl-note">原图（约 300~500KB）画质最佳；压缩版（约 100KB）手机下载更快，桌面看效果几乎一样。</p>' +
       '</div>';
     document.body.appendChild(modal);
 
-    var yes = modal.querySelector("#ag-dl-yes");
+    var full = modal.querySelector("#ag-dl-full");
+    var lite = modal.querySelector("#ag-dl-lite");
     var no = modal.querySelector("#ag-dl-no");
 
-    function openModal() { modal.hidden = false; setTimeout(function () { try { yes.focus(); } catch (e) {} }, 30); }
+    function openModal() { modal.hidden = false; setTimeout(function () { try { full.focus(); } catch (e) {} }, 30); }
     function closeModal() { modal.hidden = true; }
 
-    btn.addEventListener("click", openModal);              // 点「⬇ 下载背景图」→ 弹确认
-    yes.addEventListener("click", function () {            // 点「是」→ 下载
+    /* 统一下载动作：fetch 拿 blob（保持同源、可带下载名），失败则新标签打开 */
+    function doDownload(url, name) {
       closeModal();
-      var url = bg.dataset.src ||
-                (bg.style.backgroundImage.match(/url\("?([^")]+)"?\)/) || [])[1];
       if (!url) return;
-      var name = bg.dataset.name || "background.jpg";
       fetch(url).then(function (r) {
         if (!r.ok) throw new Error("http " + r.status);
         return r.blob();
@@ -296,12 +320,20 @@
         a.click();
         a.parentNode.removeChild(a);
         setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-      }).catch(function () {                               // 兜底：新标签打开原图
+      }).catch(function () {                               // 兜底：新标签打开
         var w = window.open(url, "_blank");
         if (!w) location.href = url;
       });
+    }
+
+    btn.addEventListener("click", openModal);              // 点「⬇ 下载背景图」→ 弹选择
+    full.addEventListener("click", function () {           // 原图（jpg）
+      doDownload(bg.dataset.full || bg.dataset.src, bg.dataset.fullName || "background.jpg");
     });
-    no.addEventListener("click", closeModal);              // 点「否」→ 取消
+    lite.addEventListener("click", function () {           // 压缩版（webp）
+      doDownload(bg.dataset.lite, bg.dataset.liteName || "background-m.webp");
+    });
+    no.addEventListener("click", closeModal);              // 取消
     modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape" && !modal.hidden) closeModal();

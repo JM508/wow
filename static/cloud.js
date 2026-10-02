@@ -47,8 +47,9 @@
   var TABLE_SCORES  = "runner_scores";    // 排行榜成绩（所有人可看，仅本人可提交）
   var NICK_KEY      = "runner-nick";      // 昵称本地缓存（提交成绩用）
   var NICK_MAX      = 16;
-  var LEADER_PAGE   = 20;                 // 排行榜每页人数
-  var LEADER_LIMIT  = 100;                // 榜单总席位 = 5 页 × 20
+  var LEADER_PAGE   = 10;                 // 排行榜每页人数
+  var LEADER_LIMIT  = 50;                 // 榜单总席位 = 5 页 × 10
+  var GUEST_RE      = /^访客 ([0-9]{1,3})$/;   // 访客昵称格式（与服务端 RLS 校验一致）
 
   /* ═══════════ 客户端（只建一次） ═══════════ */
   var client = null;
@@ -252,21 +253,75 @@
   function scoreSubmit(entry) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
-    if (!user()) {
-      return Promise.resolve({
-        data: null,
-        error: { kind: "unauthenticated", message: "请先登录再提交成绩", status: 0 }
-      });
-    }
+    var guest = !user();
     var row = {
       nickname: String(entry.nickname || nickOrDefault()).trim().slice(0, NICK_MAX) || "无名火柴人",
       score: Math.max(0, Math.floor(Number(entry.score) || 0)),
       coins: Math.max(0, Math.floor(Number(entry.coins) || 0)),
       distance: Math.max(0, Math.floor(Number(entry.distance) || 0))
     };
-    setNick(row.nickname);
+    /* 访客模式：未登录也能上传，但昵称必须是「访客 N」——
+       服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称 */
+    if (guest) {
+      if (!GUEST_RE.test(row.nickname)) {
+        return Promise.resolve({
+          data: null,
+          error: { kind: "invalid-request", message: "访客昵称必须为「访客 数字」格式", status: 0 }
+        });
+      }
+    } else {
+      setNick(row.nickname);
+    }
     return d.from(TABLE_SCORES).insert(row)
       .select("nickname, score, coins, distance, created_at");
+  }
+
+  /* ── 重名校验 ──
+     排行榜上不允许出现两个同名的人：查「同昵称、但不是本人」的行。
+     访客行（owner_id = anon）与登录用户互相也算重名。 */
+  function scoreNameTaken(nickname) {
+    var d = db();
+    if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
+    var me = user() ? user().id : "anon";
+    return d.from(TABLE_SCORES)
+      .select("owner_id")
+      .eq("nickname", String(nickname || "").trim())
+      .neq("owner_id", me)
+      .limit(1)
+      .then(function (r) {
+        if (r.error) return r;
+        return { data: !!(r.data && r.data.length), error: null };
+      });
+  }
+
+  /* ── 访客编号分配 ──
+     扫一遍榜上已有的「访客 N」，取最小的空号（0 起）。
+     结果记在 sessionStorage：同一会话固定一个编号，避免每局都变。 */
+  function guestName() {
+    try {
+      var cached = sessionStorage.getItem("rank-guest-name");
+      if (cached && GUEST_RE.test(cached)) return Promise.resolve(cached);
+    } catch (e) {}
+    var d = db();
+    if (!d) return Promise.resolve("访客 0");
+    return d.from(TABLE_SCORES)
+      .select("nickname")
+      .like("nickname", "访客 %")
+      .limit(500)
+      .then(function (r) {
+        var used = {};
+        if (r.data) {
+          for (var i = 0; i < r.data.length; i++) {
+            var m = GUEST_RE.exec(String(r.data[i].nickname || ""));
+            if (m) used[parseInt(m[1], 10)] = true;
+          }
+        }
+        var n = 0;
+        while (used[n] && n < 1000) n++;
+        var name = "访客 " + (n > 999 ? 999 : n);
+        try { global.sessionStorage.setItem("rank-guest-name", name); } catch (e) {}
+        return name;
+      });
   }
 
   /* ═══════════ 本地钱包 ⇄ 云存档 合并 ═══════════
@@ -430,7 +485,9 @@
       top: scoreTop,
       mine: scoreMine,
       rankAbove: scoreRankAbove,
-      submit: scoreSubmit
+      submit: scoreSubmit,
+      nameTaken: scoreNameTaken,
+      guestName: guestName
     }
   };
 })(window);

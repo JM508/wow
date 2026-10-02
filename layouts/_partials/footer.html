@@ -21,6 +21,14 @@
         - Support us by sponsoring the project on GitHub Sponsors: https://github.com/sponsors/adityatelange
     */}}
     
+    {{- /* 站点 GitHub 仓库（仅首页页脚展示，地址在 hugo.toml params.githubUrl） */}}
+    {{- if .IsHome }}
+        {{- with site.Params.githubUrl }}
+        {{- print " · " }}
+        <span><a href="{{ . }}" rel="noopener" target="_blank" title="本站源代码仓库">GitHub</a></span>
+        {{- end }}
+    {{- end }}
+
     <span>
         Powered by
         <a href="https://gohugo.io/?utm_source=papermod" rel="noopener" target="_blank">Hugo</a> &
