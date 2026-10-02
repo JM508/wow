@@ -246,9 +246,18 @@
 
     if (p.kind === "player") {
       g.save();
-      g.translate(W / 2, H - 34);                 // 脚底
+      /* 立绘皮肤（限定款）比火柴人高：78 × 3.1 ≈ 242，画布才 260，
+         沿用火柴人的脚底基线会头顶顶出上沿、脚下空一大截（底部空隙 40 vs 其他卡 22~26），
+         看起来「展示太靠上」。限定款按画布高度微收缩放（顶留 12 / 底留 24），
+         基线也随之下沉；普通火柴人维持原样不动。 */
+      var scale = 3.1, baseY = H - 34;
+      if (p.item.sprite) {
+        scale = Math.min(scale, (H - 36) / (p.item.runH || 66));
+        baseY = H - 24;
+      }
+      g.translate(W / 2, baseY);                  // 脚底
       Skins.drawStick(g, p.item, {
-        pose: "run", t: t, run: t * 8.5, night: night, scale: 3.1
+        pose: "run", t: t, run: t * 8.5, night: night, scale: scale
       });
       g.restore();
     } else {
