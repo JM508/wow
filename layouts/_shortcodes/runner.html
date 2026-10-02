@@ -2,6 +2,7 @@
 <link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/rank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="run-root" aria-label="火柴人快跑小游戏">
   <div class="run-hud">
     <div class="run-brand">
@@ -16,6 +17,7 @@
     <div class="run-tools">
       <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">🏆 排行榜</button>
       <button type="button" class="run-shop-btn" id="run-shop-btn" data-open-shop title="用金币兑换皮肤">🛍 商店</button>
+      <button type="button" class="run-ach-btn" id="run-ach-btn" title="成就：看看解锁了多少">🏅 成就<span class="ach-count">0/18</span></button>
       <button type="button" id="run-mute" aria-pressed="false" title="音效开关">🔊 音效</button>
       <button type="button" id="run-help" title="玩法说明">玩法</button>
     </div>
@@ -46,7 +48,8 @@
   <p class="run-foot run-wallet-bar">
     <span id="run-wallet">钱包 0</span> ·
     <button type="button" class="run-link-btn" data-open-shop>🛍 皮肤商店</button> ·
-    <button type="button" class="run-link-btn" data-open-rank>🏆 云端排行榜</button>
+    <button type="button" class="run-link-btn" data-open-rank>🏆 云端排行榜</button> ·
+    <button type="button" class="run-link-btn" data-open-ach>🏅 成就</button>
     —— 每局收集的金币都会存进钱包，可在这里兑换火柴人皮肤与金币皮肤；登录后钱包与成绩还能同步到云端。
   </p>
   <p class="run-foot">
@@ -91,9 +94,26 @@
   </div>
 </div>
 
+<!-- ═══ 成就弹层：18 个成就分三档，内容由 /ach.js 渲染（数据只存本机） ═══ -->
+<div id="run-ach" class="run-ach hidden" data-ach-panel role="dialog" aria-modal="true" aria-labelledby="run-ach-title">
+  <div class="run-ach-box">
+    <div class="run-ach-head">
+      <strong id="run-ach-title">🏅 成就</strong>
+      <button type="button" class="run-ach-x" id="run-ach-close" title="关闭成就" aria-label="关闭成就">✕</button>
+    </div>
+    <div id="ach-progress" aria-live="polite"></div>
+    <div id="ach-list" aria-label="成就列表"></div>
+    <p class="ach-foot">
+      成就只保存在本机浏览器里，换设备不会同步。局内达成的（分数 / 里程 / 跳跃 / 满速）当场解锁，
+      其余在一局结束时结算；「无伤」指整局一次都没碰到障碍（用护盾撞碎障碍也算碰到）。
+    </p>
+  </div>
+</div>
+
 <script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/rank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/runner.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

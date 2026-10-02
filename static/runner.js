@@ -170,6 +170,13 @@
      正常情况下 skins.js 与本文件同目录同源、由页面先加载；万一没加载到，
      退回到内置的最小实现，至少不会白屏。 */
   var Skins = window.RunnerSkins;
+
+  /* 成就系统（/ach.js，先于本脚本加载）：
+     页面没引入时三个调用自动跳过，游戏本体不受影响。
+     本局快照就直接用 S —— 成就模块只读 jumps/shields/smashes/dist/score/coins/speed/crashed。 */
+  var Ach = window.RunnerAch || null;
+  function achLive() { if (Ach && Ach.live) Ach.live(S); }
+  function achFinish() { if (Ach && Ach.finish) Ach.finish(S); }
   if (!Skins) {
     var DEF_P = { id: "classic", name: "经典火柴人", ink: "#28324a", inkNight: "#f2f5fa", scarf: "#ff5f6d", eye: "#28324a" };
     var DEF_C = { id: "gold", name: "经典金币", shape: "coin", dark: "#d99a1c", face: "#f7c33d", hi: "#ffe9a8", halo: "rgba(255,209,102,0.22)" };
@@ -391,7 +398,12 @@
       shieldHold: 0,                            // 下一个护盾最早出现的距离（护盾冷却）
       itemPending: false,                       // 金币到点待生成：障碍先让路
       waves: 0, groups: 0,                      // 本局生成的障碍波数 / 道具串数（调试用）
-      time: 0, best: lastBest, isBest: false
+      time: 0, best: lastBest, isBest: false,
+      /* ── 成就统计（本局，ach.js 只读） ── */
+      jumps: 0,                                 // 本局起跳次数
+      shields: 0,                               // 本局吃到的护盾数
+      smashes: 0,                               // 本局在无敌状态下撞碎的障碍数（= 碰到过障碍）
+      crashed: false                            // 本局是否以撞死收场（「无伤」成就要排除）
     };
   }
 
@@ -535,6 +547,7 @@
       P.onGround = false;
       P.coyote = 0;
       P.duck = false;
+      S.jumps++;                                   // 成就：单局起跳次数
       puff(CFG.PX, CFG.GROUND, 6, "#ffffff", 0.6);
       Sfx.jump();
     }
@@ -564,6 +577,7 @@
   function gameOver() {
     state = "over";
     overAt = Date.now();
+    S.crashed = true;                            // 成就：「无伤」类要排除撞死收场的局
     shake = 16;
     puff(CFG.PX, P.y - 20, 18, "#8d98a6", 1.4);
     sparkle(CFG.PX, P.y - 34, 12, "#ff7a86");
@@ -588,6 +602,8 @@
         detail: { score: score, coins: S.coins, distance: Math.floor(S.dist / 100) }
       }));
     } catch (e) {}
+    /* 成就结算：这一局没实时解锁的（分数 / 里程 / 无伤 / 累计类）在这里统一补判 */
+    achFinish();
   }
 
   /* ═══════════ 本机记录（localStorage，最多 5 条） ═══════════ */
@@ -663,6 +679,7 @@
 
   function shopOpen() { return !!elShop && !elShop.classList.contains("hidden"); }
   function rankOpen() { return !!elRank && !elRank.classList.contains("hidden"); }
+  function achOpen() { return !!(Ach && Ach.isOpen && Ach.isOpen()); }
 
   function refreshSkin() {                   // 换上的皮肤立刻生效
     skinPlayer = Skins.getPlayer(Skins.equipped ? Skins.equipped("player") : null);
@@ -702,6 +719,9 @@
   /* 云端排行榜弹层用的是同一套「开面板先定格、关掉原样恢复」逻辑 */
   document.addEventListener("rank:open", afterShopOpen);
   document.addEventListener("rank:close", afterShopClose);
+  /* 成就面板同理（ach.js 负责开关与渲染，这里只管局面定格/恢复） */
+  document.addEventListener("ach:open", afterShopOpen);
+  document.addEventListener("ach:close", afterShopClose);
   /* rank.js 借这里弹提示（成绩上传结果、云存档同步结果） */
   document.addEventListener("run:toast", function (e) { if (e.detail) toast(e.detail); });
 
@@ -839,6 +859,7 @@
           addDebris(o);                            // 击飞表现：障碍本体翻滚着飞出去
           sparkle(bb.x + bb.w / 2, bb.y + bb.h / 2, 14, "#ffd166");
           S.score += 8;
+          S.smashes++;                             // 成就：无敌撞碎也算「碰到过障碍」
           shake = Math.max(shake, 6);
           obstacles.splice(i, 1);
           continue;
@@ -875,6 +896,7 @@
           sparkle(it.x, it.y, 6, "#ffd166"); Sfx.coin();
         } else {
           S.boost = CFG.SHIELD_TIME;
+          S.shields++;                             // 成就：单局吃到的护盾数
           sparkle(it.x, it.y, 18, "#8ab4ff"); Sfx.boost();
           toast("🛡 护盾开启！无敌冲刺 · 金币雨");
           /* 开场先在玩家前方撒一排（屏幕中段，半秒内就到），别让冲刺开头空手；
@@ -890,6 +912,7 @@
     updateDebris(dt);
     if (shake > 0) shake = Math.max(0, shake - 60 * dt);
     updateHud();
+    achLive();                                   // 成就实时判定（数值没变时 ach.js 内部秒早退）
   }
 
   /* 生成一波障碍。
@@ -1429,6 +1452,11 @@
       if (k === "m" || k === "M") toggleMute();
       return;
     }
+    /* 成就面板：同样不让按键穿透（Escape 由 ach.js 处理关闭） */
+    if (achOpen()) {
+      if (k === "m" || k === "M") toggleMute();
+      return;
+    }
 
     if (isJumpKey(k, code)) {
       e.preventDefault();
@@ -1606,6 +1634,12 @@
     openShop: openShop,
     closeShop: closeShop,
     shopOpen: shopOpen,
+    /* 成就（/ach.js）：面板开关 + 只读快照，供控制台与测试使用 */
+    openAch: function () { if (Ach && Ach.open) Ach.open(); },
+    closeAch: function () { if (Ach && Ach.close) Ach.close(); },
+    achOpen: function () { return achOpen(); },
+    achState: function () { return Ach && Ach.snapshot ? Ach.snapshot() : null; },
+    achReset: function () { if (Ach && Ach.reset) Ach.reset(); },
     /* 钱包 / 皮肤（供控制台与测试使用） */
     wallet: function () { return Skins.getWallet(); },
     setWallet: function (n) { var v = Skins.setWallet(n); updateHud(); return v; },
@@ -1642,7 +1676,9 @@
         wallet: Skins.getWallet(), banked: S.banked,
         player: { y: P.y, vy: P.vy, onGround: P.onGround, duck: P.duck, h: curH() },
         obstacles: obstacles.length, items: items.length,
-        waves: S.waves, groups: S.groups
+        waves: S.waves, groups: S.groups,
+        /* 成就统计（本局） */
+        jumps: S.jumps, shields: S.shields, smashes: S.smashes, crashed: S.crashed
       };
     }
   };
