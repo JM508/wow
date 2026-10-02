@@ -63,7 +63,7 @@
     DASH_Y: 36,             // 冲刺币中心离地高度（站着跑就能吃到）
 
     AIR_GAP: 44,            // 飞行物底边离地高度（只能下蹲穿过）
-    AIR_TOP: -20,           // 飞行物碰撞盒顶（画面上沿之外）：整体吊在天花板上 → 跳不过去
+    AIR_TOP: -20,           // 飞行物碰撞盒顶（画面上沿之外）：整根拉长的瓶子吊在画面顶 → 跳不过去
     AIR_LEAD: 0.25,         // 飞行物这一波额外后推的时间（秒）：留出「上一跳落地」的反应余量
     GAP_MIN: 0.80,          // 障碍间距系数下限（× 当前速度）
     GAP_MAX: 1.55,          // 障碍间距系数上限
@@ -426,8 +426,9 @@
       phase: random() * 6.28
     };
     if (kind === "air") {
-      /* 飞行物「吊」在天花板上：本体（瓶子/纸/无人机）高 h，但碰撞盒从画面上沿
-         一直垂到「下蹲缝隙」的上沿。于是跳起来只会迎面撞上去 —— 想过去只能下蹲。
+      /* 飞行障碍 = 拉长的雪碧瓶：本体（瓶子原始高 h）只是模型的原始比例，
+         但碰撞盒从画面上沿一直垂到「下蹲缝隙」的上沿，绘制时瓶子贴图
+         纵向拉伸填满整个碰撞盒。于是跳起来只会迎面撞上去 —— 想过去只能下蹲。
          （旧版只把本体当碰撞盒，最高点才到 230 左右，一次满跳脚底能抬到 144，
           直接就从它上面飞过去了。） */
       o.body = h;
@@ -624,8 +625,8 @@
 
   var HELP_HTML = "按 <b>空格</b>/<b>↑</b>/<b>W</b> 起跳，长按跳得更高；<br>" +
     "按 <b>↓</b>/<b>S</b> 下蹲，空中按下蹲可加速下落；<br>" +
-    "地面的障碍要 <b>跳过</b>；天上的长柱只能 <b>下蹲</b> 从下面的缝隙钻过去" +
-    "（柱子从画面顶垂到贴地，跳起来会迎面撞上）；<br>" +
+    "地面的障碍要 <b>跳过</b>；天上的长瓶子只能 <b>下蹲</b> 从下面的缝隙钻过去" +
+    "（瓶子从画面顶一直垂到贴地，跳起来会迎面撞上）；<br>" +
     "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
     "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
     "速度会越来越快，坚持越久分数越高。";
@@ -636,7 +637,7 @@
     elOverlay.classList.remove("hidden");
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
-      elOvText.innerHTML = "按 <b>空格</b> / <b>↑</b> 起跳，长按跳更高；<b>↓</b> 下蹲钻过天上的长柱。<br>" +
+      elOvText.innerHTML = "按 <b>空格</b> / <b>↑</b> 起跳，长按跳更高；<b>↓</b> 下蹲钻过天上的长瓶子。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
         "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
@@ -940,8 +941,8 @@
 
   /* 障碍「本体」矩形（瓶子 / 纸 / 无人机那一段）。
      地面障碍的本体就是碰撞盒；空中障碍的碰撞盒是「吊到天花板的整条竖井」，
-     本体只是末端那一截 —— 绘制、碎块、撞碎粒子都得按本体走，
-     否则瓶子会被画成一根 276px 高的柱子、粒子会在屏幕顶上炸开。 */
+     绘制时整根瓶子拉伸填满竖井，但碎块/撞碎粒子仍按本体那一截走，
+     否则碎块会在屏幕顶上炸开。 */
   function obBody(o) {
     var h = o.kind === "air" ? (o.body || o.h) : o.h;
     return { x: o.x, y: o.y + o.h - h, w: o.w, h: h };
@@ -1186,34 +1187,40 @@
     return { im: im, w: w, h: h };
   }
 
-  /* ── 飞行障碍的「长柱」本体 ──
-     从画面上沿一直垂到下蹲缝隙上沿，宽度与碰撞盒一致 —— 看到的就是撞到的。
-     （旧版只在末端画一段本体 + 一条吊索，玩家误以为只有那段本体才算数。） */
-  function drawAirShaft(cx, top, bottom, w, bob) {
+  /* ── 飞行障碍 = 一整根「拉长的雪碧瓶」──
+     瓶子模型本身被纵向拉长：瓶盖/瓶颈吊在画面上沿之外，瓶身一路垂到贴地，
+     宽度与碰撞盒一致 —— 看到的就是撞到的，「跳不过去、只能蹲钻」一眼可见。
+     这是图片没加载出来（含无图测试环境）时的矢量兜底画法。 */
+  function drawTallBottle(cx, top, bottom, w) {
     if (!(bottom > top)) return;
     var x = cx - w / 2;
+    var full = bottom - top;
+    /* 瓶盖（顶端，通常在画面外沿） */
+    ctx.fillStyle = "#7fd4e8";
+    rr(ctx, x + w * 0.28, top - 4, w * 0.44, 10, 2); ctx.fill();
+    /* 瓶颈：从瓶盖下面收窄，往下渐宽过渡到瓶身 */
+    ctx.fillStyle = "rgba(94,196,166,0.92)";
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.34, top + 5);
+    ctx.lineTo(x + w * 0.66, top + 5);
+    ctx.lineTo(x + w * 0.82, top + Math.min(46, full * 0.28));
+    ctx.lineTo(x + w * 0.18, top + Math.min(46, full * 0.28));
+    ctx.closePath(); ctx.fill();
+    /* 瓶身：一条拉长的圆角矩形，直到贴近地面的瓶底 */
+    var bodyTop = top + Math.min(46, full * 0.28) - 2;
+    var bodyH = bottom - bodyTop;
     var g = ctx.createLinearGradient(x, 0, x + w, 0);
-    g.addColorStop(0, "rgba(138,152,170,0.9)");
-    g.addColorStop(0.45, "rgba(206,218,232,0.96)");
-    g.addColorStop(1, "rgba(112,126,144,0.9)");
+    g.addColorStop(0, "rgba(74,168,140,0.94)");
+    g.addColorStop(0.45, "rgba(133,214,183,0.96)");
+    g.addColorStop(1, "rgba(58,142,118,0.94)");
     ctx.fillStyle = g;
-    rr(ctx, x, top - 6, w, bottom - top + 6 + bob * 0.4, Math.min(9, w / 2));
-    ctx.fill();
-    ctx.strokeStyle = "rgba(100,114,132,0.45)";
-    ctx.lineWidth = 1.4;
-    for (var i = 1; i <= 2; i++) {
-      var lx = x + (w * i) / 3;
-      ctx.beginPath(); ctx.moveTo(lx, top - 2); ctx.lineTo(lx, bottom + bob * 0.4); ctx.stroke();
-    }
-    /* 柱身上的警示斜纹（每隔一段一道），远处也一眼能认出是障碍 */
-    ctx.strokeStyle = "rgba(255,122,89,0.35)";
-    ctx.lineWidth = 2.2;
-    for (var y = top + 14; y < bottom - 6; y += 46) {
-      ctx.beginPath();
-      ctx.moveTo(x + 3, y + 8);
-      ctx.lineTo(x + w - 3, y);
-      ctx.stroke();
-    }
+    rr(ctx, x, bodyTop, w, bodyH, Math.min(9, w / 2)); ctx.fill();
+    /* 高光竖线 + 标签横带，一眼认出是「瓶子」 */
+    ctx.strokeStyle = "rgba(255,255,255,0.4)";
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(x + w * 0.24, bodyTop + 8); ctx.lineTo(x + w * 0.24, bottom - 8); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillRect(x + 2, bottom - full * 0.42, w - 4, Math.max(6, full * 0.05));
   }
 
   /* ── 障碍绘制 ── */
@@ -1232,13 +1239,12 @@
         ctx.fill();
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
       } else {
-        /* 空中障碍 = 整条「从顶垂下的长柱」：柱身宽度与碰撞盒一致，
-           底端保留原来的雪碧瓶贴图（贴图底边抬 10px，与下蹲头顶最少留 2.5px）。
-           柱身一路顶到画面外 —— 「不能跳过去」一眼可见。 */
+        /* 空中障碍 = 雪碧瓶模型本身被拉长：同一张贴图纵向拉伸，
+           从画面上沿（碰撞盒顶）一直拉到贴近地面的瓶底（底边抬 10px，
+           与下蹲头顶最少留 2.5px）—— 瓶子大到跳不过去，只能蹲钻。 */
         var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
         var btm = o.y + o.h - 10 + bob;
-        drawAirShaft(o.x + o.w / 2, o.y, btm - vis.h + 6, o.w, bob);
-        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, btm - vis.h, vis.w, vis.h);
+        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, o.y, vis.w, btm - o.y);
       }
       ctx.restore();
       return;
@@ -1246,7 +1252,12 @@
 
     var bb = obBody(o);
     var x = bb.x, y = bb.y, w = bb.w, h = bb.h;
-    if (o.kind === "air") drawAirShaft(o.x + o.w / 2, o.y, y, o.w, 0);
+    if (o.kind === "air") {
+      /* 无图兜底：整个空中障碍就是一整根拉长的瓶子，不再叠画纸/无人机 */
+      drawTallBottle(o.x + o.w / 2, o.y, o.y + o.h - 10, o.w);
+      ctx.restore();
+      return;
+    }
 
     if (o.id === "cup") {                        // 咖啡杯
       ctx.fillStyle = "#ffffff"; rr(ctx, x, y + 8, w, h - 8, 7); ctx.fill();
