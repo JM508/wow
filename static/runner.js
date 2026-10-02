@@ -596,10 +596,18 @@
     S.earned = bankCoins();                      // 本局金币进钱包（S.banked 保证只入账一次）
     showOverlay("over");
     updateHud();
-    /* 交给云端排行榜：未登录时 rank.js 不会发任何请求 */
+    /* 交给云端排行榜：未登录时 rank.js 不会发任何请求。
+       durationMs 是本局的**游戏内用时**（S.time 只在 playing 时累加，暂停不算），
+       服务端靠它校验成绩的物理可行性：位置推进 = Σ 速度×dt、用时 = Σ dt，
+       有效速度恒在 [330, 1038] px/s，所以「距离 ↔ 用时」会互相锁死。 */
     try {
       document.dispatchEvent(new CustomEvent("run:over", {
-        detail: { score: score, coins: S.coins, distance: Math.floor(S.dist / 100) }
+        detail: {
+          score: score,
+          coins: S.coins,
+          distance: Math.floor(S.dist / 100),
+          durationMs: Math.round(S.time * 1000)
+        }
       }));
     } catch (e) {}
     /* 成就结算：这一局没实时解锁的（分数 / 里程 / 无伤 / 累计类）在这里统一补判 */

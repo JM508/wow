@@ -232,14 +232,28 @@
      · 未登录 = 访客模式：自动取「访客 N」空号直接上传（服务端只放行这种名字）
      · 已登录：上传前先查重名 —— 排行榜上不允许出现两个同名的人，
        撞名时提示换名字，这局先暂存，改名后自动补传
-     · 上传失败绝不静默丢弃：暂存，之后自动补传 */
+     · 上传失败绝不静默丢弃：暂存，之后自动补传
+     · 服务端会校验成绩（数据自洽 + 距离/用时的物理一致性），
+       校验不过的属于「这组数据本身不成立」，暂存重传没有意义，直接如实告知 */
+  function stash(entry, score, guest, guestName) {
+    var p = {
+      score: score,
+      coins: entry && entry.coins,
+      distance: entry && entry.distance,
+      durationMs: entry && entry.durationMs,   // 物理凭证，补传时必须整包带上
+      guest: !!guest
+    };
+    if (guestName) p.guestName = guestName;
+    return p;
+  }
+
   function submit(entry) {
     var score = Math.floor((entry && entry.score) || 0);
     if (score <= 0 || score === lastSubmit) return;
     if (!CLOUD.user()) {
       /* 访客模式：分配/复用访客编号后直接上传 */
       if (guestChecking) {
-        if (!pending || score > pending.score) pending = { score: score, coins: entry.coins, distance: entry.distance, guest: true };
+        if (!pending || score > pending.score) pending = stash(entry, score, true);
         return;
       }
       guestChecking = true;
@@ -254,9 +268,7 @@
     var name = CLOUD.nickOrDefault();
     CLOUD.scores.nameTaken(name).then(function (r) {
       if (r && r.data) {
-        if (!pending || score > pending.score) {
-          pending = { score: score, coins: entry.coins, distance: entry.distance, guest: false };
-        }
+        if (!pending || score > pending.score) pending = stash(entry, score, false);
         toast("⚠️ 榜上已有「" + name + "」，请换个昵称（下方输入框），改名后自动补传");
         var nickInput = document.getElementById("rank-nick");
         if (nickInput) { try { nickInput.focus(); } catch (e) {} }
@@ -272,13 +284,19 @@
       nickname: isGuest ? guestName : undefined,
       score: score,
       coins: entry && entry.coins,
-      distance: entry && entry.distance
+      distance: entry && entry.distance,
+      durationMs: entry && entry.durationMs
     }).then(function (r) {
       if (r.error) {
-        /* lastSubmit 只在成功后记账：失败的这局下一回还有机会补传 */
-        if (!pending || score > pending.score) {
-          pending = { score: score, coins: entry && entry.coins, distance: entry && entry.distance, guest: isGuest, guestName: guestName };
+        /* 服务端校验拦下：这组成绩数据本身不成立（分数与距离对不上 /
+           用时跑不出这个距离 / 提交太频繁），重传多少次都一样，丢弃并说明 */
+        if (r.error.permanent) {
+          toast("⚠️ 这一局没有上榜：" + CLOUD.describe(r.error));
+          if (pending && pending.score <= score) pending = null;
+          return;
         }
+        /* lastSubmit 只在成功后记账：失败的这局下一回还有机会补传 */
+        if (!pending || score > pending.score) pending = stash(entry, score, isGuest, guestName);
         toast("☁️ 成绩上传失败：" + CLOUD.describe(r.error));
         return;
       }

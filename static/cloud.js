@@ -118,6 +118,12 @@
     if (kind === "network" || status === 0 && kind === "network") {
       return "网络连接失败，请检查网络后重试";
     }
+    /* 成绩被服务端校验拦下（触发器 runner_scores_guard 抛的 SQLSTATE WOW01，
+       经网关后 code 变成 DATABASE_WOW01）：直接把库里的中文原因原样呈现，
+       别退化成一句「云服务出错了」。 */
+    if (/WOW01$/.test(String(code)) || /成绩校验未通过|提交太频繁/.test(String(err.message || ""))) {
+      return err.message || "这一局的成绩没通过校验，没有上榜";
+    }
     if (code === "42P01") return "云端数据表尚未就绪，请稍后再试";
     if (code === "23505") return "已经存在同名记录，换一个昵称试试";
     if (code === "42501") return "没有权限执行该操作，请重新登录";
@@ -252,6 +258,18 @@
     return d.from(TABLE_SCORES).select("id", { count: "exact", head: true }).gt("score", score);
   }
 
+  /* ── 成绩被服务端校验拦下 ──
+     触发器 runner_scores_guard 以 SQLSTATE 'WOW01' 抛错，网关会把它包装成
+     code = "DATABASE_WOW01"（message 是库里的中文原因）。这类错误意味着
+     「这组数据本身不成立」，重传一万次也过不去 —— 调用方必须放弃暂存重试，
+     否则会无限补传同一条脏数据。所以这里用「后缀匹配 + message 兜底」，
+     两种形态（网关加前缀 / 直接透传）都能认出来。 */
+  function isScoreReject(err) {
+    if (!err) return false;
+    if (/WOW01$/.test(String(err.code || ""))) return true;
+    return /成绩校验未通过|提交太频繁/.test(String(err.message || ""));
+  }
+
   function scoreSubmit(entry) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
@@ -262,6 +280,11 @@
       coins: Math.max(0, Math.floor(Number(entry.coins) || 0)),
       distance: Math.max(0, Math.floor(Number(entry.distance) || 0))
     };
+    /* 本局用时（毫秒）＝服务端校验成绩的物理凭证。
+       老客户端（页面缓存了旧脚本）不传这个字段时，服务端会降级成宽松校验
+       （距离上限收紧到 2000 米）而不是直接拒收，玩家不会白跑一局。 */
+    var durMs = Math.round(Number(entry.durationMs) || 0);
+    if (durMs > 0) row.duration_ms = durMs;
     /* 访客模式：未登录也能上传，但昵称必须是「访客 N」——
        服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称。
        同时带上本机 device_id：之后登录时可以凭它把这些访客行过户到账号名下。 */
@@ -277,7 +300,11 @@
       setNick(row.nickname);
     }
     return d.from(TABLE_SCORES).insert(row)
-      .select("nickname, score, coins, distance, created_at");
+      .select("nickname, score, coins, distance, created_at")
+      .then(function (r) {
+        if (r && r.error && isScoreReject(r.error)) r.error.permanent = true;
+        return r;
+      });
   }
 
   /* ── 本机设备标识 ──
