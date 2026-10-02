@@ -91,6 +91,12 @@
       desc: "白衬衫加眼镜，一手话筒一手规划，冲就完事了。",
       sprite: { run: "zhang-runner", duck: "zhang-duck" },
       runH: 78, duckH: 48
+    },
+    {
+      id: "pinkops", name: "粉装突击", price: 2333, tag: "限定",
+      desc: "粉发突击手，背着全套装备也要跑第一。",
+      sprite: { run: "pinkops-runner", duck: "pinkops-duck" },
+      runH: 78, duckH: 48
     }
   ];
 
