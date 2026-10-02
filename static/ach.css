@@ -94,6 +94,23 @@
 }
 .ach-bar-text b { color: var(--primary, #1f1f1f); }
 
+/* ── 面板顶部那行云状态（未接云 / 未登录 / 同步中 / 已同步 / 失败） ── */
+.ach-cloud {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: -6px 0 14px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--secondary, #5b6470);
+  background: var(--tertiary, #f3f5f9);
+  border-radius: 8px;
+}
+.ach-cloud.is-ok { color: #1f7a4d; background: rgba(53, 160, 106, 0.12); }
+.ach-cloud.is-err { color: #b03030; background: rgba(214, 69, 69, 0.12); }
+.ach-cloud.is-busy { color: #8a6200; background: rgba(232, 167, 14, 0.14); }
+
 /* ── 分组 ── */
 .ach-group { margin: 0 0 16px; }
 .ach-group h4 {

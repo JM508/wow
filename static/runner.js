@@ -1956,6 +1956,9 @@
     elKeysSum = document.getElementById("set-keys-sum");
     elA11ySum = document.getElementById("set-a11y-sum");
     elSetHint = document.getElementById("set-hint");
+    elClearBtn = document.getElementById("set-clear");
+    elClearWrap = document.getElementById("set-clear-confirm");
+    elClearTip = document.getElementById("set-clear-tip");
   }
 
   function showSetView(name) {
@@ -2092,7 +2095,7 @@
     if (elSetHint) {
       elSetHint.textContent = captureAct
         ? "请按下新键…（Esc 取消）"
-        : "设置只保存在本机浏览器，换设备需要重设。";
+        : "设置只保存在本机浏览器，换设备需要重设（成就与钱包登录后会同步到云端）。";
     }
     renderKeys();
   }
@@ -2196,6 +2199,107 @@
     window.addEventListener("resize", resize);
   }
 
+  /* ═══════════ 清理本地缓存（设置 → 缓存与数据） ═══════════
+     清掉本机这一份跑酷存档：按 "runner-" 前缀扫 localStorage。
+     ⚠️ **保留设置类键**（runner-set 音效/无障碍/自定义按键、runner-mute 旧的静音键）——
+     那些是偏好不是存档，清个缓存顺手把人家的键位和无障碍设置也抹掉最气人。
+
+     云端账号数据一律不碰。已登录时清完立刻从云端恢复（成就走 ach.js 的云同步、
+     钱包与皮肤走 WowCloud.wallet.sync），再刷新页面：比只改内存干净 ——
+     最高分（lastBest）这类启动时才读一次的变量也能跟着归位。 */
+  var CACHE_PREFIX = "runner-";
+  var CACHE_KEEP = { "runner-set": 1, "runner-mute": 1 };
+  var elClearBtn = null, elClearWrap = null, elClearTip = null;
+  var clearLogged = false;      // 上一次确认框问出来的登录状态（点了确认就用它）
+
+  function clearLocalCache() {
+    var removed = [], kept = [], keys = [], i, k;
+    if (Ach && Ach.cloud && Ach.cloud.cancel) Ach.cloud.cancel();   // 先撤掉待发的上传，别把清空后的空档推到云端
+    try {
+      for (i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    } catch (e) { keys = []; }
+    for (i = 0; i < keys.length; i++) {
+      k = keys[i];
+      if (!k || k.indexOf(CACHE_PREFIX) !== 0) continue;            // 只碰本游戏的键
+      if (CACHE_KEEP[k]) { kept.push(k); continue; }
+      try { localStorage.removeItem(k); removed.push(k); } catch (e) {}
+    }
+    if (Ach && Ach.clearLocal) Ach.clearLocal();                    // 内存里的成就也跟着归零
+    return { removed: removed, kept: kept };
+  }
+
+  function clearTip(text, kind) {
+    if (!elClearTip) return;
+    elClearTip.className = "set-clear-tip" + (kind ? " is-" + kind : "");
+    elClearTip.textContent = text || "";
+  }
+
+  /* 点「清理缓存」先问一句：登录与未登录的后果完全不一样，必须说清楚再动手 */
+  function showClearConfirm() {
+    if (elClearWrap) elClearWrap.classList.remove("hidden");
+    if (elClearBtn) elClearBtn.disabled = true;
+    clearTip("正在确认登录状态…");
+    var C = window.WowCloud;
+    if (!C || !C.session) { paintClearTip(false); return; }
+    C.session().then(function (r) { paintClearTip(!!(r && r.data)); },
+                     function () { paintClearTip(false); });
+  }
+  function hideClearConfirm() {
+    if (elClearWrap) elClearWrap.classList.add("hidden");
+    if (elClearBtn) elClearBtn.disabled = false;
+    clearTip("");
+  }
+  function paintClearTip(logged) {
+    clearLogged = !!logged;
+    if (logged) {
+      clearTip("已登录云账号：清理后会立刻从云端把成就与钱包恢复回来，本机不会真的丢东西。", "ok");
+    } else {
+      clearTip((window.WowCloud ? "当前未登录：" : "本站未接入云存档：") +
+               "本机存档删掉就找不回来了。确定要清理吗？", "warn");
+    }
+  }
+
+  var clearDone = false;
+  function applyClearCache(logged) {
+    if (clearDone) return;
+    clearDone = true;
+    var res = clearLocalCache();
+    hideClearConfirm();
+    toast("🧹 已清理本机缓存" + (res.removed.length ? "（" + res.removed.length + " 项）" : "") +
+          (res.kept.length ? "，音效与按键设置已保留" : ""));
+    reloadSoon(logged);
+  }
+
+  /* 已登录：先把云端那份（成就 + 钱包）拉回来，成功或超时都刷新页面 */
+  function reloadSoon(logged) {
+    /* 自动化测试（__RUNNER_MANUAL__）里不真跳转：jsdom 不支持导航，会把测试环境搅乱 */
+    var reload = function () {
+      if (window.__RUNNER_MANUAL__) return;
+      try { location.reload(); } catch (e) {}
+    };
+    var jobs = [];
+    if (logged) {
+      if (Ach && Ach.cloud && Ach.cloud.sync) jobs.push(Ach.cloud.sync({ quiet: true }));
+      var C = window.WowCloud;
+      if (C && C.wallet && C.wallet.sync) jobs.push(C.wallet.sync());
+    }
+    var go = function (msg) {
+      if (msg) toast(msg);
+      setTimeout(reload, 800);
+    };
+    if (!jobs.length) { setTimeout(reload, 900); return; }
+    var settled = false;
+    var finish = function (msg) { if (settled) return; settled = true; go(msg); };
+    var timer = setTimeout(function () { finish(""); }, 4000);       // 网络慢也不能把用户卡在这儿
+    Promise.all(jobs).then(function (rs) {
+      clearTimeout(timer);
+      var a = rs[0], wal = rs[1];
+      if (a && a.ok) finish("☁️ 已从云端恢复成就 " + a.unlocked + "/" + a.total);
+      else if (wal && wal.ok) finish("☁️ 已从云端恢复钱包（" + wal.coins + " 金币）");
+      else finish("✅ 已清理，正在刷新…");
+    }, function () { clearTimeout(timer); finish("✅ 已清理，正在刷新…"); });
+  }
+
   /* 设置面板的控件绑定（标记在页面里，这里只挂行为，缺元素自动跳过） */
   function bindSet() {
     if (!elSet) return;
@@ -2244,6 +2348,16 @@
     });
     var va = document.getElementById("set-open-vol");
     if (va) va.addEventListener("click", function () { showSetView("a11y"); });
+
+    /* 清理缓存：按钮 → 二段确认（问清登录状态）→ 清理 → 已登录则从云端恢复并刷新 */
+    if (elClearBtn) elClearBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      showClearConfirm();
+    });
+    var cy = document.getElementById("set-clear-yes");
+    if (cy) cy.addEventListener("click", function (e) { e.preventDefault(); applyClearCache(clearLogged); });
+    var cn = document.getElementById("set-clear-no");
+    if (cn) cn.addEventListener("click", function (e) { e.preventDefault(); hideClearConfirm(); });
   }
 
   function bindViewEntry(btn, view) {
@@ -2303,6 +2417,11 @@
       return { sfx: !!SET.sfx, vol: SET.vol, cb: !!SET.cb, calm: !!SET.calm, big: !!SET.big, keys: keys };
     },
     setOption: function (name, val) { return setOpt(name, val); },
+    /* 清理本地缓存：纯清理（不刷新页面，供测试用）
+       + 面板那条完整流程（确认框在页面里，见 showClearConfirm / applyClearCache） */
+    clearCache: clearLocalCache,
+    clearCacheConfirm: showClearConfirm,
+    clearCacheApply: applyClearCache,
     keys: function () { return SET.keys; },
     setKeys: function (next) { return setKeys(next); },
     resetKeys: function () { return resetKeys(); },

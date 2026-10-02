@@ -45,6 +45,7 @@
 
   var TABLE_WALLETS = "runner_wallets";   // 钱包云存档（仅本人可读写）
   var TABLE_SCORES  = "runner_scores";    // 排行榜成绩（所有人可看，仅本人可提交）
+  var TABLE_ACH     = "runner_achievements"; // 成就云存档（仅本人可读写；读写逻辑在 /ach.js）
   var NICK_KEY      = "runner-nick";      // 昵称本地缓存（提交成绩用）
   var NICK_MAX      = 16;
   var SYNC_BASE_KEY = "runner-coins-synced"; // 上次成功同步时的金币基线（扣款不被云端吃掉的关键）
@@ -573,7 +574,7 @@
     /* 实际使用的数据面地址 / 是否走的同源代理（调试与测试用） */
     endpoint: function () { return API; },
     viaProxy: function () { return VIA_PROXY; },
-    TABLES: { wallets: TABLE_WALLETS, scores: TABLE_SCORES },
+    TABLES: { wallets: TABLE_WALLETS, scores: TABLE_SCORES, achievements: TABLE_ACH },
     LEADER_LIMIT: LEADER_LIMIT,
     LEADER_PAGE: LEADER_PAGE,
     NICK_MAX: NICK_MAX,

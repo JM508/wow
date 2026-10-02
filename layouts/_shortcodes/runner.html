@@ -107,13 +107,13 @@
     <div id="ach-progress" aria-live="polite"></div>
     <div id="ach-list" aria-label="成就列表"></div>
     <p class="ach-foot">
-      成就只保存在本机浏览器里，换设备不会同步。局内达成的（分数 / 里程 / 跳跃 / 满速）当场解锁，
-      其余在一局结束时结算；「无伤」指整局一次都没碰到障碍（用护盾撞碎障碍也算碰到）。
+      局内达成的（分数 / 里程 / 跳跃 / 满速）当场解锁，其余在一局结束时结算；
+      「无伤」指整局一次都没碰到障碍（用护盾撞碎障碍也算碰到）。成就存在哪、有没有同步到云端，看上方 ☁️ 那行。
     </p>
   </div>
 </div>
 
-<!-- ═══ 设置弹层：音效 / 无障碍 / 自定义按键（三个视图，逻辑在 /runner.js，只存本机） ═══ -->
+<!-- ═══ 设置弹层：音效 / 无障碍 / 自定义按键 / 清理缓存（三个视图，逻辑在 /runner.js） ═══ -->
 <div id="run-set" class="run-set hidden" data-set-panel role="dialog" aria-modal="true" aria-labelledby="run-set-title">
   <div class="run-set-box">
     <div class="run-set-head">
@@ -157,7 +157,22 @@
         </button>
       </section>
 
-      <p class="set-foot" id="set-hint">设置只保存在本机浏览器，换设备需要重设。</p>
+      <section class="set-sec">
+        <h4 class="set-h">🧹 缓存与数据</h4>
+        <div class="set-row">
+          <div class="set-lab"><span>清理本地缓存</span><small>清空本机这一份存档：成就进度、金币与已购皮肤、单机最高分、上榜昵称。云端账号数据不受影响，已登录时清理后会立刻从云端恢复（成就 + 钱包）；音效、无障碍与按键设置会保留。</small></div>
+          <button type="button" id="set-clear" class="set-btn set-danger" title="清理本机存档">清理缓存</button>
+        </div>
+        <div class="set-clear-confirm hidden" id="set-clear-confirm" role="group" aria-labelledby="set-clear-tip">
+          <p class="set-clear-tip" id="set-clear-tip" role="status" aria-live="polite"></p>
+          <div class="set-clear-acts">
+            <button type="button" id="set-clear-yes" class="set-btn set-danger">确认清理</button>
+            <button type="button" id="set-clear-no" class="set-btn">取消</button>
+          </div>
+        </div>
+      </section>
+
+      <p class="set-foot" id="set-hint">设置只保存在本机浏览器，换设备需要重设（成就与钱包登录后会同步到云端）。</p>
     </div>
 
     <!-- 视图 2：无障碍选项（色盲模式 / 减少闪烁 / 独立音量 / 大字模式） -->

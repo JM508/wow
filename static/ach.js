@@ -2,7 +2,9 @@
    火柴人快跑 · 成就系统
    ──────────────────────────────────────────────────────────────
    · 18 个成就，分「入门 / 进阶 / 大师」三档
-   · 数据只存本机浏览器（localStorage: runner-ach），不联网、不上传
+   · 数据存本机浏览器（localStorage: runner-ach）；登录云账号后另外记一份在
+     云端（runner_achievements），换设备 / 清缓存都能恢复。没接云服务、
+     没登录、或页面没引 cloud.js 时，整条云链路自动失效，只存本机。
    · 两种判定时机：
        局内实时 —— 跳跃数 / 满速 / 距离 / 分数这类「当场达成」的，
                    满足的那一刻就解锁并弹提示（不等这一局结束）
@@ -194,6 +196,179 @@
     return null;
   }
 
+  /* ═══════════════ 云端同步（可选依赖：window.WowCloud） ═══════════════
+     登录云账号后，本机这份成就另外记一份在云端（表 runner_achievements）：
+     换设备登录、或者本机缓存被清掉，都能把成就和累计统计拉回来。
+
+     合并口径（两边都不会丢东西，也是「清缓存后能恢复」的关键）：
+       · got  解锁状态取并集，解锁时间取更早的那个（什么时候拿的第一时间保留）
+       · stat 累计值逐项取较大者（局数 / 累计里程 / 累计金币 / 历史最好）
+
+     上传时机：解锁的那一刻（防抖 1.5 秒，一次解锁多个也只发一条）、
+     每局结算之后（累计类要跟着走）、以及登录态就绪时先合并一次。
+     ⚠️ 未登录绝不上传：匿名请求既写不进云档，也会白白打一次网络。
+
+     WowCloud 是可选依赖 —— 独立站（stick-runner）没有 cloud.js，
+     这段整体降级为「不联网」，成就照旧只存本机，游戏本体不受影响。 */
+  var CLOUD = global.WowCloud || null;
+  var TABLE = "runner_achievements";
+  var PUSH_WAIT = 1500;                     // 防抖窗口
+  var pushTimer = null;
+  var syncP = null;                         // 正在跑的同步（并发去重）
+  var lastCloudUser = null;                  // 已同步过的账号，登录动作靠它识别
+  /* local = 没有云模块 / off = 有云但未登录 / syncing / ok / error */
+  var cloudState = { status: CLOUD ? "off" : "local", at: 0, error: null };
+
+  function cloudUser() { return (CLOUD && CLOUD.user) ? CLOUD.user() : null; }
+  function cloudReady() {
+    return !!(CLOUD && CLOUD.database && CLOUD.database());
+  }
+  function cloudErr(err) {
+    if (CLOUD && CLOUD.describe) { try { return CLOUD.describe(err); } catch (e) {} }
+    return (err && err.message) || "云服务暂时不可用";
+  }
+
+  function cloudPull() {
+    return CLOUD.database().from(TABLE).select("got, stat, updated_at").maybeSingle();
+  }
+  function cloudPush(merged) {
+    /* owner_id 交给数据库的 DEFAULT auth.uid() 填，前端永远不发送 */
+    var row = { got: merged.got, stat: merged.stat, updated_at: new Date().toISOString() };
+    return CLOUD.database().from(TABLE).upsert(row, { onConflict: "owner_id" })
+      .select("got, stat, updated_at");
+  }
+
+  /* ── 合并：本机 ⇄ 云端 ── */
+  function mergeData(local, cloud) {
+    var out = { got: {}, stat: {} }, f;
+    for (f in EMPTY_STAT) out.stat[f] = 0;
+    var take = function (src) {
+      if (!src || typeof src !== "object") return;
+      var g = src.got, s = src.stat, k, ts;
+      if (g && typeof g === "object") {
+        for (k in g) {
+          if (!Object.prototype.hasOwnProperty.call(g, k)) continue;
+          if (!isKnown(k)) continue;                        // 不认识的成就 id 一律丢掉
+          ts = Math.floor(Number(g[k]));
+          if (!isFinite(ts) || ts <= 0) continue;            // 脏数据（0 / NaN / 负数）
+          if (!out.got[k] || ts < out.got[k]) out.got[k] = ts;
+        }
+      }
+      if (s && typeof s === "object") {
+        for (f in EMPTY_STAT) {
+          var v = Math.floor(Number(s[f]));
+          if (isFinite(v) && v > out.stat[f]) out.stat[f] = v;
+        }
+      }
+    };
+    take(local);
+    take(cloud);
+    return out;
+  }
+
+  function applyMerged(merged) {
+    data.got = merged.got;
+    data.stat = merged.stat;
+    save();
+    lastKey = "";                            // 合并结果可能比本机进度更靠前，下一帧重新判定
+    render();
+    refreshBadge();
+    try { document.dispatchEvent(new CustomEvent("ach:sync", { detail: snapshot() })); } catch (e) {}
+  }
+
+  /* 一次完整同步：拉云端 → 与本机合并 → 写回云端 → 落到本机。
+     任何一步失败都保持本机数据不动，只把失败原因记进 cloudState 供面板显示。 */
+  function cloudSync(opts) {
+    opts = opts || {};
+    if (!CLOUD) return Promise.resolve({ ok: false, reason: "no-cloud" });
+    if (syncP) return syncP;                 // 已在同步：复用这一次，避免来回覆盖
+    cancelPush();
+    cloudState.status = "syncing";
+    if (isOpen()) render();
+    var wait = cloudUser() ? Promise.resolve(null)
+      : (CLOUD.session ? CLOUD.session() : Promise.resolve(null));
+    syncP = wait.then(function (r) {
+      if (!cloudUser() && !(r && r.data)) return { ok: false, needLogin: true };
+      if (!cloudReady()) return { ok: false, needLogin: true };
+      var before = unlockedCount();
+      return cloudPull().then(function (pull) {
+        if (pull && pull.error) return { ok: false, error: pull.error };
+        var cloud = (pull && pull.data) ? pull.data : null;
+        var merged = mergeData(data, cloud);
+        return cloudPush(merged).then(function (push) {
+          if (push && push.error) return { ok: false, error: push.error };
+          applyMerged(merged);
+          return {
+            ok: true, first: !cloud,
+            unlocked: unlockedCount(), gained: unlockedCount() - before, total: ACHS.length,
+            savedAt: (push.data && push.data[0] && push.data[0].updated_at) || null
+          };
+        });
+      });
+    }).then(function (r) {
+      syncP = null;
+      cloudState.status = r.ok ? "ok" : (r.needLogin ? "off" : "error");
+      cloudState.error = r.error || null;
+      if (r.ok) {
+        cloudState.at = Date.now();
+        if (!opts.quiet) {
+          var msg = "☁️ 成就已同步：" + r.unlocked + "/" + r.total;
+          if (r.gained) msg += "（从云端恢复 " + r.gained + " 个）";
+          say(msg);
+        }
+      } else if (!opts.quiet && r.error) {
+        say("☁️ 成就同步失败：" + cloudErr(r.error));
+      }
+      if (isOpen()) render();
+      return r;
+    }, function (e) {
+      syncP = null;
+      cloudState.status = "error";
+      cloudState.error = { message: (e && e.message) || "同步失败" };
+      if (isOpen()) render();
+      return { ok: false, error: cloudState.error };
+    });
+    return syncP;
+  }
+
+  /* 解锁 / 结算后延迟上传：连着解锁好几个也只发一条（防抖窗口内的合并成一次） */
+  function schedulePush() {
+    if (!CLOUD || !cloudUser()) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushTimer = null;
+      cloudSync({ quiet: true });
+    }, PUSH_WAIT);
+  }
+  function cancelPush() {
+    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+  }
+
+  /* 登录态就绪：启动时若已登录先合并一次（安静），之后每次「新登录」再同步并提示 */
+  function startCloud() {
+    if (!CLOUD || !CLOUD.session) return;
+    var booted = false;             // 启动时的「会话恢复」不算新登录，别弹提示
+    if (CLOUD.onAuthChange) {
+      CLOUD.onAuthChange(function () {
+        var id = cloudUser() ? cloudUser().id : null;
+        if (id && id !== lastCloudUser) {
+          lastCloudUser = id;
+          cloudSync({ quiet: !booted });
+        } else if (!id) {
+          lastCloudUser = null;
+          cloudState.status = "off";
+          if (isOpen()) render();
+        }
+      });
+    }
+    CLOUD.session().then(function (r) {
+      booted = true;
+      if (!r || !r.data) { cloudState.status = "off"; if (isOpen()) render(); return; }
+      lastCloudUser = cloudUser() ? cloudUser().id : null;
+      cloudSync({ quiet: true });
+    });
+  }
+
   /* ═══════════════ 皮肤统计（成就用；商店不存在时按 0 处理） ═══════════════
      live() 每帧都会走 ctx()，而数皮肤要读 10 次 localStorage，
      所以这里缓存一份，只在「买到/换上皮肤」时失效。 */
@@ -247,6 +422,7 @@
     if (data.got[id]) return false;
     data.got[id] = Date.now();
     save();
+    schedulePush();                                  // 登录了就顺手把新解锁的记到云端
     var d = def(id);
     refreshBadge();
     flashBadge();
@@ -320,6 +496,7 @@
     data.stat.bestCoins = Math.max(data.stat.bestCoins, c.coins);
     data.stat.bestJumps = Math.max(data.stat.bestJumps, c.jumps);
     save();
+    schedulePush();                                 // 累计统计跟着这一局一起上传
     lastKey = "";                                   // 下一局重新开始比对
     return evaluate(ctx(snap), true);
   }
@@ -331,6 +508,22 @@
     lastKey = "";
     render();
     refreshBadge();
+  }
+
+  /* 清空本机成就存档（设置面板「清理缓存」用）。
+     和 reset() 的区别：这里**不写回存储**，键直接删掉；并且取消待发的上传，
+     免得把「刚清空」的空档推到云端去。登录状态下清完再从云端合并一次即为恢复。 */
+  function clearLocal() {
+    cancelPush();
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    data = { v: 1, got: {}, stat: {} };
+    for (var f in EMPTY_STAT) data.stat[f] = EMPTY_STAT[f];
+    lastKey = "";
+    cur = null;
+    refreshSkins();
+    render();
+    refreshBadge();
+    return { key: KEY };
   }
 
   /* ═══════════════ 面板 ═══════════════ */
@@ -356,6 +549,35 @@
     if (isNaN(d.getTime()) || !ts) return "";
     return (d.getMonth() + 1) + "/" + d.getDate();
   }
+  function fmtAgo(ts) {
+    var s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (s < 45) return "刚刚";
+    if (s < 3600) return Math.round(s / 60) + " 分钟前";
+    if (s < 86400) return Math.round(s / 3600) + " 小时前";
+    return Math.round(s / 86400) + " 天前";
+  }
+
+  /* 面板顶部那行云状态：没接云服务 / 未登录 / 同步中 / 已同步 / 同步失败 五种 */
+  function cloudLine() {
+    if (!CLOUD) {
+      return "<p class='ach-cloud'>☁️ 本站未接入云存档，成就保存在本机浏览器</p>";
+    }
+    if (cloudState.status === "syncing") {
+      return "<p class='ach-cloud is-busy'>☁️ 正在同步成就…</p>";
+    }
+    if (!cloudUser()) {
+      return "<p class='ach-cloud'>☁️ 登录后成就自动记到云端账号，换设备或清理缓存都能恢复</p>";
+    }
+    if (cloudState.status === "error") {
+      return "<p class='ach-cloud is-err'>⚠️ 云端同步失败：" + esc(cloudErr(cloudState.error)) +
+        "（本机记录不受影响，稍后重试）</p>";
+    }
+    if (cloudState.status === "ok") {
+      return "<p class='ach-cloud is-ok'>☁️ 已同步到云端账号" +
+        (cloudState.at ? " · " + fmtAgo(cloudState.at) : "") + "</p>";
+    }
+    return "<p class='ach-cloud'>☁️ 已登录，成就会同步到云端账号</p>";
+  }
 
   /* ═══════════════ 徽章（工具条按钮上的 n/18） ═══════════════ */
   function refreshBadge() {
@@ -376,7 +598,8 @@
       elProg.innerHTML =
         "<div class='ach-bar-outer'><i style='width:" + pct + "%'></i></div>" +
         "<p class='ach-bar-text'>已解锁 <b>" + n + "</b> / " + ACHS.length + " 个成就（" + pct + "%）" +
-        "　累计跑 <b>" + c.totalMeters + "</b> 米 · <b>" + c.runs + "</b> 局</p>";
+        "　累计跑 <b>" + c.totalMeters + "</b> 米 · <b>" + c.runs + "</b> 局</p>" +
+        cloudLine();
     }
 
     if (!elList) return;
@@ -430,6 +653,13 @@
     panel.classList.remove("hidden");
     render();
     document.dispatchEvent(new CustomEvent("ach:open"));      // runner.js 借此把局面定格
+    /* 打开面板时顺手对齐一次云端（登录状态下）——换设备刚登录、或上次同步失败，
+       点开成就就能自己追上，不用退出重进。
+       刚同步过（60 秒内且成功）就不重复发请求，免得每点开一次都打一次网络。 */
+    if (CLOUD && cloudUser() && cloudState.status !== "syncing" &&
+        (cloudState.status !== "ok" || Date.now() - cloudState.at > 60000)) {
+      cloudSync({ quiet: true });
+    }
   }
   function close() {
     if (!panel || !isOpen()) return;
@@ -461,6 +691,8 @@
     refreshBadge();
   }
 
+  startCloud();                  // 已登录就先把云端与本机合并一次（没有云模块时直接返回）
+
   /* ═══════════════ 对外接口 ═══════════════ */
   global.RunnerAch = {
     KEYS: { ach: KEY },
@@ -470,10 +702,26 @@
     live: live,
     finish: finish,
     reset: reset,
+    clearLocal: clearLocal,
     open: open,
     close: close,
     isOpen: isOpen,
     render: render,
+    /* 云同步：登录状态下把本机与云端合并（面板、设置里的「清理缓存」都用它） */
+    cloud: {
+      available: function () { return !!CLOUD; },
+      table: TABLE,
+      sync: cloudSync,
+      start: startCloud,
+      cancel: cancelPush,
+      state: function () {
+        return { status: cloudState.status, at: cloudState.at,
+                 error: cloudState.error ? cloudErr(cloudState.error) : null,
+                 logged: !!cloudUser() };
+      },
+      /* 纯函数：合并规则单独可测（got 并集取更早、stat 逐项取大） */
+      merge: mergeData
+    },
     unlocked: function () {
       var out = [];
       for (var i = 0; i < ACHS.length; i++) if (data.got[ACHS[i].id]) out.push(ACHS[i].id);
