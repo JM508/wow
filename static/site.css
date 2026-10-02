@@ -1,10 +1,50 @@
 /* ══ 站点自定义样式 ══
    注：导航栏（.header-nav）保持主题默认布局——无菜单项时 logo/主题按钮靠左。
-   游戏入口放在首页正文区，做成两个居中大按钮（见下方规则）。 */
+   游戏入口：首页一个大按钮 → /games/ 游戏合集页（卡片式两个游戏入口）。 */
 
-/* ══ 首页正文区的「玩游戏」卡片 ══
+/* ══ 首页正文区的「玩游戏」入口按钮 ══
    入口来自 hugo.toml 的 homeInfoParams.Content 里的原生 HTML（unsafe=true），
-   样式仿「小游戏目录导航」卡片：圆角大卡 + 头部图标标题 + 两行游戏入口。 */
+   一个居中大按钮 → 跳转 /games/ 游戏合集页（两个游戏都收在合集页里）。 */
+.games-entry {
+  text-align: center;
+  margin: 1.8rem 0 0.6rem;
+}
+
+.games-entry-btn {
+  display: inline-block;
+  padding: 14px 48px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4f8cff, #6a5cff);
+  box-shadow: 0 14px 30px -14px rgba(79, 140, 255, 0.9);
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.games-entry-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08);
+  box-shadow: 0 18px 34px -14px rgba(79, 140, 255, 0.95);
+}
+
+.games-entry-sub {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--secondary, #888888);
+}
+
+/* 小屏：按钮收窄 */
+@media (max-width: 520px) {
+  .games-entry-btn { padding: 12px 38px; font-size: 16px; }
+}
+
+/* ══ /games/ 游戏合集页的游戏卡片 ══
+   与首页旧卡片同一套样式（games-card / games-row），合集页复用；
+   两行游戏入口 hover 时各自的品牌色渐变。 */
 .games-card {
   max-width: 460px;
   margin: 1.8rem auto 0.6rem;
