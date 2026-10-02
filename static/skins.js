@@ -97,6 +97,12 @@
       desc: "来自《碧蓝档案》的小鸟游星野。",
       sprite: { run: "hoshino-runner", duck: "hoshino-duck" },
       runH: 78, duckH: 48
+    },
+    {
+      id: "pixelrun", name: "像素狂奔", price: 3333, tag: "史诗",
+      desc: "从老录像带里跑出来的像素小人，一步一帧都在狂奔。",
+      sprite: { run: { sheet: "pixelrun-sheet", n: 12, fps: 15 }, duck: "pixelrun-duck" },
+      runH: 78, duckH: 48
     }
   ];
 
@@ -142,8 +148,8 @@
     for (var i = 0; i < PLAYERS.length; i++) {
       var sp = PLAYERS[i].sprite;
       if (!sp) continue;
-      if (sp.run) spriteImg(sp.run);
-      if (sp.duck) spriteImg(sp.duck);
+      if (sp.run) spriteImg(typeof sp.run === "object" ? sp.run.sheet : sp.run);
+      if (sp.duck) spriteImg(typeof sp.duck === "object" ? sp.duck.sheet : sp.duck);
     }
   })();
 
@@ -420,19 +426,32 @@
     var scale = opts.scale || 1;
     var night = !!opts.night;
 
-    /* ── 立绘皮肤：直接贴图（跑动带轻微起伏 / 前后倾，蹲用专属立绘）── */
+    /* ── 立绘皮肤：直接贴图（跑动带轻微起伏 / 前后倾，蹲用专属立绘）──
+       逐帧动画皮肤（史诗）：run/duck 可以是 { sheet: "文件名", n: 帧数, fps: 帧率 }，
+       sheet 为横排精灵图，按 t 取当前帧循环播放；静图皮肤照旧。 */
     if (skin.sprite) {
-      var im = spriteImg(pose === "duck" ? skin.sprite.duck : skin.sprite.run);
+      var sp = pose === "duck" ? skin.sprite.duck : skin.sprite.run;
+      var frames = (sp && typeof sp === "object") ? (sp.n || 1) : 1;
+      var im = spriteImg(typeof sp === "object" ? sp.sheet : sp);
       if (imgOk(im)) {
         var dh = pose === "duck" ? (skin.duckH || 36) : (skin.runH || 66);
-        var dw = dh * im.naturalWidth / im.naturalHeight;
+        var dw;
         ctx.save();
         ctx.scale(scale, scale);
-        if (pose === "run") {
-          ctx.translate(0, Math.sin(run) * 1.8);          // 步伐起伏
-          ctx.rotate(Math.sin(run) * 0.035);              // 轻微前后倾
+        if (frames > 1) {
+          /* 逐帧动画：素材本身就是完整跑步循环，自带步伐感，不再叠加起伏/倾斜 */
+          var fw = im.naturalWidth / frames;
+          var fi = Math.floor((opts.t || 0) * (sp.fps || 15)) % frames;
+          dw = dh * fw / im.naturalHeight;
+          ctx.drawImage(im, fi * fw, 0, fw, im.naturalHeight, -dw / 2, -dh, dw, dh);
+        } else {
+          dw = dh * im.naturalWidth / im.naturalHeight;
+          if (pose === "run") {
+            ctx.translate(0, Math.sin(run) * 1.8);          // 步伐起伏
+            ctx.rotate(Math.sin(run) * 0.035);              // 轻微前后倾
+          }
+          ctx.drawImage(im, -dw / 2, -dh, dw, dh);
         }
-        ctx.drawImage(im, -dw / 2, -dh, dw, dh);
         ctx.restore();
         return;
       }
