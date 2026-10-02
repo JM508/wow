@@ -303,25 +303,46 @@
      登录后调用：把本机（device_id 匹配）仍在榜的「访客 N」行改成本人所有。
      rename = true 时昵称一并改成账号昵称（榜单上彻底不留访客痕迹）；
      昵称已被别人占用时保持「访客 N」不变（只换归属，避免制造重名）。
-     幂等：过户完成后这些行不再是 anon，重复调用不会再命中。 */
+     幂等：过户后这些行的 device_id 被清空，重复调用不会再命中。
+
+     ⚠️ 必须走服务端函数 claim_guest_scores：直接 UPDATE 的旧策略只校验
+     「是访客行」，任何登录用户都能把别人的访客成绩过户走（越权刷榜）。
+     函数内以 auth.uid() 为准，并要求设备号与本机一致。 */
   function claimGuestScores(rename) {
     var u = user();
     if (!u) return Promise.resolve({ data: 0, error: null });
-    var d = db();
-    if (!d) return Promise.resolve({ data: 0, error: envUnavailable() });
+    var c = build();
+    if (!c) return Promise.resolve({ data: 0, error: envUnavailable() });
     var did = deviceId();
     if (!did) return Promise.resolve({ data: 0, error: null });
-    var row = { owner_id: u.id };
-    if (rename !== false) row.nickname = nickOrDefault();
-    return d.from(TABLE_SCORES)
-      .update(row)
-      .eq("owner_id", "anon")
-      .eq("device_id", did)
-      .select("id")
-      .then(function (r) {
-        if (r.error) return r;
-        return { data: (r.data && r.data.length) || 0, error: null };
+    return c.auth.getAccessToken().then(function (tok) {
+      if (!tok) return { data: 0, error: { kind: "unauthenticated", message: "登录态已失效，请重新登录", status: 0 } };
+      return fetch(API + "/.cloud/database/rest/rpc/claim_guest_scores", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wb-webapp-access-key": PUBLIC_CONFIG.publishableKey,
+          "Authorization": "Bearer " + tok
+        },
+        body: JSON.stringify({
+          p_device_id: did,
+          p_nickname: rename !== false ? nickOrDefault() : null
+        })
+      }).then(function (r) {
+        if (!r.ok) {
+          return {
+            data: 0,
+            error: { kind: r.status === 401 || r.status === 403 ? "unauthenticated" : "unknown",
+                     message: "成绩过户失败（HTTP " + r.status + "）", status: r.status }
+          };
+        }
+        return r.json().then(function (v) {
+          return { data: typeof v === "number" ? v : 0, error: null };
+        });
+      }).catch(function (e) {
+        return { data: 0, error: { kind: "network", message: "网络异常，稍后重试", status: 0, cause: e } };
       });
+    });
   }
 
   /* ── 重名校验 ──
