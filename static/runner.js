@@ -1510,15 +1510,32 @@
 
   /* ── 障碍外观素材（致谢 seia-runner：地面=巧乐兹、空中=雪碧瓶）──
      图片未加载完 / 加载失败（含无图测试环境）时自动回退到下面的矢量画法 */
+  /* 素材目录：优先用 skins.js 推好的基址（同目录布局），
+     拿不到时自己按脚本 URL 推一遍——写死 "/img/" 会让独立站全部 404。 */
+  var IMG_BASE = (function () {
+    if (window.RunnerSkins && window.RunnerSkins.imgBase) return window.RunnerSkins.imgBase;
+    var s = document.currentScript;
+    if (!s || !s.src) {
+      var all = document.getElementsByTagName("script");
+      for (var i = all.length - 1; i >= 0; i--) {
+        var src = all[i].getAttribute("src") || "";
+        if (/(^|\/)(runner|skins)\.js(\?|#|$)/.test(src)) { s = all[i]; break; }
+      }
+    }
+    var href = (s && s.src) || "";
+    if (!href) return "img/";
+    return href.replace(/[?#][\s\S]*$/, "").replace(/[^/]*$/, "") + "img/";
+  })();
+
   var OB_IMG = {};
   (function () {
     var srcs = {
-      qiaolezi: "/img/qiaolezi.webp", qiaoleziAlt: "/img/qiaolezi-alt.webp",
-      sprite: "/img/sprite-bottle.webp"
+      qiaolezi: "qiaolezi.webp", qiaoleziAlt: "qiaolezi-alt.webp",
+      sprite: "sprite-bottle.webp"
     };
     for (var k in srcs) {
       var im = null;
-      try { im = new Image(); im.src = srcs[k]; } catch (e) { im = null; }
+      try { im = new Image(); im.src = IMG_BASE + srcs[k]; } catch (e) { im = null; }
       OB_IMG[k] = im;
     }
   })();

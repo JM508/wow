@@ -94,12 +94,32 @@
     }
   ];
 
+  /* ── 素材基址：脚本所在目录 + img/ ──
+     主站（wow）脚本挂在站点根（/skins.js → /img/），独立站挂在子路径
+     （/stick-runner/skins.js → /stick-runner/img/）。
+     以前写死 "/img/" 绝对路径，独立站的贴图全部 404（GitHub Pages 项目站
+     带 /stick-runner/ 子路径，根路径下没有图）。这里从脚本自己的 URL 推
+     目录，两种布局都不用手工配置，也不用改 HTML。 */
+  var IMG_BASE = (function () {
+    var s = document.currentScript;
+    if (!s || !s.src) {                        // 动态注入等拿不到 currentScript 时按名字兜底
+      var all = document.getElementsByTagName("script");
+      for (var i = all.length - 1; i >= 0; i--) {
+        var src = all[i].getAttribute("src") || "";
+        if (/(^|\/)(runner|skins)\.js(\?|#|$)/.test(src)) { s = all[i]; break; }
+      }
+    }
+    var href = (s && s.src) || "";
+    if (!href) return "img/";                  // 实在推不出：退化成相对页面的 img/
+    return href.replace(/[?#][\s\S]*$/, "").replace(/[^/]*$/, "") + "img/";
+  })();
+
   /* ── 立绘皮肤素材：按需 new Image 预加载，未就绪时回退经典火柴人 ── */
   var SPRITES = {};
   function spriteImg(key) {
     if (!(key in SPRITES)) {
       var im = null;
-      try { im = new Image(); im.src = "/img/" + key + ".webp"; } catch (e) { im = null; }
+      try { im = new Image(); im.src = IMG_BASE + key + ".webp"; } catch (e) { im = null; }
       SPRITES[key] = im;
     }
     return SPRITES[key];
@@ -586,6 +606,7 @@
   /* ═══════════════ 对外接口 ═══════════════ */
   global.RunnerSkins = {
     KEYS: { wallet: KEY_WALLET, owned: KEY_OWNED, skin: KEY_SKIN, coin: KEY_COIN },
+    imgBase: IMG_BASE,                     // 素材目录（runner.js 的障碍贴图也用它，见 runner.js OB_IMG）
     PLAYERS: PLAYERS,
     COINS: COINS,
     list: list,
