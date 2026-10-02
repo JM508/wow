@@ -337,3 +337,318 @@
   }
 }
 
+/* ══════════════════════════════════════════════════════════════
+   ⚙ 设置弹层（音效 / 无障碍 / 自定义按键）
+   · 与 .run-shop / .run-ach / .run-rank 同一套弹层规范（点遮罩 / ✕ / Esc 关闭）
+   · 三个视图来回切换不重开弹层；返回箭头只在子视图显示
+   ══════════════════════════════════════════════════════════════ */
+.run-set {
+  --set-blue: #4f7cff;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(8, 14, 24, 0.66);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  animation: run-set-in 0.16s ease;
+}
+.run-set.hidden { display: none; }
+
+@keyframes run-set-in { from { opacity: 0; } to { opacity: 1; } }
+
+.run-set-box {
+  width: min(620px, 100%);
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  padding: 0 20px 18px;
+  color: var(--primary, #1f1f1f);
+  background: var(--theme, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 16px;
+  box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.72);
+  -webkit-overflow-scrolling: touch;
+}
+
+.run-set-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 -20px;
+  padding: 16px 20px 10px;
+  background: var(--theme, #ffffff);
+  border-bottom: 1px solid var(--border, #e0e0e0);
+}
+.run-set-head strong { flex: 1; font-size: 17px; }
+.run-set-back,
+.run-set-x {
+  width: 32px;
+  height: 32px;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.run-set-back:hover,
+.run-set-x:hover { filter: brightness(0.95); }
+/* 总览视图没有「返回」，但按钮仍占位，避免标题左右跳动 */
+.run-set-back.hidden { visibility: hidden; display: inline-block; }
+
+.set-view.hidden { display: none; }
+.set-sec { margin-top: 16px; }
+.set-sec > .set-h {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--secondary, #6b7280);
+}
+
+/* 一行设置：左边标题 + 说明，右边控件 */
+.set-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--entry, #fff);
+  border: 1px solid var(--border, #e6e6e6);
+  border-radius: 10px;
+}
+.set-lab { flex: 1 1 220px; display: flex; flex-direction: column; gap: 2px; }
+.set-lab > span { font-size: 14px; font-weight: 600; }
+.set-lab > small { font-size: 12px; line-height: 1.55; color: var(--secondary, #6b7280); }
+
+/* 开关按钮：开=绿、关=灰；文字也写明状态，不只靠颜色 */
+.set-switch {
+  flex: none;
+  min-width: 104px;
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+.set-switch.is-on {
+  color: #fff;
+  background: linear-gradient(135deg, #35a06a, #2f8a5c);
+  border-color: transparent;
+}
+.set-switch:hover { filter: brightness(1.05); }
+
+/* 音量滑块（设置总览与无障碍里的「独立音量」是同一个设置，改哪个都同步） */
+.set-vol { flex: none; display: flex; align-items: center; gap: 8px; }
+.set-vol input[type="range"] {
+  width: 150px;
+  height: 22px;
+  accent-color: var(--set-blue);
+  cursor: pointer;
+}
+.set-vol > span {
+  min-width: 42px;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--set-blue);
+}
+
+/* 子视图入口（无障碍 / 自定义按键）：整行可点 */
+.set-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  font-family: inherit;
+  text-align: left;
+  background: var(--entry, #fff);
+  border: 1px solid var(--border, #e6e6e6);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.set-entry:hover { border-color: var(--set-blue); }
+.set-entry-t { flex: none; font-size: 14px; font-weight: 700; color: var(--primary, #1f1f1f); }
+.set-entry-s {
+  flex: 1;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--secondary, #6b7280);
+}
+.set-arrow { flex: none; font-size: 18px; color: var(--secondary, #9aa3ae); }
+
+.set-foot {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--secondary, #6b7280);
+}
+
+/* ── 自定义按键 ── */
+.set-keys { display: flex; flex-direction: column; gap: 8px; }
+.set-key-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  background: var(--entry, #fff);
+  border: 1px solid var(--border, #e6e6e6);
+  border-radius: 10px;
+}
+.set-key-lab { flex: 1 1 190px; display: flex; flex-direction: column; gap: 2px; }
+.set-key-lab > b { font-size: 14px; }
+.set-key-lab > small { font-size: 12px; line-height: 1.5; color: var(--secondary, #6b7280); }
+.set-key-keys { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.set-key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+}
+.set-key-x {
+  padding: 0 3px;
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--secondary, #6b7280);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.set-key-x:hover { color: #d94b4b; }
+.set-key-add {
+  padding: 5px 10px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--set-blue);
+  background: none;
+  border: 1px dashed var(--set-blue);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.set-key-add:hover { background: rgba(79, 124, 255, 0.08); }
+.set-key-wait {
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #7a4a00;
+  background: rgba(232, 167, 14, 0.4);
+  border-radius: 8px;
+}
+.set-key-hint { flex: 1 0 100%; font-size: 11px; color: var(--secondary, #9aa3ae); }
+.set-keys-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.set-btn {
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: var(--tertiary, #ececec);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.set-btn:hover { filter: brightness(0.95); }
+.set-keys-tip { font-size: 12px; color: var(--secondary, #6b7280); }
+.set-keys-tip b { color: var(--primary, #1f1f1f); }
+
+/* 工具条里的「⚙ 设置」：静音时右上角挂一个小喇叭标记 */
+.run-tools button.run-set-btn { position: relative; font-weight: 700; }
+.run-tools button.run-set-btn.is-muted::after {
+  content: "🔇";
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 11px;
+  line-height: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   无障碍：三个开关是 <html> 上的类名（runner.js 的 applyA11y）
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 减少闪烁：面板动效与过渡一律关掉（前庭敏感 / 对闪烁敏感的人） ── */
+html.run-calm .run-overlay,
+html.run-calm .run-card,
+html.run-calm .run-toast,
+html.run-calm .run-shop,
+html.run-calm .run-set,
+html.run-calm .run-ach,
+html.run-calm .run-rank,
+html.run-calm .set-key-wait,
+html.run-calm .run-tools button,
+html.run-calm .set-switch,
+html.run-calm .run-ach-btn {
+  animation: none !important;
+  transition: none !important;
+}
+/* 成就按钮解锁时「闪两下」也是闪烁 */
+html.run-calm .run-ach-btn.is-new { animation: none !important; }
+
+/* ── 大字模式：HUD / 遮罩 / 弹层 / 页脚整体放大一档 ── */
+html.run-bigtext #run-root { font-size: 18px; }
+html.run-bigtext .run-brand strong { font-size: 21px; }
+html.run-bigtext .run-brand span { font-size: 15px; }
+html.run-bigtext .run-board { font-size: 20px; }
+html.run-bigtext .run-tools button,
+html.run-bigtext .run-tools .run-shop-btn { font-size: 17px; padding: 8px 14px; }
+html.run-bigtext .run-card h3 { font-size: 25px; }
+html.run-bigtext .run-ov-text { font-size: 17px; }
+html.run-bigtext .run-ov-text .run-big { font-size: 34px; }
+html.run-bigtext .run-primary { font-size: 18px; }
+html.run-bigtext .run-ctl { font-size: 19px; padding: 14px 10px; }
+html.run-bigtext .run-foot { font-size: 16px; }
+html.run-bigtext .run-shop,
+html.run-bigtext .run-ach,
+html.run-bigtext .run-rank,
+html.run-bigtext .run-set { font-size: 17px; }
+html.run-bigtext .run-shop-box,
+html.run-bigtext .run-ach-box,
+html.run-bigtext .run-rank-box,
+html.run-bigtext .run-set-box { width: min(720px, 100%); }
+html.run-bigtext .set-lab > span,
+html.run-bigtext .set-entry-t,
+html.run-bigtext .set-key-lab > b { font-size: 17px; }
+html.run-bigtext .set-lab > small,
+html.run-bigtext .set-entry-s,
+html.run-bigtext .set-key-lab > small,
+html.run-bigtext .set-foot { font-size: 15px; }
+html.run-bigtext .set-switch { font-size: 16px; min-width: 124px; }
+
+/* ── 色盲模式：界面里靠红/绿对比的地方换成对红绿色盲友好的蓝 / 琥珀 ── */
+html.run-cb #run-root { --run-accent: #1f6feb; --run-accent2: #0b7fa8; }
+html.run-cb .run-link-btn { color: #1f6feb; }
+html.run-cb .set-vol > span { color: #b06a00; }
+html.run-cb .set-vol input[type="range"] { accent-color: #b06a00; }
+html.run-cb .set-switch.is-on {
+  color: #1b1b1b;
+  background: linear-gradient(135deg, #ffd166, #ffb020);
+}
+html.run-cb .set-key-add { color: #b06a00; border-color: #b06a00; }
+

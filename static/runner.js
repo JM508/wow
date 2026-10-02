@@ -4,6 +4,8 @@
    · 全部画面用 canvas 2D 程序化绘制，不依赖任何图片 / 字体文件
    · 音效用 WebAudio 实时合成，不依赖任何音频文件
      （本站 CSP 为纯同源白名单、无 unsafe-inline，禁止内联脚本）
+   · 设置面板（⚙ 设置）：音效 / 音量、无障碍（色盲模式、减少闪烁、大字模式）、
+     自定义按键，全部只存本机 localStorage（键名 runner-set）
    · 逻辑世界宽 960，高随画布实际形状而定（见 resize()）
    · 画面由 CSS 决定画布盒子大小（宽铺满正文、高自适应视口），
      渲染时按画布「实际宽高」反推缩放，所以画面永远是等比、不变形
@@ -172,10 +174,238 @@
   var elShop    = document.getElementById("run-shop");        // 商店弹层（骨架在页面里，内容由 shop.js 填）
   var btnShopX  = document.getElementById("run-shop-close");
   var elRank    = document.getElementById("run-rank");        // 云端排行榜弹层（内容由 rank.js 填）
+  var elSet     = document.getElementById("run-set");          // 设置弹层（音效 / 无障碍 / 自定义按键）
+  var btnSetOpen = document.getElementById("run-set-btn");     // 工具条里的「⚙ 设置」
+  var btnSetX   = document.getElementById("run-set-close");
+  var btnSetBack = document.getElementById("run-set-back");
+  var elSetTitle = document.getElementById("run-set-title");
 
   var KEY_BEST = "runner-best";
   var KEY_SCORES = "runner-scores";
   var KEY_MUTE = "runner-mute";
+  var KEY_SET = "runner-set";        // 设置（JSON：sfx / vol / cb / calm / big / keys）
+
+  /* ═══════════ 设置（⚙ 设置面板：音效、无障碍、自定义按键） ═══════════
+     和钱包、成就一样只写本机 localStorage，不联网。面板里所有控件都读写同一个
+     SET 对象（setOpt / setKeys 是唯一入口），改完立刻生效并存盘。
+     · sfx  音效开关（0/1）—— 老版本存的 "runner-mute" 会被读进来，升级不丢设置
+     · vol  音效音量（0~1）—— 「独立音量」，只影响本游戏合成的音效，不动系统音量
+     · cb   色盲模式：障碍加深色描边+斜纹（靠形状认危险）、金币加深色外圈、
+            地线/轮廓拉到极限对比、危险色换成安全的琥珀黄，界面不再依赖红绿区分
+     · calm 减少闪烁：去掉撞击/冲刺的画面抖动、星星闪烁、24Hz 护盾光环闪烁、
+            冲刺速度线与面板动效，并削减粒子数量
+     · big  大字模式：HUD / 遮罩 / 各弹层 / 页脚字号放大一档（html.run-bigtext）
+     · keys 自定义按键：跳跃 / 下蹲 / 暂停 / 音效开关各自的键位（按 KeyboardEvent.code 存） */
+  var KEY_ACTIONS = ["jump", "duck", "pause", "mute"];
+  var KEY_ACT_CN = { jump: "跳跃", duck: "下蹲", pause: "暂停", mute: "音效开关" };
+  var KEY_DESC = {
+    jump: "长按跳更高，可绑多个键",
+    duck: "下蹲钻过飞行障碍，空中按下蹲加速下落",
+    pause: "暂停 / 继续（Esc 也默认在这里）",
+    mute: "音效开关"
+  };
+  var KEY_MAX = 4;                                  // 每个动作最多绑几个键
+  var KEY_UNIQUE = { jump: false, duck: false, pause: true, mute: true };
+  var KEY_ALIAS = { " ": "Space", "Spacebar": "Space", "Up": "ArrowUp", "Down": "ArrowDown",
+                    "Left": "ArrowLeft", "Right": "ArrowRight", "Esc": "Escape" };
+  var KEY_NAMES = {
+    Space: "空格", ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→",
+    Escape: "Esc", Enter: "回车", Backspace: "退格", Delete: "Delete", Tab: "Tab",
+    ShiftLeft: "左 Shift", ShiftRight: "右 Shift", ControlLeft: "左 Ctrl", ControlRight: "右 Ctrl",
+    AltLeft: "左 Alt", AltRight: "右 Alt", CapsLock: "大写锁定", Insert: "Insert",
+    Home: "Home", End: "End", PageUp: "PgUp", PageDown: "PgDn", Semicolon: ";",
+    Quote: "'", Comma: ",", Period: ".", Slash: "/", Backslash: "\\", BracketLeft: "[",
+    BracketRight: "]", Minus: "-", Equal: "=", Backquote: "`"
+  };
+  var SET_DEF = {
+    sfx: 1, vol: 0.7, cb: 0, calm: 0, big: 0,
+    keys: {
+      jump: ["Space", "ArrowUp", "KeyW"],
+      duck: ["ArrowDown", "KeyS"],
+      pause: ["KeyP", "Escape"],
+      mute: ["KeyM"]
+    }
+  };
+
+  function keyName(code) {
+    if (!code) return "?";
+    if (KEY_NAMES[code]) return KEY_NAMES[code];
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^Numpad/.test(code)) return "小键盘 " + code.slice(6);
+    if (/^F\d{1,2}$/.test(code)) return code;
+    return code.length === 1 ? code.toUpperCase() : code;
+  }
+  function keyNorm(code) {
+    if (!code) return "";
+    if (KEY_ALIAS[code]) return KEY_ALIAS[code];
+    /* 只给 key 不给 code 的旧环境：把 "w" / "3" 归一成 code 写法，匹配得上默认键位 */
+    if (/^[a-z]$/.test(code)) return "Key" + code.toUpperCase();
+    if (/^[A-Z]$/.test(code)) return "Key" + code;
+    if (/^\d$/.test(code)) return "Digit" + code;
+    return code;
+  }
+
+  function loadSet() {
+    var raw = null;
+    try { raw = JSON.parse(store(KEY_SET) || "null"); } catch (e) { raw = null; }
+    var o = { sfx: SET_DEF.sfx, vol: SET_DEF.vol, cb: 0, calm: 0, big: 0, keys: {} };
+    var a;
+    if (raw && typeof raw === "object") {
+      o.sfx = (raw.sfx === 0 || raw.sfx === false) ? 0 : 1;
+      var v = Number(raw.vol);
+      o.vol = isFinite(v) ? clamp(Math.round(v * 100) / 100, 0, 1) : SET_DEF.vol;
+      o.cb = raw.cb ? 1 : 0;
+      o.calm = raw.calm ? 1 : 0;
+      o.big = raw.big ? 1 : 0;
+      for (a = 0; a < KEY_ACTIONS.length; a++) {
+        var act = KEY_ACTIONS[a], src = raw.keys && raw.keys[act], out = [];
+        if (Object.prototype.toString.call(src) === "[object Array]") {
+          for (var i = 0; i < src.length && out.length < KEY_MAX; i++) {
+            if (typeof src[i] !== "string") continue;      // 脏数据（null / 数字）直接丢掉
+            var c = keyNorm(src[i]);
+            if (c && out.indexOf(c) < 0) out.push(c);
+          }
+        }
+        if (!out.length) out = SET_DEF.keys[act].slice();      // 至少留一个键，别把动作绑空
+        o.keys[act] = out;
+      }
+    } else {
+      /* 从没存过设置：沿用老版本「runner-mute」的静音状态，其余用默认值 */
+      o.sfx = store(KEY_MUTE) === "1" ? 0 : 1;
+      for (a = 0; a < KEY_ACTIONS.length; a++) o.keys[KEY_ACTIONS[a]] = SET_DEF.keys[KEY_ACTIONS[a]].slice();
+    }
+    /* 同一个键不能同时绑两个动作：后出现的动作优先，前一个动作里删掉；删空了补默认 */
+    var seen = {};
+    for (var m = 0; m < KEY_ACTIONS.length; m++) {
+      var ac = KEY_ACTIONS[m], keep = [];
+      for (var n = 0; n < o.keys[ac].length; n++) {
+        var kc = o.keys[ac][n];
+        if (seen[kc]) continue;
+        seen[kc] = 1; keep.push(kc);
+      }
+      o.keys[ac] = keep.length ? keep : SET_DEF.keys[ac].slice();
+    }
+    return o;
+  }
+
+  var SET = loadSet();
+
+  function saveSet() {
+    store(KEY_SET, JSON.stringify(SET));
+    store(KEY_MUTE, SET.sfx ? "0" : "1");     // 老版本代码 / 旧缓存只认这个键，保持同步
+  }
+  function opt(name) { return !!SET[name]; }
+  function cbOn() { return !!SET.cb; }
+  function calmOn() { return !!SET.calm; }
+
+  /* 无障碍的三项开关落在 <html> 的类名上，CSS 负责字号放大与关掉动效 */
+  function applyA11y() {
+    var de = document.documentElement;
+    if (!de || !de.classList || !de.classList.toggle) return;
+    de.classList.toggle("run-cb", !!SET.cb);
+    de.classList.toggle("run-calm", !!SET.calm);
+    de.classList.toggle("run-bigtext", !!SET.big);
+  }
+
+  function setOpt(name, val) {
+    if (name === "vol") {
+      var v = Number(val);
+      SET.vol = isFinite(v) ? clamp(v, 0, 1) : SET.vol;
+    } else if (name === "sfx" || name === "cb" || name === "calm" || name === "big") {
+      SET[name] = val ? 1 : 0;
+    } else {
+      return null;                            // 未知选项：不改、不存
+    }
+    saveSet();
+    applyA11y();
+    syncSetUi();
+    return SET[name];
+  }
+
+  function keyList(action) { return SET.keys[action] || []; }
+  /* 命中判定：优先比 KeyboardEvent.code，再比归一化后的 key
+     （老浏览器 / 合成事件可能只给其中一个） */
+  function keyHit(action, e) {
+    var list = keyList(action), k = keyNorm(e.key);
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] === e.code || list[i] === k) return true;
+    }
+    return false;
+  }
+  function keyHint(action) {
+    var list = keyList(action), out = [];
+    for (var i = 0; i < list.length; i++) out.push(keyName(list[i]));
+    return out.join(" / ") || "未设置";
+  }
+  function setKeys(next) {
+    if (!next || typeof next !== "object") return null;
+    var seen = {}, a, i;
+    for (a = 0; a < KEY_ACTIONS.length; a++) {
+      var act = KEY_ACTIONS[a], out = [];
+      if (Object.prototype.toString.call(next[act]) === "[object Array]") {
+        for (i = 0; i < next[act].length && out.length < KEY_MAX; i++) {
+          if (typeof next[act][i] !== "string") continue;
+          var c = keyNorm(next[act][i]);
+          if (c && out.indexOf(c) < 0) out.push(c);
+        }
+      }
+      if (out.length) SET.keys[act] = out;
+    }
+    /* 再去一次重复：同一个键只归最后一个动作 */
+    for (a = KEY_ACTIONS.length - 1; a >= 0; a--) {
+      var ac = KEY_ACTIONS[a], keep = [];
+      for (i = 0; i < SET.keys[ac].length; i++) {
+        var kc = SET.keys[ac][i];
+        if (seen[kc]) continue;
+        seen[kc] = 1; keep.push(kc);
+      }
+      SET.keys[ac] = keep.length ? keep : SET_DEF.keys[ac].slice();
+    }
+    saveSet();
+    syncSetUi();
+    return SET.keys;
+  }
+  function resetKeys() {
+    for (var a = 0; a < KEY_ACTIONS.length; a++) SET.keys[KEY_ACTIONS[a]] = SET_DEF.keys[KEY_ACTIONS[a]].slice();
+    saveSet();
+    syncSetUi();
+    return SET.keys;
+  }
+  function keyTaken(action, code) {            // 返回别的动作里占着这个键的名字（没有则 null）
+    for (var a = 0; a < KEY_ACTIONS.length; a++) {
+      if (KEY_ACTIONS[a] === action) continue;
+      if (keyList(KEY_ACTIONS[a]).indexOf(code) >= 0) return KEY_ACTIONS[a];
+    }
+    return null;
+  }
+  function addKey(action, code) {
+    code = keyNorm(code);
+    if (!code) return null;
+    var other = keyTaken(action, code);
+    if (other) {                               // 一个键只能干一件事：从别的动作里摘掉
+      var l = keyList(other);
+      l.splice(l.indexOf(code), 1);
+      toast("「" + keyName(code) + "」已从「" + KEY_ACT_CN[other] + "」移过来");
+    }
+    var cur = keyList(action);
+    if (cur.indexOf(code) >= 0) return code;   // 已经绑过，幂等
+    if (cur.length >= KEY_MAX) toast("每个动作最多绑 " + KEY_MAX + " 个键");
+    else if (KEY_UNIQUE[action]) cur.length = 0;
+    if (cur.indexOf(code) < 0) cur.push(code);
+    saveSet();
+    syncSetUi();
+    return code;
+  }
+  function removeKey(action, code) {
+    var cur = keyList(action), i = cur.indexOf(code);
+    if (i < 0) return null;
+    if (cur.length <= 1) { toast("「" + KEY_ACT_CN[action] + "」至少要留一个键"); return null; }
+    cur.splice(i, 1);
+    saveSet();
+    syncSetUi();
+    return code;
+  }
 
   /* ═══════════ 皮肤仓库（static/skins.js，与商店页共用同一份） ═══════════
      正常情况下 skins.js 与本文件同目录同源、由页面先加载；万一没加载到，
@@ -286,9 +516,12 @@
     return s;
   }
 
-  /* ═══════════ 音效（WebAudio 实时合成） ═══════════ */
+  /* ═══════════ 音效（WebAudio 实时合成） ═══════════
+     开关与音量都读设置（SET.sfx / SET.vol，见上面的「设置」块）：
+     静音 = 不发声；音量为 0 也等于听不见，但两个开关互不覆盖，
+     所以从静音切回来时音量还是原来的值。 */
   var Sfx = (function () {
-    var ac = null, muted = store(KEY_MUTE) === "1";
+    var ac = null;
     function ctxAudio() {
       if (ac) return ac;
       var AC = window.AudioContext || window.webkitAudioContext;
@@ -296,8 +529,10 @@
       try { ac = new AC(); } catch (e) { ac = null; }
       return ac;
     }
+    function live() { return !!SET.sfx && SET.vol > 0.001; }
     function tone(freq, dur, type, gain, slideTo) {
-      if (muted) return;
+      var amp = (gain || 0.06) * SET.vol;
+      if (!live() || amp <= 0.0002) return;
       var a = ctxAudio(); if (!a) return;
       if (a.state === "suspended" && a.resume) a.resume();
       var o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime;
@@ -305,20 +540,21 @@
       o.frequency.setValueAtTime(freq, t0);
       if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), t0 + dur);
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(gain || 0.06, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(amp, t0 + 0.012);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
       o.connect(g); g.connect(a.destination);
       o.start(t0); o.stop(t0 + dur + 0.02);
     }
     function noise(dur, gain) {
-      if (muted) return;
+      var amp = (gain || 0.15) * SET.vol;
+      if (!live() || amp <= 0.0002) return;
       var a = ctxAudio(); if (!a) return;
       var len = Math.floor(a.sampleRate * dur);
       var buf = a.createBuffer(1, len, a.sampleRate);
       var d = buf.getChannelData(0);
       for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
       var s = a.createBufferSource(), g = a.createGain();
-      s.buffer = buf; g.gain.value = gain || 0.15;
+      s.buffer = buf; g.gain.value = amp;
       s.connect(g); g.connect(a.destination); s.start();
     }
     function seq(freqs, gap, dur, type, gain) {
@@ -333,8 +569,10 @@
       boost: function () { seq([523, 659, 784, 1046], 70, 0.12, "triangle", 0.05); },
       crash: function () { noise(0.28, 0.16); tone(320, 0.42, "sawtooth", 0.07, 70); },
       best:  function () { seq([659, 784, 988, 1318], 110, 0.16, "square", 0.045); },
-      isMuted: function () { return muted; },
-      setMuted: function (v) { muted = !!v; store(KEY_MUTE, muted ? "1" : "0"); },
+      isMuted: function () { return !SET.sfx; },
+      setMuted: function (v) { SET.sfx = v ? 0 : 1; saveSet(); },
+      volume: function () { return SET.vol; },
+      setVolume: function (v) { setOpt("vol", v); },
       wake: function () { var a = ctxAudio(); if (a && a.state === "suspended" && a.resume) a.resume(); }
     };
   })();
@@ -370,6 +608,29 @@
       star: a.star + (b.star - a.star) * tt,
       nightK: (a.dark ? 1 : 0) + ((b.dark ? 1 : 0) - (a.dark ? 1 : 0)) * tt
     };
+  }
+
+  /* ── 色盲模式的配色修正（受「设置 → 无障碍 → 色盲模式」控制）──
+     红绿色觉异常的人分不清红/绿、也很难分辨相近明度的暖色，所以：
+       · 地线 / 轮廓 / 土层拉到极限对比（白天近黑、夜晚近白），前后景一眼分开
+       · 日月与所有「危险色」统一成琥珀黄（红绿色盲最容易辨认的色相）
+       · 黄昏那一档的红橙天空压成蓝青，避免整屏暖色糊成一片
+     障碍与金币的形状线索在 drawObstacle / drawItem 里另外加（描边 + 斜纹 + 外圈）。 */
+  function cbPalette(p) {
+    if (!SET.cb) return p;
+    var q = {};
+    for (var k in p) if (p.hasOwnProperty(k)) q[k] = p[k];
+    q.dark = p.dark;
+    q.line = p.dark ? "#ffffff" : "#0b1420";
+    q.ground = p.dark ? "#0a1622" : "#f4f8fc";
+    q.ink = p.dark ? "#ffffff" : "#0b1420";
+    q.orb = "#ffb020";
+    q.far = p.dark ? "#0e2130" : "#c9dcee";
+    q.mid = p.dark ? "#16293c" : "#e6eff8";
+    q.top = p.dark ? "#0b1a2a" : "#9fd3f5";
+    q.bottom = p.dark ? "#1b3250" : "#eaf6ff";
+    q.cloud = p.dark ? "#20364c" : "#ffffff";
+    return q;
   }
 
   /* ═══════════ 场景装饰（程序化生成，只算一次） ═══════════ */
@@ -531,6 +792,7 @@
 
   /* ═══════════ 粒子 ═══════════ */
   function puff(x, y, n, color, spread) {
+    if (calmOn()) n = Math.max(1, Math.round(n * 0.35));    // 减少闪烁：粒子也减量
     for (var i = 0; i < n; i++) {
       parts.push({
         x: x, y: y, vx: -rnd(20, 120), vy: -rnd(10, 90) * (spread || 1),
@@ -539,6 +801,7 @@
     }
   }
   function sparkle(x, y, n, color) {
+    if (calmOn()) n = Math.max(1, Math.round(n * 0.35));
     for (var i = 0; i < n; i++) {
       var a = rnd(0, 6.28), sp = rnd(60, 220);
       parts.push({
@@ -547,6 +810,8 @@
       });
     }
   }
+  /* 色盲模式：危险相关的高亮统一换成琥珀黄（红绿色觉异常最容易辨认的色相） */
+  function dangerColor() { return cbOn() ? "#ffb020" : "#ff7a86"; }
 
   /* ═══════════ 操作 ═══════════ */
   function curH() { return P.duck ? CFG.DUCK_H : CFG.STAND_H; }
@@ -589,9 +854,9 @@
     state = "over";
     overAt = Date.now();
     S.crashed = true;                            // 成就：「无伤」类要排除撞死收场的局
-    shake = 16;
+    shake = calmOn() ? 0 : 16;
     puff(CFG.PX, P.y - 20, 18, "#8d98a6", 1.4);
-    sparkle(CFG.PX, P.y - 34, 12, "#ff7a86");
+    sparkle(CFG.PX, P.y - 34, 12, dangerColor());
     Sfx.crash();
 
     var score = Math.floor(S.score);
@@ -657,13 +922,18 @@
   /* ═══════════ 遮罩层 ═══════════ */
   var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-shop>🛍 皮肤商店</button>";
 
-  var HELP_HTML = "按 <b>空格</b>/<b>↑</b>/<b>W</b> 起跳，长按跳得更高；<br>" +
-    "按 <b>↓</b>/<b>S</b> 下蹲，空中按下蹲可加速下落；<br>" +
-    "地面的障碍要 <b>跳过</b>；天上的大雪碧瓶只能 <b>下蹲</b> 从下面的缝隙钻过去" +
-    "（瓶子比满跳的最高点还高，跳起来会迎面撞上）；<br>" +
-    "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
-    "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
-    "速度会越来越快，坚持越久分数越高。";
+  /* 帮助文本里的键位跟着自定义按键走，改完键这里立刻同步 */
+  function helpHtml() {
+    return "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳得更高；<br>" +
+      "按 <b>" + keyHint("duck") + "</b> 下蹲，空中按下蹲可加速下落；<br>" +
+      "地面的障碍要 <b>跳过</b>；天上的大雪碧瓶只能 <b>下蹲</b> 从下面的缝隙钻过去" +
+      "（瓶子比满跳的最高点还高，跳起来会迎面撞上）；<br>" +
+      "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
+      "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
+      "速度会越来越快，坚持越久分数越高。<br>" +
+      "键位不舒服？在 <b>⚙ 设置 → 自定义按键</b> 里改；色盲模式 / 减少闪烁 / 大字模式在 " +
+      "<b>⚙ 设置 → 无障碍选项</b> 里。";
+  }
 
   function showOverlay(kind) {
     if (!elOverlay) return;
@@ -671,14 +941,15 @@
     elOverlay.classList.remove("hidden");
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
-      elOvText.innerHTML = "按 <b>空格</b> / <b>↑</b> 起跳，长按跳更高；<b>↓</b> 下蹲钻过天上的大雪碧瓶。<br>" +
+      elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
+        keyHint("duck") + "</b> 下蹲钻过天上的大雪碧瓶。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
         "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
       renderRecords();
     } else if (kind === "paused") {
       elOvTitle.textContent = "已暂停";
-      elOvText.innerHTML = "按 <b>P</b> 或点下面的按钮继续。";
+      elOvText.innerHTML = "按 <b>" + keyHint("pause") + "</b> 或点下面的按钮继续。";
       elOvBtn.textContent = "继续";
       elRecords.innerHTML = "";
     } else if (kind === "over") {
@@ -741,6 +1012,9 @@
   /* 成就面板同理（ach.js 负责开关与渲染，这里只管局面定格/恢复） */
   document.addEventListener("ach:open", afterShopOpen);
   document.addEventListener("ach:close", afterShopClose);
+  /* 设置面板同理：打开时定格（改键 / 试听音效都不该让角色在背后跑） */
+  document.addEventListener("set:open", afterShopOpen);
+  document.addEventListener("set:close", afterShopClose);
   /* rank.js 借这里弹提示（成绩上传结果、云存档同步结果） */
   document.addEventListener("run:toast", function (e) { if (e.detail) toast(e.detail); });
 
@@ -1128,9 +1402,10 @@
   function worldDist() { return bgDist + (S ? S.dist : 0); }
 
   function render() {
-    var pal = paletteAt(worldDist() * 0.4);
+    var pal = cbPalette(paletteAt(worldDist() * 0.4));
     ctx.save();
-    if (shake > 0) ctx.translate(rnd(-shake, shake) * 0.4, rnd(-shake, shake) * 0.4);
+    /* 撞击 / 撞碎时的画面抖动：开了「减少闪烁」就完全不做（前庭敏感的人会不适） */
+    if (shake > 0 && !calmOn()) ctx.translate(rnd(-shake, shake) * 0.4, rnd(-shake, shake) * 0.4);
     drawSky(pal);
     drawSkyline(pal);
     drawGround(pal);
@@ -1157,7 +1432,8 @@
     if (pal.star > 0.05) {                       // 星空
       ctx.fillStyle = "rgba(255,255,255," + (0.85 * pal.star) + ")";
       for (var i = 0; i < 46; i++) {
-        var tw = 0.7 + 0.5 * Math.sin((S ? S.time : 0) * 2 + i);
+        /* 星星的明暗闪烁正是「减少闪烁」要压掉的东西：开了就固定亮度 */
+        var tw = calmOn() ? 1 : 0.7 + 0.5 * Math.sin((S ? S.time : 0) * 2 + i);
         ctx.fillRect((i * 137.5) % CFG.W, (i * 61.7) % (190 * skyK), 1.7 * tw, 1.7 * tw);
       }
     }
@@ -1311,6 +1587,39 @@
     ctx.fillRect(x + 2, bottom - full * 0.42, w - 4, Math.max(6, full * 0.05));
   }
 
+  /* ── 色盲模式的形状标记 ──
+     障碍贴图/矢量画法的颜色五花八门，色觉异常时很难一眼分清「能吃的/要躲的」，
+     所以在障碍外面套一圈「深色描边 + 内侧白线」，左上角再贴一块琥珀色斜纹警示条：
+     颜色认不出来也能靠形状和纹理判断。金币同理，加一圈深色外圈。 */
+  function cbMarkObstacle(x, y, w, h) {
+    if (!SET.cb || !(w > 0) || !(h > 0)) return;
+    ctx.save();
+    rr(ctx, x - 3, y - 3, w + 6, h + 6, 8);
+    ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 4; ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.lineWidth = 1.6; ctx.stroke();
+    var bw = Math.min(26, w), bh = Math.min(14, h);
+    rr(ctx, x, y, bw, bh, 3);
+    ctx.clip();
+    ctx.fillStyle = "#ffb020";
+    ctx.fillRect(x, y, bw, bh);
+    ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 2.5;
+    for (var i = -20; i < 40; i += 7) {
+      ctx.beginPath(); ctx.moveTo(x + i, y + bh); ctx.lineTo(x + i + bh, y); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function cbMarkCoin(x, y, ph, t) {
+    if (!SET.cb) return;
+    /* 光环/币身的浮动偏移与 skins.js drawCoin 保持一致，圈才不会错位 */
+    var cy = y + Math.sin(t * 5 + (ph || 0)) * 3;
+    ctx.save();
+    ctx.strokeStyle = "#0b1020"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, cy, 17, 0, 6.2832); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(x, cy, 15.2, 0, 6.2832); ctx.stroke();
+    ctx.restore();
+  }
+
   /* ── 障碍绘制 ── */
   function drawObstacle(o, pal) {
     ctx.save();
@@ -1325,6 +1634,7 @@
         ctx.beginPath();
         ctx.ellipse(o.x + o.w / 2, CFG.GROUND + 3, vis.w * 0.55, 5, 0, 0, 6.2832);
         ctx.fill();
+        cbMarkObstacle(o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
       } else {
         /* 空中障碍 = 雪碧瓶适度拉长：同一张贴图纵向拉伸填满碰撞盒
@@ -1332,6 +1642,7 @@
            底边抬 10px，与下蹲头顶最少留 2.5px。跳起来必然迎面撞上。 */
         var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
         var btm = o.y + o.h - 10 + bob;
+        cbMarkObstacle(o.x + o.w / 2 - vis.w / 2, o.y, vis.w, btm - o.y);
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, o.y, vis.w, btm - o.y);
       }
       ctx.restore();
@@ -1342,10 +1653,12 @@
     var x = bb.x, y = bb.y, w = bb.w, h = bb.h;
     if (o.kind === "air") {
       /* 无图兜底：整个空中障碍就是一整根拉长的瓶子，不再叠画纸/无人机 */
+      cbMarkObstacle(o.x, o.y, o.w, o.h - 10);
       drawTallBottle(o.x + o.w / 2, o.y, o.y + o.h - 10, o.w);
       ctx.restore();
       return;
     }
+    cbMarkObstacle(x, y, w, h);
 
     if (o.id === "cup") {                        // 咖啡杯
       ctx.fillStyle = "#ffffff"; rr(ctx, x, y + 8, w, h - 8, 7); ctx.fill();
@@ -1387,7 +1700,7 @@
       ctx.moveTo(x + w - 8, y + 5); ctx.lineTo(x + w - 5, y + 13);
       ctx.stroke();
       ctx.fillStyle = "#5b6a80"; rr(ctx, x + 12, y + 13, w - 24, h - 17, 7); ctx.fill();
-      ctx.fillStyle = "#ff5f6d";
+      ctx.fillStyle = dangerColor();                 // 无人机指示灯（色盲模式换成琥珀黄）
       ctx.beginPath(); ctx.arc(x + w - 18, y + 23, 3.2, 0, 6.2832); ctx.fill();
       ctx.fillStyle = "#8b9bb2";
       ctx.beginPath();
@@ -1403,9 +1716,10 @@
     var t = S ? S.time : 0;
     if (it.kind === "coin") {                    // 金币：外观由商店里装备的皮肤决定
       Skins.drawCoin(ctx, skinCoin, { x: it.x, y: it.y, t: t, ph: it.ph || 0 });
+      cbMarkCoin(it.x, it.y, it.ph, t);          // 色盲模式：金币加一圈深色外圈，和障碍区分开
     } else {                                     // 护盾（无敌道具）
       var y2 = it.y + Math.sin(t * 4) * 2;
-      var pulse = 0.5 + 0.5 * Math.sin(t * 6);
+      var pulse = calmOn() ? 1 : 0.5 + 0.5 * Math.sin(t * 6);   // 减少闪烁：光晕不再一张一缩
       ctx.fillStyle = "rgba(138,180,255," + (0.16 + 0.16 * pulse) + ")";
       ctx.beginPath(); ctx.arc(it.x, y2, 24, 0, 6.2832); ctx.fill();
       var sw = 14, sh = 16;                              // 盾牌：上平下尖
@@ -1455,7 +1769,9 @@
 
     if (S && S.boost > 0) {                       // 护盾光环（收尾期转暗、闪烁加快 = 无敌要没了）
       var tailK = S.boost < CFG.BOOST_TAIL ? (S.boost / CFG.BOOST_TAIL) : 1;
-      var flick = tailK < 1 ? 0.5 + 0.5 * Math.sin(t * 24) : (0.5 + 0.5 * Math.sin(t * 12));
+      /* 收尾提示原本靠 24Hz 高频闪烁，对闪烁敏感的人很不友好；
+         开了「减少闪烁」改成「稳定变暗」——照样能看出快结束了。 */
+      var flick = calmOn() ? 1 : (tailK < 1 ? 0.5 + 0.5 * Math.sin(t * 24) : (0.5 + 0.5 * Math.sin(t * 12)));
       ctx.strokeStyle = "rgba(91,141,239," + ((0.4 + 0.45 * flick) * (0.4 + 0.6 * tailK)).toFixed(3) + ")";
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.ellipse(0, -h / 2, 28, h * 0.72, 0, 0, 6.2832); ctx.stroke();
@@ -1473,7 +1789,8 @@
   }
 
   function drawBoostFx() {
-    if (!S || S.boost <= 0) return;
+    /* 冲刺速度线是高速横向流动的亮线，是整个画面里最「闪」的元素之一 */
+    if (!S || S.boost <= 0 || calmOn()) return;
     ctx.strokeStyle = "rgba(138,180,255,0.5)";
     ctx.lineWidth = 2;
     for (var i = 0; i < 7; i++) {
@@ -1496,31 +1813,46 @@
   }
 
   /* ═══════════ 事件 ═══════════ */
-  function isJumpKey(k, code) {
-    return code === "Space" || k === " " || k === "Spacebar" || k === "ArrowUp" || k === "w" || k === "W";
-  }
-  function isDuckKey(k) { return k === "ArrowDown" || k === "s" || k === "S"; }
+  /* 键位全部走设置里的自定义按键（默认 空格/↑/W 跳、↓/S 蹲、P 暂停、M 静音） */
+  function isJumpKey(k, code) { return keyHit("jump", { key: k, code: code }); }
+  function isDuckKey(k, code) { return keyHit("duck", { key: k, code: code }); }
 
   function mayRestart() { return state !== "over" || Date.now() - overAt > 400; }
 
   function onKeyDown(e) {
     var k = e.key, code = e.code;
 
+    /* 正在等待新键（改键捕获）：吃掉这次按键，别让它同时触发游戏动作。
+       先于面板开关判断——改键状态一旦进入，不管面板是不是还开着都有效 */
+    if (captureAct) {
+      e.preventDefault();
+      if (k === "Escape" || code === "Escape") cancelCapture();   // Esc 取消捕获、不改键
+      else commitCapture(e);
+      return;
+    }
+
+    /* 设置面板开着的时候，键盘只服务面板，其余键不穿透到游戏
+       （否则空格会在面板后面把游戏跑起来，玩家看不见角色、直接撞死） */
+    if (setOpen()) {
+      if (k === "Escape" || code === "Escape") { e.preventDefault(); closeSet(); return; }
+      if (isMuteKey(k, code)) toggleMute();
+      return;
+    }
     /* 商店开着的时候，键盘只用来关商店，不打扰人物 */
     if (shopOpen()) {
-      if (k === "Escape" || k === "p" || k === "P") { e.preventDefault(); closeShop(); }
-      else if (k === "m" || k === "M") toggleMute();
+      if (k === "Escape" || keyHit("pause", e)) { e.preventDefault(); closeShop(); }
+      else if (isMuteKey(k, code)) toggleMute();
       return;
     }
     /* 排行榜弹层同理：开着时按键不穿透到游戏，否则空格会在面板后面把游戏跑起来，
        玩家看不见角色、直接撞死。Escape 由 rank.js 自己处理（关面板），这里不再触发暂停。 */
     if (rankOpen()) {
-      if (k === "m" || k === "M") toggleMute();
+      if (isMuteKey(k, code)) toggleMute();
       return;
     }
     /* 成就面板：同样不让按键穿透（Escape 由 ach.js 处理关闭） */
     if (achOpen()) {
-      if (k === "m" || k === "M") toggleMute();
+      if (isMuteKey(k, code)) toggleMute();
       return;
     }
 
@@ -1531,21 +1863,23 @@
       if (!input.jumpHeld) { input.jumpHeld = true; doJump(); }
       return;
     }
-    if (isDuckKey(k)) {
+    if (isDuckKey(k, code)) {
       if (state === "playing" || state === "ready") e.preventDefault();
       input.duckHeld = true;
       applyDuck(true);
       return;
     }
-    if (k === "p" || k === "P" || k === "Escape") { togglePause(); return; }
-    if (k === "m" || k === "M") { toggleMute(); return; }
+    if (keyHit("pause", e)) { togglePause(); return; }
+    if (isMuteKey(k, code)) { toggleMute(); return; }
     if (k === "Enter" && (state === "ready" || state === "over") && mayRestart()) startGame();
   }
+
+  function isMuteKey(k, code) { return keyHit("mute", { key: k, code: code }); }
 
   function onKeyUp(e) {
     var k = e.key, code = e.code;
     if (isJumpKey(k, code)) input.jumpHeld = false;
-    if (isDuckKey(k)) { input.duckHeld = false; applyDuck(false); }
+    if (isDuckKey(k, code)) { input.duckHeld = false; applyDuck(false); }
   }
 
   function pressJump() { input.jumpHeld = true; doJump(); }
@@ -1565,10 +1899,185 @@
 
   function toggleMute() {
     Sfx.setMuted(!Sfx.isMuted());
-    if (btnMute) {
-      btnMute.setAttribute("aria-pressed", Sfx.isMuted() ? "true" : "false");
-      btnMute.textContent = Sfx.isMuted() ? "🔇 静音" : "🔊 音效";
+    syncSetUi();
+  }
+
+  /* ═══════════ 设置弹层（⚙ 设置：音效 / 无障碍 / 自定义按键） ═══════════
+     和商店、成就同一套「开面板先定格、关掉原样恢复」逻辑（shopPrev 共用），
+     面板里有三个视图：总览 / 无障碍 / 自定义按键，来回切换不重新开弹层。
+     所有控件状态由 syncSetUi() 单点同步：任何设置变化（含键盘改键）都调它一次。 */
+  var setPrev = null;
+  var captureAct = null, captureAdd = false;      // 正在等待新键的动作
+  var elSetViews = {}, elSetCb = {}, elSetCalm = {}, elSetBig = {};
+  var elSetVol = [], elSetVolVal = [];
+  var elKeysList = null, elKeysSum = null, elA11ySum = null;
+  var elSetHint = null;
+
+  function setOpen() { return !!elSet && !elSet.classList.contains("hidden"); }
+
+  function initSetRefs() {
+    elSetViews = {
+      main: document.getElementById("set-view-main"),
+      a11y: document.getElementById("set-view-a11y"),
+      keys: document.getElementById("set-view-keys")
+    };
+    elSetCb = {
+      el: document.getElementById("set-cb"),
+      set: function (on) { setOpt("cb", on); }
+    };
+    elSetCalm = {
+      el: document.getElementById("set-calm"),
+      set: function (on) { setOpt("calm", on); }
+    };
+    elSetBig = {
+      el: document.getElementById("set-big"),
+      set: function (on) { setOpt("big", on); }
+    };
+    elSetVol = [document.getElementById("run-vol"), document.getElementById("run-vol-a11y")];
+    elSetVolVal = [document.getElementById("run-vol-val"), document.getElementById("run-vol-a11y-val")];
+    elKeysList = document.getElementById("set-keys-list");
+    elKeysSum = document.getElementById("set-keys-sum");
+    elA11ySum = document.getElementById("set-a11y-sum");
+    elSetHint = document.getElementById("set-hint");
+  }
+
+  function showSetView(name) {
+    var names = ["main", "a11y", "keys"];
+    for (var i = 0; i < names.length; i++) {
+      var v = elSetViews[names[i]];
+      if (v) v.classList.toggle("hidden", names[i] !== name);
     }
+    if (btnSetBack) btnSetBack.classList.toggle("hidden", name === "main");
+    if (elSetTitle) {
+      elSetTitle.textContent = name === "a11y" ? "♿ 无障碍选项"
+        : (name === "keys" ? "⌨ 自定义按键" : "⚙ 设置");
+    }
+    cancelCapture();
+  }
+
+  function openSet() {
+    if (!elSet || setOpen()) return;
+    showSetView("main");
+    elSet.classList.remove("hidden");
+    document.dispatchEvent(new CustomEvent("set:open"));   // runner 自己监听：把局面定格
+  }
+  function closeSet() {
+    if (!setOpen()) return;
+    cancelCapture();
+    elSet.classList.add("hidden");
+    document.dispatchEvent(new CustomEvent("set:close"));
+  }
+  function toggleSet() { setOpen() ? closeSet() : openSet(); }
+
+  function beginCapture(action, add) {
+    captureAct = action;
+    captureAdd = !!add;
+    syncSetUi();
+  }
+  function cancelCapture() {
+    if (!captureAct) return;
+    captureAct = null; captureAdd = false;
+    syncSetUi();
+  }
+  function commitCapture(e) {
+    var code = keyNorm(e.code || e.key);
+    var act = captureAct;
+    captureAct = null; captureAdd = false;
+    if (act && code) addKey(act, code);        // addKey 里会 syncSetUi
+    else syncSetUi();
+  }
+
+  /* 一个开关按钮的样式与朗读状态 */
+  function paintSwitch(el, on, onText, offText) {
+    if (!el) return;
+    el.setAttribute("aria-pressed", on ? "true" : "false");
+    el.classList.toggle("is-on", !!on);
+    el.textContent = on ? (onText || "已开启") : (offText || "已关闭");
+  }
+
+  function renderKeys() {
+    if (!elKeysList) return;
+    var html = "";
+    for (var a = 0; a < KEY_ACTIONS.length; a++) {
+      var act = KEY_ACTIONS[a], list = keyList(act);
+      html += "<div class='set-key-row' data-act='" + act + "'>" +
+        "<div class='set-key-lab'><b>" + KEY_ACT_CN[act] + "</b><small>" + KEY_DESC[act] + "</small></div>" +
+        "<div class='set-key-keys'>";
+      for (var i = 0; i < list.length; i++) {
+        html += "<span class='set-key-chip'><b>" + keyName(list[i]) + "</b>" +
+          (list.length > 1 ? "<button type='button' class='set-key-x' data-del-act='" + act +
+            "' data-del-code='" + list[i] + "' aria-label='移除 " + keyName(list[i]) + "'>✕</button>" : "") +
+          "</span>";
+      }
+      if (captureAct === act) {
+        html += "<span class='set-key-wait'>按下新键…（Esc 取消）</span>";
+      } else if (KEY_UNIQUE[act]) {
+        html += "<button type='button' class='set-key-add' data-cap-act='" + act + "' data-cap-add='1'>改键</button>";
+      } else if (list.length < KEY_MAX) {
+        html += "<button type='button' class='set-key-add' data-cap-act='" + act + "' data-cap-add='1'>+ 添加</button>";
+      }
+      html += "</div><div class='set-key-hint'>" + keyHint(act) + "</div></div>";
+    }
+    elKeysList.innerHTML = html;
+    var btns = elKeysList.querySelectorAll("[data-cap-act]");
+    for (var b = 0; b < btns.length; b++) {
+      btns[b].addEventListener("click", function () {
+        beginCapture(this.getAttribute("data-cap-act"), this.getAttribute("data-cap-add") === "1");
+      });
+    }
+    var dels = elKeysList.querySelectorAll("[data-del-code]");
+    for (var d = 0; d < dels.length; d++) {
+      dels[d].addEventListener("click", function () {
+        removeKey(this.getAttribute("data-del-act"), this.getAttribute("data-del-code"));
+      });
+    }
+  }
+
+  /* 所有设置控件的状态同步（唯一入口，多处共用同一份设置时不会走样） */
+  function syncSetUi() {
+    var i;
+    /* 音效开关（#run-mute 仍在 DOM 里，只是搬到了设置面板中） */
+    if (btnMute) {
+      var muted = Sfx.isMuted();
+      btnMute.setAttribute("aria-pressed", muted ? "true" : "false");
+      btnMute.classList.toggle("is-on", !muted);
+      btnMute.textContent = muted ? "🔇 已静音" : "🔊 音效开";
+    }
+    /* 工具条上的「⚙ 设置」显示一个静音小标记 */
+    if (btnSetOpen) {
+      btnSetOpen.classList.toggle("is-muted", Sfx.isMuted());
+      btnSetOpen.title = (Sfx.isMuted() ? "设置（当前静音）" : "设置") + "：音效、无障碍、自定义按键";
+    }
+    paintSwitch(elSetCb.el, SET.cb, "已开启 · 色盲友好", "已关闭");
+    paintSwitch(elSetCalm.el, SET.calm, "已开启 · 少抖动", "已关闭");
+    paintSwitch(elSetBig.el, SET.big, "已开启 · 大字", "已关闭");
+    var pct = Math.round(SET.vol * 100) + "%";
+    for (i = 0; i < elSetVol.length; i++) {
+      if (elSetVol[i]) elSetVol[i].value = String(Math.round(SET.vol * 100));
+      if (elSetVolVal[i]) elSetVolVal[i].textContent = pct;
+    }
+    if (elA11ySum) {
+      var on = [];
+      if (SET.cb) on.push("色盲模式");
+      if (SET.calm) on.push("减少闪烁");
+      if (SET.big) on.push("大字模式");
+      on.push("独立音量 " + pct);
+      elA11ySum.textContent = on.join(" · ");
+    }
+    if (elKeysSum) {
+      elKeysSum.textContent = "跳跃 " + keyHint("jump") + " · 下蹲 " + keyHint("duck");
+    }
+    var keysTag = document.getElementById("set-keys-tip");
+    if (keysTag) {
+      keysTag.innerHTML = "跳跃：<b>" + keyHint("jump") + "</b> ｜ 下蹲：<b>" + keyHint("duck") +
+        "</b> ｜ 暂停：<b>" + keyHint("pause") + "</b> ｜ 音效开关：<b>" + keyHint("mute") + "</b>";
+    }
+    if (elSetHint) {
+      elSetHint.textContent = captureAct
+        ? "请按下新键…（Esc 取消）"
+        : "设置只保存在本机浏览器，换设备需要重设。";
+    }
+    renderKeys();
   }
 
   function openHelp() {
@@ -1576,7 +2085,7 @@
     if (state === "playing") state = "paused";
     showOverlay("paused");
     elOvTitle.textContent = "玩法说明";
-    elOvText.innerHTML = HELP_HTML;
+    elOvText.innerHTML = helpHtml();
     elOvBtn.textContent = "知道了";
     elRecords.innerHTML = "";
     elOvBtn.dataset.mode = "back";
@@ -1587,17 +2096,24 @@
     document.addEventListener("keyup", onKeyUp);
     bindHold(btnJumpIn, pressJump, releaseJump);
     bindHold(btnDuckIn, pressDuck, releaseDuck);
-    bindHold(btnMute, toggleMute, function () {});
+    /* 音效开关：新版在设置面板里（点一下切换）；旧页面（按钮还在工具条）仍用长按式绑定 */
+    if (btnMute) {
+      if (elSet && elSet.contains(btnMute)) {
+        btnMute.addEventListener("click", function (e) { e.preventDefault(); toggleMute(); });
+      } else {
+        bindHold(btnMute, toggleMute, function () {});
+      }
+    }
     if (btnHelp) btnHelp.addEventListener("click", openHelp);
+    bindSet();
 
-    /* 所有「🛍 商店 / 皮肤商店」入口共用一套点击委托 */
+    /* 所有「🛍 商店 / 皮肤商店 / ⚙ 设置」入口共用一套点击委托 */
     root.addEventListener("click", function (e) {
       var n = e.target;
       while (n && n !== root) {
-        if (n.hasAttribute && n.hasAttribute("data-open-shop")) {
-          e.preventDefault();
-          openShop();
-          return;
+        if (n.hasAttribute) {
+          if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openShop(); return; }
+          if (n.hasAttribute("data-open-set")) { e.preventDefault(); openSet(); return; }
         }
         n = n.parentNode;
       }
@@ -1623,7 +2139,7 @@
     if (stage) {
       stage.addEventListener("mousedown", function (e) {
         if (e.button !== 0) return;
-        if (e.target && e.target.closest && e.target.closest("[data-open-shop]")) return;  // 点商店入口别顺手开局
+        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 点商店入口别顺手开局
         if (state === "paused") { togglePause(); return; }
         if (state === "ready" || state === "over") { if (mayRestart()) startGame(); return; }
         pressJump();
@@ -1633,7 +2149,7 @@
 
       var touchY = null;
       stage.addEventListener("touchstart", function (e) {
-        if (e.target && e.target.closest && e.target.closest("[data-open-shop]")) return;  // 同上
+        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 同上
         if (state === "paused") { e.preventDefault(); togglePause(); return; }
         if (state === "ready" || state === "over") {
           e.preventDefault();
@@ -1663,15 +2179,74 @@
     window.addEventListener("resize", resize);
   }
 
+  /* 设置面板的控件绑定（标记在页面里，这里只挂行为，缺元素自动跳过） */
+  function bindSet() {
+    if (!elSet) return;
+    if (btnSetOpen) btnSetOpen.addEventListener("click", openSet);
+    if (btnSetX) btnSetX.addEventListener("click", closeSet);
+    if (btnSetBack) btnSetBack.addEventListener("click", function () { showSetView("main"); });
+    elSet.addEventListener("click", function (e) {          // 点遮罩空白处关掉
+      if (e.target === elSet) closeSet();
+    });
+
+    var entries = [["set-open-a11y", "a11y"], ["set-open-keys", "keys"]];
+    for (var i = 0; i < entries.length; i++) {
+      var b = document.getElementById(entries[i][0]);
+      if (b) bindViewEntry(b, entries[i][1]);
+    }
+
+    var toggles = [elSetCb, elSetCalm, elSetBig];
+    for (var t = 0; t < toggles.length; t++) {
+      (function (entry, name) {
+        if (!entry.el) return;
+        entry.el.addEventListener("click", function () {
+          entry.set(entry.el.getAttribute("aria-pressed") !== "true");   // 取反
+          if (name === "cb" || name === "calm") refreshCanvasStyle();
+        });
+      })(toggles[t], ["cb", "calm", "big"][t]);
+    }
+
+    var vols = [elSetVol[0], elSetVol[1]];
+    for (var v = 0; v < vols.length; v++) {
+      if (!vols[v]) continue;
+      (function (el) {
+        var handler = function () {
+          setOpt("vol", Number(el.value) / 100);
+          Sfx.wake();
+          if (!Sfx.isMuted() && SET.vol > 0) Sfx.coin();      // 拖动时试听一下音量
+        };
+        el.addEventListener("input", handler);
+        el.addEventListener("change", handler);
+      })(vols[v]);
+    }
+
+    var rk = document.getElementById("set-keys-reset");
+    if (rk) rk.addEventListener("click", function () {
+      resetKeys();
+      toast("已恢复默认按键");
+    });
+    var va = document.getElementById("set-open-vol");
+    if (va) va.addEventListener("click", function () { showSetView("a11y"); });
+  }
+
+  function bindViewEntry(btn, view) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      showSetView(view);
+    });
+  }
+
+  /* 色盲模式 / 减少闪烁 改了之后立刻重画一帧，不用等下一次 tick */
+  function refreshCanvasStyle() { render(); updateHud(); }
+
   /* ═══════════ 初始化 ═══════════ */
   lastBest = parseInt(store(KEY_BEST) || "0", 10) || 0;
+  applyA11y();                    // 先落无障碍类名（字号 / 关动效由 CSS 接管）
+  initSetRefs();                  // 再抓设置面板的元素引用，之后 syncSetUi 才能同步
   resize();
   resetGame();
   bind();
-  if (btnMute) {
-    btnMute.setAttribute("aria-pressed", Sfx.isMuted() ? "true" : "false");
-    btnMute.textContent = Sfx.isMuted() ? "🔇 静音" : "🔊 音效";
-  }
+  syncSetUi();                    // 把设置里的值刷到面板控件上（音效开关 / 音量 / 各开关 / 键位）
   render();
   if (!window.__RUNNER_MANUAL__ && window.requestAnimationFrame) rafId = window.requestAnimationFrame(frame);
 
@@ -1700,6 +2275,24 @@
     openShop: openShop,
     closeShop: closeShop,
     shopOpen: shopOpen,
+    /* 设置弹层（音效 / 无障碍 / 自定义按键）：供控制台与测试使用 */
+    openSet: openSet,
+    closeSet: closeSet,
+    setOpen: setOpen,
+    setView: showSetView,
+    settings: function () {
+      var keys = {};
+      for (var a = 0; a < KEY_ACTIONS.length; a++) keys[KEY_ACTIONS[a]] = keyList(KEY_ACTIONS[a]).slice();
+      return { sfx: !!SET.sfx, vol: SET.vol, cb: !!SET.cb, calm: !!SET.calm, big: !!SET.big, keys: keys };
+    },
+    setOption: function (name, val) { return setOpt(name, val); },
+    keys: function () { return SET.keys; },
+    setKeys: function (next) { return setKeys(next); },
+    resetKeys: function () { return resetKeys(); },
+    keyLabel: keyName,
+    keyHint: keyHint,
+    /* 当前配色（色盲模式会改写它），给取证探针看 */
+    palette: function () { return cbPalette(paletteAt(worldDist() * 0.4)); },
     /* 成就（/ach.js）：面板开关 + 只读快照，供控制台与测试使用 */
     openAch: function () { if (Ach && Ach.open) Ach.open(); },
     closeAch: function () { if (Ach && Ach.close) Ach.close(); },
