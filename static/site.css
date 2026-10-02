@@ -166,9 +166,20 @@
   .games-name { font-size: 15px; }
 }
 
-/* ══ 站内子页面的「返回首页」按钮 ══
-   手机端主题导航折叠成汉堡按钮、菜单项为空时不明显，游戏页里给一个一键回首页的入口。
-   跑酷工具条 / 扫雷工具条 / 账号页都用它，样式统一、明暗主题自动适配。 */
+/* ══ 站名（Wow 娱乐小站）下方的一行「返回」入口 ══
+   目标由页面 front matter 决定（见 layouts/_partials/header.html）：
+   小游戏页 → /games/（返回游戏合集，挑另一个玩）；游戏合集页 → /（返回首页）。
+   左边距与 .header-nav 同宽同 padding，保证和站名左对齐、正好落在它下方。 */
+.header-back {
+  display: flex;
+  justify-content: flex-start;
+  max-width: calc(var(--nav-width) + var(--gap) * 2);
+  margin: 0 auto 6px;
+  padding: 0 var(--gap);
+}
+
+/* ══ 站内「返回 / 回上一级」按钮 ══
+   站名下方那一行用它（.header-back > .site-back），样式统一、明暗主题自动适配。 */
 .site-back {
   display: inline-flex;
   align-items: center;

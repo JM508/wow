@@ -307,14 +307,17 @@
    上限 1440px（原来 1100px），画面约放大 30%。 */
 @media (min-width: 900px) {
   .main:has(#run-root),
-  body:has(#run-root) .header-nav {
+  body:has(#run-root) .header-nav,
+  /* 站名下方的「返回游戏合集」一行跟页头一起放宽，保持与站名左对齐 */
+  body:has(#run-root) .header-back {
     max-width: min(1440px, 96vw, calc((100vh - 180px) * 8 / 3));
   }
 }
 /* 中等屏幕（平板横屏 / 小笔记本）也尽量吃满宽度，别留大片空白 */
 @media (min-width: 700px) and (max-width: 899.98px) {
   .main:has(#run-root),
-  body:has(#run-root) .header-nav {
+  body:has(#run-root) .header-nav,
+  body:has(#run-root) .header-back {
     max-width: 100%;
   }
 }

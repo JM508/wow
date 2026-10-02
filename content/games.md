@@ -3,6 +3,9 @@ date = '2026-10-02T10:05:00+08:00'
 draft = false
 title = '游戏合集'
 description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑，点开即玩。'
+# 站名下方那一行「返回」入口：合集页回首页
+backHref = '/'
+backLabel = '返回首页'
 +++
 
 <div class="games-card" aria-label="游戏合集">
