@@ -5,8 +5,6 @@ title = '游戏合集'
 description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑，点开即玩。'
 +++
 
-挑一个开玩，都会自动保存进度和成绩：
-
 <div class="games-card" aria-label="游戏合集">
 <div class="games-card-head"><span class="games-ico">🎮</span><strong>游戏合集</strong><span class="games-sub">点击进入</span></div>
 <a class="games-row games-ms" href="/minesweeper/"><span class="games-emoji">💣</span><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-10-01</span></span><span class="games-go">点击进入 →</span></a>
