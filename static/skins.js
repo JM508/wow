@@ -99,8 +99,8 @@
       runH: 78, duckH: 48
     },
     {
-      id: "pixelrun", name: "像素狂奔", price: 3333, tag: "史诗",
-      desc: "从老录像带里跑出来的像素小人，一步一帧都在狂奔。",
+      id: "pixelrun", name: "监控人", price: 3333, tag: "传说",
+      desc: "从监控录像里跑出来的像素小人，一步一帧都在狂奔。",
       sprite: { run: { sheet: "pixelrun-sheet", n: 12, fps: 15 }, duck: "pixelrun-duck" },
       runH: 78, duckH: 48
     }
@@ -427,7 +427,7 @@
     var night = !!opts.night;
 
     /* ── 立绘皮肤：直接贴图（跑动带轻微起伏 / 前后倾，蹲用专属立绘）──
-       逐帧动画皮肤（史诗）：run/duck 可以是 { sheet: "文件名", n: 帧数, fps: 帧率 }，
+       逐帧动画皮肤（传说）：run/duck 可以是 { sheet: "文件名", n: 帧数, fps: 帧率 }，
        sheet 为横排精灵图，按 t 取当前帧循环播放；静图皮肤照旧。 */
     if (skin.sprite) {
       var sp = pose === "duck" ? skin.sprite.duck : skin.sprite.run;
