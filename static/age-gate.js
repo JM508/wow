@@ -218,11 +218,10 @@
       probe.src = u;
     })(bgUrlFor(idx), idx, 0);
 
-    // 首页专属的两个悬浮按钮：左下「下载背景图」、右下「看背景图」
-    if (isHome) {
-      setupDownload(el);
-      setupViewer(el);
-    }
+    // 悬浮按钮：首页左下「下载背景图」+ 右下「看背景图」；
+    // 游戏合集页（/games/）也给右下「看背景图」，方便在那儿专心看当前这张背景
+    if (isHome) setupDownload(el);
+    if (isHome || isGames) setupViewer(el);
   }
 
   /* ---------- 日期工具：出生日期核验 ---------- */
@@ -548,9 +547,11 @@
   if (/[?&]agegate=reset\b/i.test(location.search)) clearStore();
   purgeOld();
 
-  /* 当前是否首页：① 年龄门禁默认只拦首页；② 「下载背景图」按钮只在首页出现 */
+  /* 当前是否首页：① 年龄门禁默认只拦首页；② 「下载背景图」按钮只在首页出现
+     游戏合集页 /games/ 额外挂一个「看背景图」（右下 👁） */
   var p = location.pathname.replace(/index\.html?$/i, "");
   var isHome = (p === "/" || p === "");
+  var isGames = /^\/games\/?$/.test(p);
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", applyBg);
