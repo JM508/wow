@@ -47,6 +47,7 @@
   var TABLE_SCORES  = "runner_scores";    // 排行榜成绩（所有人可看，仅本人可提交）
   var NICK_KEY      = "runner-nick";      // 昵称本地缓存（提交成绩用）
   var NICK_MAX      = 16;
+  var SYNC_BASE_KEY = "runner-coins-synced"; // 上次成功同步时的金币基线（扣款不被云端吃掉的关键）
   var LEADER_PAGE   = 10;                 // 排行榜每页人数
   var LEADER_LIMIT  = 50;                 // 榜单总席位 = 5 页 × 10
   var GUEST_RE      = /^访客 ([0-9]{1,3})$/;   // 访客昵称格式（与服务端 RLS 校验一致）
@@ -325,9 +326,27 @@
   }
 
   /* ═══════════ 本地钱包 ⇄ 云存档 合并 ═══════════
-     规则（都是「只增不减」，避免任何一端的数据被另一端吃掉）：
-       coins  取两边最大值；owned 取并集；装备优先保留本地这件（前提是合并后确实拥有）。
+     owned 取并集；装备优先保留本地这件（前提是合并后确实拥有）。
+     金币不能简单取两边最大值 —— 那是「只增不减」规则，赚金币没问题，
+     **花钱买皮肤是减少**：买完本地变 200，云端还是旧的 500，
+     max() 一合并钱就「回来了」（皮肤却因并集而保留）。修法：
+       记录上次成功同步时的金币基线（runner-coins-synced），
+       合并值 = 云端值 +（本地值 − 基线），即把本地的增减 delta 叠到云端上。
+       赚了 +N、花了 −N 都能正确过账；首次同步没有基线时才退回 max() 采纳云端。
      未登录时完全不碰本地存档，游戏照旧离线可玩。 */
+  function syncBase() {
+    try {
+      var n = parseInt(global.localStorage.getItem(SYNC_BASE_KEY), 10);
+      return isNaN(n) ? null : Math.max(0, n);
+    } catch (e) { return null; }
+  }
+  function setSyncBase(n) {
+    try {
+      if (n === null || n === undefined) global.localStorage.removeItem(SYNC_BASE_KEY);
+      else global.localStorage.setItem(SYNC_BASE_KEY, String(Math.max(0, Math.floor(n || 0))));
+    } catch (e) {}
+  }
+
   function mergeWallet(local, cloud) {
     var c = cloud || {};
     local = local || { coins: 0, owned: [], skin: null, coinSkin: null };
@@ -341,7 +360,13 @@
     push(local.owned);
     push(c.owned);
 
-    var coins = Math.max(Math.floor(Number(local.coins) || 0), Math.floor(Number(c.coins) || 0));
+    var lc = Math.max(0, Math.floor(Number(local.coins) || 0));
+    var cc = Math.max(0, Math.floor(Number(c.coins) || 0));
+    var base = syncBase();
+    var coins;
+    if (c.coins === undefined || c.coins === null) coins = lc;   // 云端还没有存档 → 本地原样保留
+    else if (base === null) coins = Math.max(lc, cc);            // 首次同步：采纳两边较大值
+    else coins = Math.max(0, cc + (lc - base));                  // 之后：云端 + 本地变动量
     /* ⚠️ 已购清单存的是「带前缀的键」（p:xxx / c:xxx），而 equipped() 给的是裸 id。
        直接 indexOf 永远匹配不上 → 装备永远同步不过去，而且回传时会把云端的
        skin / coin_skin 覆盖成 null（等于每次同步都把装备抹掉）。这里统一补前缀再比对。
@@ -393,6 +418,8 @@
       if (merged.coinSkin) s.equip("coin", merged.coinSkin);
       var name = merged.ownerName || (cloud && cloud.owner_name) || "";
       if (name && !nick()) setNick(name);
+      /* 同步成功后刷新金币基线：之后的本地增减（赚/花）都以这个值为准 */
+      setSyncBase(merged.coins);
     } finally {
       suppressAutoPush = false;
     }
@@ -479,7 +506,9 @@
       sync: walletSync,
       local: localWallet,
       merge: mergeWallet,
-      bindAutoPush: bindWalletAutoPush
+      bindAutoPush: bindWalletAutoPush,
+      syncBase: syncBase,
+      setSyncBase: setSyncBase
     },
     scores: {
       top: scoreTop,

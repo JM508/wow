@@ -9,7 +9,7 @@ enableRobotsTXT = true
   defaultTheme = "dark"
   # 自定义静态资源（/site.css /age-gate.js /runner.js 等）的缓存穿透版本号：
   # 改了 JS/CSS 记得把这里换个新值（配合 _headers 里对 /*.js / *.css 的一年强缓存）
-  assetVer = "v20261002b"
+  assetVer = "v20261002c"
   # 站点仓库（首页页脚展示）
   githubUrl = "https://github.com/JM508/wow"
   homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "分享搞笑段子、游戏攻略和动漫推荐。\n\n<div class=\"games-card\" aria-label=\"玩游戏\">\n<div class=\"games-card-head\"><span class=\"games-ico\">🎮</span><strong>玩游戏</strong><span class=\"games-sub\">点击卡片直接开玩</span></div>\n<a class=\"games-row games-ms\" href=\"/minesweeper/\"><span class=\"games-emoji\">💣</span><span class=\"games-name\">扫雷</span><span class=\"games-go\">点击跳转 →</span></a>\n<a class=\"games-row games-run\" href=\"/runner/\"><span class=\"games-emoji\">🏃</span><span class=\"games-name\">火柴人快跑</span><span class=\"games-go\">点击跳转 →</span></a>\n</div>"}
