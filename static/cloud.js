@@ -48,6 +48,7 @@
   var NICK_KEY      = "runner-nick";      // 昵称本地缓存（提交成绩用）
   var NICK_MAX      = 16;
   var SYNC_BASE_KEY = "runner-coins-synced"; // 上次成功同步时的金币基线（扣款不被云端吃掉的关键）
+  var DEVICE_KEY    = "runner-device-id";    // 本机随机标识：访客成绩上榜后，登录时凭它过户到账号
   var LEADER_PAGE   = 10;                 // 排行榜每页人数
   var LEADER_LIMIT  = 50;                 // 榜单总席位 = 5 页 × 10
   var GUEST_RE      = /^访客 ([0-9]{1,3})$/;   // 访客昵称格式（与服务端 RLS 校验一致）
@@ -262,7 +263,8 @@
       distance: Math.max(0, Math.floor(Number(entry.distance) || 0))
     };
     /* 访客模式：未登录也能上传，但昵称必须是「访客 N」——
-       服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称 */
+       服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称。
+       同时带上本机 device_id：之后登录时可以凭它把这些访客行过户到账号名下。 */
     if (guest) {
       if (!GUEST_RE.test(row.nickname)) {
         return Promise.resolve({
@@ -270,11 +272,56 @@
           error: { kind: "invalid-request", message: "访客昵称必须为「访客 数字」格式", status: 0 }
         });
       }
+      row.device_id = deviceId();
     } else {
       setNick(row.nickname);
     }
     return d.from(TABLE_SCORES).insert(row)
       .select("nickname, score, coins, distance, created_at");
+  }
+
+  /* ── 本机设备标识 ──
+     访客成绩过户的凭证：未登录上传时悄悄带上，登录后用同一标识把
+     「访客 N」行改成自己的（owner_id + 昵称），榜单上就不再留访客条目。
+     随机生成一次、永久存在 localStorage；拿不到存储时返回 null（只是无法过户）。 */
+  function deviceId() {
+    try {
+      var id = localStorage.getItem(DEVICE_KEY);
+      if (id) return id;
+      var bytes = new Uint8Array(16);
+      (global.crypto && crypto.getRandomValues) ? crypto.getRandomValues(bytes)
+        : (function () { for (var i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256); })();
+      var hex = "";
+      for (var j = 0; j < 16; j++) hex += (bytes[j] + 0x100).toString(16).slice(1);
+      id = hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+      localStorage.setItem(DEVICE_KEY, id);
+      return id;
+    } catch (e) { return null; }
+  }
+
+  /* ── 访客成绩过户 ──
+     登录后调用：把本机（device_id 匹配）仍在榜的「访客 N」行改成本人所有。
+     rename = true 时昵称一并改成账号昵称（榜单上彻底不留访客痕迹）；
+     昵称已被别人占用时保持「访客 N」不变（只换归属，避免制造重名）。
+     幂等：过户完成后这些行不再是 anon，重复调用不会再命中。 */
+  function claimGuestScores(rename) {
+    var u = user();
+    if (!u) return Promise.resolve({ data: 0, error: null });
+    var d = db();
+    if (!d) return Promise.resolve({ data: 0, error: envUnavailable() });
+    var did = deviceId();
+    if (!did) return Promise.resolve({ data: 0, error: null });
+    var row = { owner_id: u.id };
+    if (rename !== false) row.nickname = nickOrDefault();
+    return d.from(TABLE_SCORES)
+      .update(row)
+      .eq("owner_id", "anon")
+      .eq("device_id", did)
+      .select("id")
+      .then(function (r) {
+        if (r.error) return r;
+        return { data: (r.data && r.data.length) || 0, error: null };
+      });
   }
 
   /* ── 重名校验 ──
@@ -516,7 +563,9 @@
       rankAbove: scoreRankAbove,
       submit: scoreSubmit,
       nameTaken: scoreNameTaken,
-      guestName: guestName
+      guestName: guestName,
+      claimGuest: claimGuestScores,
+      deviceId: deviceId
     }
   };
 })(window);

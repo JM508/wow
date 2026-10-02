@@ -374,20 +374,40 @@
   /* 游戏结束 → 可能是本局成绩，交给上传（登录后才会真的发请求） */
   document.addEventListener("run:over", function (e) { submit(e.detail); });
 
+  /* ═══════════ 访客成绩过户 ═══════════
+     登录后把本机之前以「访客 N」上传的成绩收进账号名下（改 owner + 昵称），
+     榜单随之刷新——访客条目不再以访客身份留在榜上。
+     昵称已被别人占用时保留「访客 N」只换归属（避免制造重名）。
+     幂等：过户完成后这些行不再属于 anon，重复调用不会再命中。 */
+  function claimGuestRuns() {
+    var name = CLOUD.nickOrDefault();
+    CLOUD.scores.nameTaken(name).then(function (r) {
+      return CLOUD.scores.claimGuest(!(r && r.data));
+    }).then(function (res) {
+      if (!res || res.error || !res.data) return;    // 没有过户任何行 / 失败 → 下次再试
+      toast("☁️ 已把本机访客成绩收入账号名下（" + res.data + " 条）");
+      if (isOpen()) refresh(); else loadTop();
+    });
+  }
+
   /* 启动：绑定钱包自动回传 + 登录状态下先同步一次 */
   CLOUD.wallet.bindAutoPush();
   CLOUD.session().then(function (r) {
-    if (r && r.data) syncWallet(true);
+    if (r && r.data) {
+      syncWallet(true);
+      claimGuestRuns();                // 登录状态打开页面：把之前的访客成绩收进账号
+    }
     flushPending();                    // 上一页/上一局暂存的成绩，登录了就补传
   });
 
-  /* 登录态变化：刚登录 → 补传暂存成绩；面板开着 → 立刻如实刷新状态。
+  /* 登录态变化：刚登录 → 过户访客成绩 + 补传暂存成绩；面板开着 → 立刻如实刷新状态。
      （会话恢复完成 / 在账号页登录后跳回来，都会走到这里。） */
   var lastUserId = null;
   CLOUD.onAuthChange(function () {
     var u = CLOUD.user();
     var id = u ? u.id : null;
     if (id && id !== lastUserId) {
+      claimGuestRuns();
       flushPending();
       if (isOpen()) refresh();
     } else if (!id && lastUserId && isOpen()) {
