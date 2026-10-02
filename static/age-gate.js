@@ -15,9 +15,12 @@
 
     /* 站点背景图：/images/bg/bg1.jpg ~ bg{bgCount}.jpg
        每次新开浏览器访问随机换一张（保证与上一张不同） */
-    bgCount: 20,
+    bgCount: 4,
     bgFolder: "/images/bg/bg",
     bgExt: ".jpg",
+    /* 背景图的缓存穿透版本号：/images/* 是 30 天强缓存，换图必须换号，
+       否则回访客户端会一直命中旧图的缓存（文件名不变时无感知更新）。 */
+    bgVer: 2,
     /* 视口 ≤ 此宽度改用手机版小图 bgN-m.webp（1440 宽 webp，约为原图 1/4 体积）：
        手机上加载 300KB 的 1920 宽原图很慢，而背景还盖着一层蒙版，看不出差别。 */
     bgMobileMax: 820,
@@ -98,13 +101,13 @@
     } catch (e) { webpSupport = false; }
     return webpSupport;
   }
-  /* 窄屏（手机）→ 小图 bgN-m.webp；桌面 → 原图 */
+  /* 窄屏（手机）→ 小图 bgN-m.webp；桌面 → 原图。全部带 bgVer 版本号穿透缓存 */
   function bgUrlFor(idx) {
     var base = CFG.bgFolder + (idx + 1) + CFG.bgExt;
     if (CFG.bgMobileMax && window.innerWidth <= CFG.bgMobileMax && canWebp()) {
-      return base.replace(/\.jpg$/, "-m.webp");
+      base = base.replace(/\.jpg$/, "-m.webp");
     }
-    return base;
+    return base + (CFG.bgVer ? "?v=" + CFG.bgVer : "");
   }
 
   /* 选图在脚本一加载（head 阶段）就定下来，并立刻注入 <link rel=preload>：
@@ -167,7 +170,7 @@
     var el = document.createElement("div");
     el.id = "ag-bg";
     el.setAttribute("aria-hidden", "true");
-    var url = CFG.bgFolder + (idx + 1) + CFG.bgExt;
+    var url = CFG.bgFolder + (idx + 1) + CFG.bgExt;    // 下载/展示口径的「原图」路径（不带版本号）
     el.style.backgroundImage = 'url("' + bgUrlFor(idx) + '")';
     el.style.setProperty("--ag-dim", String(CFG.bgDimLight));
     el.style.setProperty("--ag-dim-dark", String(CFG.bgDimDark));
