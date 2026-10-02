@@ -92,6 +92,73 @@
 
   #ag-root .ag-actions { display: flex; flex-direction: column; gap: 10px; }
 
+  /* ── 第二步：出生日期核验（年 / 月 / 日 三个下拉） ── */
+  #ag-root .ag-birth {
+    display: flex;
+    gap: 8px;
+    margin: 0 0 16px;
+  }
+  #ag-root .ag-select {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 12px 26px 12px 12px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--primary, #1f1f1f);
+    background-color: #ffffff;
+    /* appearance:none 后原生箭头消失，统一画一个（内联 SVG data URI，CSP img-src 允许 data:） */
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='none' stroke='%236b6b6b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M2.5 4.5 6 8l3.5-3.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    background-size: 11px 11px;
+    border: 1px solid var(--border, #e6e6e6);
+    border-radius: 11px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+  #ag-root .ag-select:hover { border-color: #d2d6dd; }
+  #ag-root .ag-select:focus-visible {
+    outline: none;
+    border-color: #ff5f6d;
+    box-shadow: 0 0 0 3px rgba(255, 95, 109, 0.18);
+  }
+
+  /* 行内错误提示（日期没选完 / 该日期不存在） */
+  #ag-root .ag-err {
+    margin: 0 0 14px;
+    padding: 9px 12px;
+    font-size: 13px;
+    line-height: 1.6;
+    text-align: left;
+    color: #a4232d;
+    background: rgba(255, 91, 106, 0.12);
+    border-radius: 9px;
+  }
+  #ag-root .ag-err[hidden] { display: none; }
+
+  /* 隐私说明：生日只在本地核验、不上传 */
+  #ag-root .ag-note {
+    margin: 14px 2px 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--secondary, #9a9a9a);
+  }
+
+  /* 极窄屏：三个下拉再收紧一点，避免挤成一行小字 */
+  @media (max-width: 360px) {
+    #ag-root .ag-birth { gap: 6px; }
+    #ag-root .ag-select {
+      padding: 11px 22px 11px 9px;
+      font-size: 14px;
+      background-position: right 6px center;
+      background-size: 10px 10px;
+    }
+  }
+
   #ag-root .ag-btn {
     width: 100%;
     padding: 13px 18px;

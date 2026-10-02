@@ -52,13 +52,25 @@
       { name: "小红书",   url: "https://www.xiaohongshu.com/" },
       { name: "西瓜视频", url: "https://www.ixigua.com/" }
     ],
-    noDelay: 1100    // 选「否」后停留多久（毫秒）再跳转
+    noDelay: 1100,   // 选「否」后停留多久（毫秒）再跳转
+
+    /* 第二步：出生日期核验（选「是」后进入，用生日真正校验年龄） */
+    birthTitle: "出生日期验证",
+    okText: "确认",
+    backText: "返回上一步",
+    labelY: "年", labelM: "月", labelD: "日"
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
   CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
-             CFG.minAge + " 周岁</b>；未满 " + CFG.minAge + " 周岁请选择「否」。";
+             CFG.minAge + " 周岁</b>；选「是」后需填写出生日期完成核验，未满 " +
+             CFG.minAge + " 周岁请选择「否」。";
   CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
+  CFG.birthDesc = "为确认您已年满 <b>" + CFG.minAge + " 周岁</b>，请填写您的出生日期。";
+  CFG.birthNote = "出生日期仅在您的浏览器本地用于年龄核验，不会上传或保存。";
+  CFG.birthErrEmpty = "请选择完整的出生日期";
+  CFG.birthErrInvalid = "该日期不存在，请重新选择";
+  CFG.birthUnder = "您填写的出生日期显示尚未满 " + CFG.minAge + " 周岁";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -213,7 +225,31 @@
     }
   }
 
-  /* ---------- 遮罩渲染 ---------- */
+  /* ---------- 日期工具：出生日期核验 ---------- */
+  function isLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
+  function daysInMonth(y, m) {
+    if (m === 2) return isLeap(y) ? 29 : 28;
+    return (m === 4 || m === 6 || m === 9 || m === 11) ? 30 : 31;
+  }
+  /* 按「今天」算周岁：今年生日还没到就减一岁（闰日 2/29 生在平年按 3/1 前未到处理） */
+  function ageAt(y, m, d) {
+    var t = new Date();
+    var a = t.getFullYear() - y;
+    var tm = t.getMonth() + 1, td = t.getDate();
+    if (tm < m || (tm === m && td < d)) a--;
+    return a;
+  }
+
+  /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「出生日期核验」 ---------- */
+  function cardHtml(inner) {
+    return '<div class="ag-card">' +
+        '<div class="ag-badge" aria-hidden="true">🔞</div>' +
+        inner +
+        '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
+        '<p class="ag-foot">' + CFG.foot + '</p>' +
+      '</div>';
+  }
+
   function render() {
     if (document.getElementById("ag-root")) return;
 
@@ -221,73 +257,165 @@
     el.id = "ag-root";
     el.setAttribute("role", "dialog");
     el.setAttribute("aria-modal", "true");
+    document.body.appendChild(el);
+    showStep1(el);
+  }
+
+  /* ── 第一步：是否已满 18 周岁 ── */
+  function showStep1(el) {
     el.setAttribute("aria-labelledby", "ag-title");
-    el.innerHTML =
-      '<div class="ag-card">' +
-        '<div class="ag-badge" aria-hidden="true">🔞</div>' +
+    el.innerHTML = cardHtml(
         '<h1 class="ag-title" id="ag-title">' + CFG.title + '</h1>' +
         '<p class="ag-question" id="ag-text">' + CFG.question + '</p>' +
         '<p class="ag-desc">' + CFG.desc + '</p>' +
         '<div class="ag-actions">' +
           '<button type="button" class="ag-btn ag-yes" id="ag-yes">' + CFG.yesText + '</button>' +
           '<button type="button" class="ag-btn ag-no" id="ag-no">' + CFG.noText + '</button>' +
-        '</div>' +
-        '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
-        '<p class="ag-foot">' + CFG.foot + '</p>' +
-      '</div>';
-    document.body.appendChild(el);
+        '</div>');
 
-    var card = el.querySelector(".ag-card");
     var yes = el.querySelector("#ag-yes");
     var no = el.querySelector("#ag-no");
     var busy = false;                          // 防重复点击
 
-    // 选「是」：写入会话级标记 → 淡出 → 进入网站
+    // 选「是」→ 进入第二步：填写出生日期做实际核验
     yes.addEventListener("click", function () {
       if (busy) return;
       busy = true;
-      writeStore();
-      purgeOld();
-      html.removeAttribute("data-ag");       // 先解除正文隐藏，让遮罩淡出时正好露出内容
-      el.classList.add("ag-out");
-      setTimeout(function () {
-        if (el.parentNode) el.parentNode.removeChild(el);
-        if (CFG.yesRedirect) location.href = CFG.yesRedirect;
-      }, 320);
+      showStep2(el);
     });
 
-    // 选「否」：不写入任何缓存 → 随机跳转短视频官网
+    // 选「否」→ 不写入任何缓存 → 随机跳转短视频官网
     no.addEventListener("click", function () {
       if (busy) return;
       busy = true;
-      clearStore();
-      var list = CFG.noTargets && CFG.noTargets.length ? CFG.noTargets : [{ name: "短视频平台", url: "https://www.douyin.com/" }];
-      var t = list[Math.floor(Math.random() * list.length)];
-
-      var titleEl = el.querySelector("#ag-title");
-      var textEl = el.querySelector("#ag-text");
-      if (titleEl) titleEl.textContent = "正在跳转…";
-      if (textEl) {
-        textEl.innerHTML = "未满 " + CFG.minAge + " 周岁的访客无法浏览本站，正在带你前往 <b>" +
-                           t.name + "</b> …";
-      }
-      document.documentElement.style.overflow = "hidden";
-      card.classList.add("ag-bye");
-
-      // 立即锁死两个按钮，避免跳转等待期间被重复点击
-      var acts = el.querySelector(".ag-actions");
-      if (acts) acts.style.display = "none";
-      yes.disabled = true;
-      no.disabled = true;
-      yes.style.pointerEvents = "none";
-      no.style.pointerEvents = "none";
-      yes.setAttribute("aria-hidden", "true");
-      no.setAttribute("aria-hidden", "true");
-
-      setTimeout(function () { location.replace(t.url); }, CFG.noDelay);
+      reject(el, null);
     });
 
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
+  }
+
+  /* ── 第二步：填写出生日期，真正核验年龄 ── */
+  function showStep2(el) {
+    var now = new Date();
+    var curY = now.getFullYear();
+    var yOpts = '<option value="">' + CFG.labelY + '</option>';
+    for (var y = curY; y >= curY - 100; y--) yOpts += '<option value="' + y + '">' + y + '</option>';
+    var mOpts = '<option value="">' + CFG.labelM + '</option>';
+    for (var m = 1; m <= 12; m++) mOpts += '<option value="' + m + '">' + m + '</option>';
+    var dOpts = '<option value="">' + CFG.labelD + '</option>';
+    for (var d = 1; d <= 31; d++) dOpts += '<option value="' + d + '">' + d + '</option>';
+
+    el.setAttribute("aria-labelledby", "ag-title");
+    el.innerHTML = cardHtml(
+        '<h1 class="ag-title" id="ag-title">' + CFG.birthTitle + '</h1>' +
+        '<p class="ag-desc" id="ag-text">' + CFG.birthDesc + '</p>' +
+        '<p class="ag-err" id="ag-err" role="alert" hidden></p>' +
+        '<div class="ag-birth">' +
+          '<select class="ag-select" id="ag-y" aria-label="出生年份">' + yOpts + '</select>' +
+          '<select class="ag-select" id="ag-m" aria-label="出生月份">' + mOpts + '</select>' +
+          '<select class="ag-select" id="ag-d" aria-label="出生日期">' + dOpts + '</select>' +
+        '</div>' +
+        '<div class="ag-actions">' +
+          '<button type="button" class="ag-btn ag-yes" id="ag-birth-ok">' + CFG.okText + '</button>' +
+          '<button type="button" class="ag-btn ag-no" id="ag-birth-back">' + CFG.backText + '</button>' +
+        '</div>' +
+        '<p class="ag-note">' + CFG.birthNote + '</p>');
+
+    var selY = el.querySelector("#ag-y");
+    var selM = el.querySelector("#ag-m");
+    var selD = el.querySelector("#ag-d");
+    var err = el.querySelector("#ag-err");
+    var ok = el.querySelector("#ag-birth-ok");
+    var back = el.querySelector("#ag-birth-back");
+    var busy = false;
+
+    function showErr(t) { err.textContent = t; err.hidden = false; }
+    function clearErr() { err.hidden = true; }
+
+    /* 年/月变化 → 重算当月天数，杜绝「2 月 30 日」这类不存在的日期 */
+    function syncDays() {
+      var yv = parseInt(selY.value, 10);
+      var mv = parseInt(selM.value, 10);
+      var max = (yv && mv) ? daysInMonth(yv, mv) : 31;
+      var cur = parseInt(selD.value, 10);
+      var opts = '<option value="">' + CFG.labelD + '</option>';
+      for (var i = 1; i <= max; i++) opts += '<option value="' + i + '">' + i + '</option>';
+      selD.innerHTML = opts;
+      if (cur >= 1 && cur <= max) selD.value = String(cur);
+    }
+    selY.addEventListener("change", function () { clearErr(); syncDays(); });
+    selM.addEventListener("change", function () { clearErr(); syncDays(); });
+    selD.addEventListener("change", clearErr);
+
+    ok.addEventListener("click", function () {
+      if (busy) return;
+      var yv = parseInt(selY.value, 10);
+      var mv = parseInt(selM.value, 10);
+      var dv = parseInt(selD.value, 10);
+      if (!(yv && mv && dv)) { showErr(CFG.birthErrEmpty); return; }
+      if (dv > daysInMonth(yv, mv)) { showErr(CFG.birthErrInvalid); return; }
+      busy = true;
+      if (ageAt(yv, mv, dv) < CFG.minAge) {     // 未满 18：与选「否」同一条拒绝路径
+        reject(el, CFG.birthUnder);
+      } else {
+        pass(el);
+      }
+    });
+
+    back.addEventListener("click", function () {
+      if (busy) return;
+      busy = true;
+      showStep1(el);                            // 回到第一步
+    });
+
+    setTimeout(function () { try { selY.focus(); } catch (e) {} }, 60);
+  }
+
+  /* ── 通过：写入会话标记 → 淡出 → 进入网站 ── */
+  function pass(el) {
+    writeStore();
+    purgeOld();
+    html.removeAttribute("data-ag");           // 先解除正文隐藏，让遮罩淡出时正好露出内容
+    el.classList.add("ag-out");
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      if (CFG.yesRedirect) location.href = CFG.yesRedirect;
+    }, 320);
+  }
+
+  /* ── 拒绝：不写入任何缓存 → 随机跳转短视频官网 ──
+     reason 为 null 时用默认文案（选「否」）；传入文案时用于出生日期核验未满 */
+  function reject(el, reason) {
+    clearStore();
+    var list = CFG.noTargets && CFG.noTargets.length ? CFG.noTargets : [{ name: "短视频平台", url: "https://www.douyin.com/" }];
+    var t = list[Math.floor(Math.random() * list.length)];
+
+    var titleEl = el.querySelector("#ag-title");
+    var textEl = el.querySelector("#ag-text");
+    if (titleEl) titleEl.textContent = "正在跳转…";
+    if (textEl) {
+      textEl.innerHTML = (reason || ("未满 " + CFG.minAge + " 周岁的访客无法浏览本站")) +
+                         "，正在带你前往 <b>" + t.name + "</b> …";
+    }
+    document.documentElement.style.overflow = "hidden";
+    var card = el.querySelector(".ag-card");
+    if (card) card.classList.add("ag-bye");
+
+    // 立即锁死所有交互，避免跳转等待期间被重复点击
+    var acts = el.querySelector(".ag-actions");
+    if (acts) acts.style.display = "none";
+    var errEl = el.querySelector("#ag-err");
+    if (errEl) errEl.hidden = true;
+    var btns = el.querySelectorAll(".ag-btn");
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].disabled = true;
+      btns[i].style.pointerEvents = "none";
+      btns[i].setAttribute("aria-hidden", "true");
+    }
+    var sels = el.querySelectorAll(".ag-select");
+    for (var j = 0; j < sels.length; j++) sels[j].disabled = true;
+
+    setTimeout(function () { location.replace(t.url); }, CFG.noDelay);
   }
 
   /* ---------- 左下角「⬇」（下载背景图，纯图标）+ 是/否确认弹窗 ---------- */
