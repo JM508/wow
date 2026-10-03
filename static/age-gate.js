@@ -59,7 +59,7 @@
     okText: "确认",
     backText: "返回上一步",
     labelY: "年", labelM: "月", labelD: "日",
-    yearMin: 1000, yearMax: 3000   // 年份可选范围（列表按年份倒序，新的在上）
+    yearMin: 1000, yearMax: 3000   // 年份下限校验（yearMin）；yearMax 留作配置口径
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
@@ -69,7 +69,7 @@
   CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
   CFG.birthDesc = "为确认您已年满 <b>" + CFG.minAge + " 周岁</b>，请填写您的出生日期。";
   CFG.birthNote = "出生日期仅在您的浏览器本地用于年龄核验，不会上传或保存。" +
-    "年 / 月 / 日 都支持键盘输入：直接敲数字即可选中（例如依次敲 <b>1</b> <b>9</b> <b>9</b> <b>0</b> 就是 1990 年）。";
+    "年 / 月 / 日 直接输入数字即可（例如 1990 / 3 / 15）：输完自动跳下一格，手机会自动弹出数字键盘。";
   CFG.birthErrEmpty = "请选择完整的出生日期";
   CFG.birthErrInvalid = "该日期不存在，请重新选择";
   CFG.birthUnder = "您填写的出生日期显示尚未满 " + CFG.minAge + " 周岁";
@@ -241,50 +241,37 @@
     return a;
   }
 
-  /* ---------- 键盘直接键入日期 ---------- */
-  /* 年份可选 1000-3000（两千项），靠滚动或方向键翻找不现实，所以支持「敲数字选」：
-     在年 / 月 / 日任一下拉上连续敲数字（如依次敲 1 9 9 0，或月份敲 1 2），
-     按「前缀匹配」逐位收窄并即时命中；停顿约 1 秒即视为下一次输入。
-     与浏览器原生首字母跳转相比，这里行为一致、可预测，停顿时间也更宽容；
-     命中后派发原生 change，年 / 月改变时照旧重算当月天数。 */
-  function typeToSelect(sel) {
-    var buf = "", timer = null, selfSet = false;
-    function reset() { buf = ""; if (timer) { clearTimeout(timer); timer = null; } }
-    sel.addEventListener("keydown", function (e) {
-      var k = e.key;
-      if (k && k.length === 1 && k >= "0" && k <= "9") {
-        e.preventDefault();                        // 接管数字键，避免与原生跳转打架
-        buf += k;
-        var opts = sel.options, hit = "";
-        for (var i = 0; i < opts.length; i++) {    // ① 先找完全相等（多数人一次敲全）
-          if (opts[i].value === buf) { hit = buf; break; }
-        }
-        if (!hit) {                                // ② 否则取第一个以缓冲开头的项
-          for (var j = 0; j < opts.length; j++) {
-            var v = opts[j].value;
-            if (v && v.indexOf(buf) === 0) { hit = v; break; }
-          }
-        }
-        if (hit) {
-          if (sel.value !== hit) {
-            sel.value = hit;
-            /* ⚠️ selfSet 标记：我们自己派发的 change 不能清缓冲 ——
-               否则每敲一位都被当成「外部改值」把缓冲清掉，多位数字永远拼不起来。 */
-            selfSet = true;
-            sel.dispatchEvent(new Event("change", { bubbles: true }));
-            selfSet = false;
-          }
-        } else {
-          buf = buf.slice(0, -1);                  // 无人匹配：忽略这一位，别把缓冲带偏
-        }
-        if (timer) clearTimeout(timer);
-        timer = setTimeout(reset, 900);
-        return;
-      }
-      if (k === "Backspace" || k === "Escape" || k === "Enter" || k === "Tab") reset();
+  /* ---------- 日期直接输入 ---------- */
+  /* 年 / 月 / 日用三个纯数字输入框（inputmode=numeric）：
+     手机唤起数字软键盘、电脑直接打字，两端行为一致。
+     —— 旧版是 <select> + 「敲数字前缀匹配」：手机上 select 唤起的是原生滚轮，
+     keydown 全被吞掉（键盘输入完全不可用）；电脑上选中值随前缀在选项间来回跳
+     （敲 1 跳 1999、敲 2 又跳 2999），停顿超过缓冲时间还会吞位 —— 实测「有点怪」。
+     改输入框后这些问题一并消失。 */
+  function wireDateInput(inp, prev, next, onEnter) {
+    var maxLen = parseInt(inp.getAttribute("maxlength"), 10) || 2;
+    inp.addEventListener("focus", function () {          // 点回来改 → 全选，直接覆盖
+      try { inp.select(); } catch (e) {}
     });
-    sel.addEventListener("change", function () { if (!selfSet) reset(); });
-    sel.addEventListener("blur", reset);
+    inp.addEventListener("input", function () {
+      var v = inp.value.replace(/\D+/g, "");             // 只留数字（粘贴也一并净化）
+      if (v !== inp.value) inp.value = v;
+      if (next && v.length > 0) {
+        var n = parseInt(v, 10);
+        /* 满 4 位（年）/ 2 位（月日）自动跳下一格；月敲 2-9、日敲 4-9
+           已不可能是两位数的开头，敲一位就跳（1-3 等第二位） */
+        var done = v.length >= maxLen ||
+          (maxLen === 2 && n >= (inp.id === "ag-m" ? 2 : 4));
+        if (done) { try { next.focus(); } catch (e) {} }
+      }
+    });
+    inp.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); onEnter(); return; }
+      if (e.key === "Backspace" && inp.value === "" && prev) {
+        e.preventDefault();                              // 空位退格 → 回上一格改
+        try { prev.focus(); } catch (e2) {}
+      }
+    });
   }
 
   /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「出生日期核验」 ---------- */
@@ -343,24 +330,23 @@
 
   /* ── 第二步：填写出生日期，真正核验年龄 ── */
   function showStep2(el) {
-    var yOpts = '<option value="">' + CFG.labelY + '</option>';
-    /* 年份倒序（新的在上）：范围见 CFG.yearMin/yearMax（默认 1000-3000）。
-       选项两千个，靠滚动翻找不现实 —— 键盘直接敲数字即可选中，见 typeToSelect()。 */
-    for (var y = CFG.yearMax; y >= CFG.yearMin; y--) yOpts += '<option value="' + y + '">' + y + '</option>';
-    var mOpts = '<option value="">' + CFG.labelM + '</option>';
-    for (var m = 1; m <= 12; m++) mOpts += '<option value="' + m + '">' + m + '</option>';
-    var dOpts = '<option value="">' + CFG.labelD + '</option>';
-    for (var d = 1; d <= 31; d++) dOpts += '<option value="' + d + '">' + d + '</option>';
-
+    /* 年 / 月 / 日是三个纯数字输入框：手机弹数字软键盘、电脑直接打字，
+       不用再面对两千项的年份下拉（详见 wireDateInput 注释） */
     el.setAttribute("aria-labelledby", "ag-title");
     el.innerHTML = cardHtml(
         '<h1 class="ag-title" id="ag-title">' + CFG.birthTitle + '</h1>' +
         '<p class="ag-desc" id="ag-text">' + CFG.birthDesc + '</p>' +
         '<p class="ag-err" id="ag-err" role="alert" hidden></p>' +
         '<div class="ag-birth">' +
-          '<select class="ag-select" id="ag-y" aria-label="出生年份">' + yOpts + '</select>' +
-          '<select class="ag-select" id="ag-m" aria-label="出生月份">' + mOpts + '</select>' +
-          '<select class="ag-select" id="ag-d" aria-label="出生日期">' + dOpts + '</select>' +
+          '<input class="ag-input" id="ag-y" type="text" inputmode="numeric" enterkeyhint="next" ' +
+            'maxlength="4" placeholder="' + CFG.labelY + '" aria-label="出生年份（4 位数字）" ' +
+            'autocomplete="bday-year">' +
+          '<input class="ag-input" id="ag-m" type="text" inputmode="numeric" enterkeyhint="next" ' +
+            'maxlength="2" placeholder="' + CFG.labelM + '" aria-label="出生月份（1-12）" ' +
+            'autocomplete="bday-month">' +
+          '<input class="ag-input" id="ag-d" type="text" inputmode="numeric" enterkeyhint="done" ' +
+            'maxlength="2" placeholder="' + CFG.labelD + '" aria-label="出生日期（1-31）" ' +
+            'autocomplete="bday-day">' +
         '</div>' +
         '<div class="ag-actions">' +
           '<button type="button" class="ag-btn ag-yes" id="ag-birth-ok">' + CFG.okText + '</button>' +
@@ -371,10 +357,6 @@
     var selY = el.querySelector("#ag-y");
     var selM = el.querySelector("#ag-m");
     var selD = el.querySelector("#ag-d");
-    /* 三个下拉都支持键盘直接敲数字选中（年份两千项，翻不动） */
-    typeToSelect(selY);
-    typeToSelect(selM);
-    typeToSelect(selD);
     var err = el.querySelector("#ag-err");
     var ok = el.querySelector("#ag-birth-ok");
     var back = el.querySelector("#ag-birth-back");
@@ -383,36 +365,36 @@
     function showErr(t) { err.textContent = t; err.hidden = false; }
     function clearErr() { err.hidden = true; }
 
-    /* 年/月变化 → 重算当月天数，杜绝「2 月 30 日」这类不存在的日期 */
-    function syncDays() {
-      var yv = parseInt(selY.value, 10);
-      var mv = parseInt(selM.value, 10);
-      var max = (yv && mv) ? daysInMonth(yv, mv) : 31;
-      var cur = parseInt(selD.value, 10);
-      var opts = '<option value="">' + CFG.labelD + '</option>';
-      for (var i = 1; i <= max; i++) opts += '<option value="' + i + '">' + i + '</option>';
-      selD.innerHTML = opts;
-      if (cur >= 1 && cur <= max) selD.value = String(cur);
-    }
-    selY.addEventListener("change", function () { clearErr(); syncDays(); });
-    selM.addEventListener("change", function () { clearErr(); syncDays(); });
-    selD.addEventListener("change", clearErr);
-
-    ok.addEventListener("click", function () {
+    /* 核验：年份下限（yearMin）+ 月 1-12 + 日与年月匹配的真实天数。
+       输入框里能敲出「2 月 30 日」这类日期，确认时给出行内提示；
+       未来年份会被 ageAt 判成负岁，照旧走「未满 18」拒绝路径 */
+    function submit() {
       if (busy) return;
       var yv = parseInt(selY.value, 10);
       var mv = parseInt(selM.value, 10);
       var dv = parseInt(selD.value, 10);
       if (!(yv && mv && dv)) { showErr(CFG.birthErrEmpty); return; }
-      if (dv > daysInMonth(yv, mv)) { showErr(CFG.birthErrInvalid); return; }
+      if (yv < CFG.yearMin || mv > 12 || dv > 31 || dv > daysInMonth(yv, mv)) {
+        showErr(CFG.birthErrInvalid); return;
+      }
       busy = true;
       if (ageAt(yv, mv, dv) < CFG.minAge) {     // 未满 18：与选「否」同一条拒绝路径
         reject(el, CFG.birthUnder);
       } else {
         pass(el);
       }
-    });
+    }
 
+    /* 三个输入框：数字净化 + 自动跳格 + Enter 提交 + 空位退格回上一格 */
+    wireDateInput(selY, null, selM, submit);
+    wireDateInput(selM, selY, selD, submit);
+    wireDateInput(selD, selM, null, submit);
+    /* 重新输入即清除错误提示 */
+    selY.addEventListener("input", clearErr);
+    selM.addEventListener("input", clearErr);
+    selD.addEventListener("input", clearErr);
+
+    ok.addEventListener("click", submit);
     back.addEventListener("click", function () {
       if (busy) return;
       busy = true;
@@ -463,7 +445,7 @@
       btns[i].style.pointerEvents = "none";
       btns[i].setAttribute("aria-hidden", "true");
     }
-    var sels = el.querySelectorAll(".ag-select");
+    var sels = el.querySelectorAll(".ag-select, .ag-input");
     for (var j = 0; j < sels.length; j++) sels[j].disabled = true;
 
     setTimeout(function () { location.replace(t.url); }, CFG.noDelay);
