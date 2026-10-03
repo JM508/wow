@@ -259,6 +259,24 @@
     return d.from(TABLE_SCORES).select("id", { count: "exact", head: true }).gt("score", score);
   }
 
+  /* 上榜门槛：第 LEADER_LIMIT 名的分数（榜单外提示「还差几分」用）。
+     只取 score 一列、按名次取满一页，最后一行就是门槛分；
+     榜上不足一页时 data 为 null（此时人人都在榜内，用不上门槛）。 */
+  function scoreCutoff() {
+    var d = db();
+    if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
+    return d.from(TABLE_SCORES)
+      .select("score")
+      .order("score", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(LEADER_LIMIT)
+      .then(function (rows) {
+        var list = rows && rows.data;
+        if (!list || !list.length) return { data: null, error: (rows && rows.error) || null };
+        return { data: Number(list[list.length - 1].score) || 0, error: null };
+      });
+  }
+
   /* ── 成绩被服务端校验拦下 ──
      触发器 runner_scores_guard 以 SQLSTATE 'WOW01' 抛错，网关会把它包装成
      code = "DATABASE_WOW01"（message 是库里的中文原因）。这类错误意味着
@@ -610,6 +628,7 @@
       top: scoreTop,
       mine: scoreMine,
       rankAbove: scoreRankAbove,
+      cutoff: scoreCutoff,
       submit: scoreSubmit,
       nameTaken: scoreNameTaken,
       guestName: guestName,

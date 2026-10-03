@@ -304,8 +304,20 @@
       if (pending && pending.score <= score) pending = null;
       CLOUD.scores.rankAbove(score).then(function (above) {
         var rank = above.error ? 0 : (Number(above.count) || 0) + 1;
-        toast(rank ? (isGuest ? ("🏃 访客模式已上榜：第 " + rank + " 名") : ("☁️ 已上榜：第 " + rank + " 名"))
-                   : (isGuest ? "🏃 访客模式：成绩已上传" : "☁️ 成绩已上传云端"));
+        var TOP = CLOUD.LEADER_LIMIT || 100;
+        if (rank && rank <= TOP) {
+          toast((isGuest ? "🏃 访客模式已上榜：第 " : "☁️ 已上榜：第 ") + rank + " 名");
+          return;
+        }
+        /* 榜外：只报与上榜门槛的差距，不再说「已上榜」。
+           门槛 = 第 TOP 名的分数；查不到（网络异常/榜单被清）则退回中性文案。 */
+        CLOUD.scores.cutoff().then(function (cut) {
+          var gap = (cut && !cut.error && cut.data != null) ? (cut.data - score) : null;
+          var head = isGuest ? "🏃 访客模式：" : "☁️ ";
+          toast(gap != null && gap > 0
+            ? (head + "成绩已上传：距第 " + TOP + " 名还差 " + gap + " 分")
+            : (head + "成绩已上传云端"));
+        });
       });
       if (isOpen()) refresh();
     });
