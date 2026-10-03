@@ -40,6 +40,24 @@ function isCloudPath(pathname) {
   return pathname === CLOUD_PREFIX || pathname.indexOf(CLOUD_PREFIX + "/") === 0;
 }
 
+/* PostgREST OpenAPI 文档根路径（P-2）：暴露全部表结构、字段、技术栈版本与
+   内网拓扑。publishableKey 本就公开，等于把攻击面地图送给攻击者。
+   只拦文档根：真实数据路径都带表名段（/database/rest/<table>、/rpc/<fn>），不受影响。 */
+function isOpenApiRoot(pathname) {
+  const rest = CLOUD_PREFIX + "/database/rest";
+  return pathname === rest || pathname === rest + "/";
+}
+
+function notFound() {
+  return new Response(JSON.stringify({ error: "not_found" }), {
+    status: 404,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store"
+    }
+  });
+}
+
 function deny(reason) {
   return new Response(
     JSON.stringify({ error: "forbidden_origin", error_description: reason }),
@@ -59,6 +77,9 @@ export async function onRequest(context) {
 
   /* 非云接口请求原样交给静态资源，零影响 */
   if (!isCloudPath(url.pathname)) return next();
+
+  /* OpenAPI 文档根：无论来源一律 404（防结构泄漏） */
+  if (isOpenApiRoot(url.pathname)) return notFound();
 
   const self = url.origin;
 
