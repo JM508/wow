@@ -25,9 +25,9 @@
   var elNickRow = document.getElementById("rank-nick-row");
   var elPager   = document.getElementById("rank-pager");
 
-  /* 榜单一次取满 50 条（= 5 页 × 10），翻页纯前端切片，不再发第二次请求 */
+  /* 榜单一次取满 100 条（= 10 页 × 10），翻页纯前端切片，不再发第二次请求 */
   var PAGE_SIZE = CLOUD.LEADER_PAGE || 10;
-  var MAX_PAGES = Math.max(1, Math.ceil((CLOUD.LEADER_LIMIT || 50) / PAGE_SIZE));
+  var MAX_PAGES = Math.max(1, Math.ceil((CLOUD.LEADER_LIMIT || 100) / PAGE_SIZE));
 
   var loaded = false;       // 是否已成功拉过榜单
   var lastSubmit = 0;       // 上一次【成功上传】的成绩，避免同一局重复上传

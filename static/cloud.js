@@ -51,7 +51,7 @@
   var SYNC_BASE_KEY = "runner-coins-synced"; // 上次成功同步时的金币基线（扣款不被云端吃掉的关键）
   var DEVICE_KEY    = "runner-device-id";    // 本机随机标识：访客成绩上榜后，登录时凭它过户到账号
   var LEADER_PAGE   = 10;                 // 排行榜每页人数
-  var LEADER_LIMIT  = 50;                 // 榜单总席位 = 5 页 × 10
+  var LEADER_LIMIT  = 100;                // 榜单总席位 = 10 页 × 10
   var GUEST_RE      = /^访客 ([0-9]{1,3})$/;   // 访客昵称格式（与服务端 RLS 校验一致）
 
   /* ═══════════ 客户端（只建一次） ═══════════ */

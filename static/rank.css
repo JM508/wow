@@ -199,7 +199,7 @@
   text-align: center;
 }
 
-/* ── 分页条（100 人 = 5 页 × 20） ── */
+/* ── 分页条（100 人 = 10 页 × 10） ── */
 .rank-pager {
   display: flex;
   flex-wrap: wrap;
