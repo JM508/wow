@@ -156,12 +156,20 @@
 
   function renderAll() {
     var i;
-    /* 商店卡片按价格升序排列（便宜在前）：排序副本渲染，不改 Skins 内部定义顺序 */
-    function byPrice(list) {
-      return [].slice.call(list).sort(function (a, b) { return a.price - b.price; });
+    /* 商店排序规则（用户定下的固定规则）：限定沉底，其余按价格升序。
+       即普通/史诗皮肤在前（便宜在前），限定皮肤永远排在最后（限定内部仍按价格）。
+       排序副本渲染，不改 Skins 内部定义顺序。 */
+    function shopRank(item) {
+      return item.tag === "限定" ? 1 : 0;
     }
-    var players = byPrice(Skins.PLAYERS);
-    var coins = byPrice(Skins.COINS);
+    function byShopOrder(list) {
+      return [].slice.call(list).sort(function (a, b) {
+        var r = shopRank(a) - shopRank(b);
+        return r !== 0 ? r : a.price - b.price;
+      });
+    }
+    var players = byShopOrder(Skins.PLAYERS);
+    var coins = byShopOrder(Skins.COINS);
     for (i = 0; i < players.length; i++) {
       gridPlayers.appendChild(buildCard("player", players[i]));
     }
