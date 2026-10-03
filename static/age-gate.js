@@ -427,8 +427,15 @@
     var textEl = el.querySelector("#ag-text");
     if (titleEl) titleEl.textContent = "正在跳转…";
     if (textEl) {
-      textEl.innerHTML = (reason || ("未满 " + CFG.minAge + " 周岁的访客无法浏览本站")) +
-                         "，正在带你前往 <b>" + t.name + "</b> …";
+      /* reason 一律按纯文本处理（textContent/Node 拼装），绝不经 innerHTML，
+         防止未来接入外部输入时演变成 XSS */
+      textEl.textContent = "";
+      textEl.appendChild(document.createTextNode(
+        (reason || ("未满 " + CFG.minAge + " 周岁的访客无法浏览本站")) + "，正在带你前往 "));
+      var bEl = document.createElement("b");
+      bEl.textContent = t.name;
+      textEl.appendChild(bEl);
+      textEl.appendChild(document.createTextNode(" …"));
     }
     document.documentElement.style.overflow = "hidden";
     var card = el.querySelector(".ag-card");

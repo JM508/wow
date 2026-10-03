@@ -44,11 +44,14 @@ const MIME = {
   '.mp4': 'video/mp4'
 };
 
-/* 与 static/_headers 完全一致的安全头（镜像域此前完全没有，属补课） */
+/* 与 static/_headers 完全一致的安全头（镜像域此前完全没有，属补课）。
+ * 注意：第一条 CSP 不写 frame-ancestors——网关会给它追加 *（'none' * 按规范
+ * 是非法源列表，整条指令被浏览器忽略并告警）。防嵌套由第二条 CSP 策略承担：
+ * 多条策略按规范取交集，第二条 frame-ancestors 'none' 原样存活生效。 */
 var CSP_MAIN =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
   "font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; " +
-  "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; " +
+  "object-src 'none'; base-uri 'self'; form-action 'self'; " +
   'upgrade-insecure-requests';
 /* 第二条 CSP：仅 frame-ancestors。多条 CSP 按规范取交集（每条都必须放行），
  * 专防中间层改写第一条后防护失效。 */

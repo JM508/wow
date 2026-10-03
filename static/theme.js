@@ -30,9 +30,18 @@
     else html.dataset.theme = "dark";
   } catch (e) {}
 
-  /* ── 2) CSP 探测 ── */
+  /* ── 2) CSP 探测 ──
+     旧版用 eval("void 0") 抛错判断内联脚本是否被拦——既触发 CSP 违规告警，
+     又会被安全扫描器标红。两站 <head> 都有 meta CSP 兜底（check_csp.js 断言
+     与 _headers 一致），直接读它判断：script-src 'self' 且无 'unsafe-inline'
+     ⇒ 主题 footer 的内联脚本必然被拦 ⇒ 本文件需要接管主题切换绑定。 */
   var cspBlocked = false;
-  try { eval("void 0"); } catch (e) { cspBlocked = true; }
+  try {
+    var metaCsp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
+    cspBlocked = !!(metaCsp &&
+      /script-src[^;]*'self'/.test(metaCsp.content) &&
+      metaCsp.content.indexOf("'unsafe-inline'") === -1);
+  } catch (e) { cspBlocked = false; }
 
   function initUI() {
     /* 菜单横向滚动位置记忆（footer.html 内联脚本 1）*/

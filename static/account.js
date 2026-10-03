@@ -59,12 +59,19 @@
   function validPass(v) { return String(v || "").length >= 8; }
 
   /* 登录成功后的跳转目标（只允许站内相对路径）
-     ⚠️ 还要挡反斜杠：location.assign("/\\evil.com") 会被浏览器把 \ 规范化成 /，
-     变成 //evil.com → 协议相对地址 → 跳去外站（开放重定向）。 */
+     ⚠️ 两道防线：
+     1. 浏览器解析 URL 前会先剥掉所有 \t \n \r（/​%09/evil.com → //evil.com），
+        所以先把这三个字符剥干净再做前缀判断；
+     2. new URL(n, origin).origin 必须等于本站 origin，任何协议相对/
+        反斜杠/编码花样都过不了这一关。 */
   function nextPath() {
     try {
       var n = new URLSearchParams(location.search).get("next") || "";
-      if (n.charAt(0) === "/" && n.charAt(1) !== "/" && n.charAt(1) !== "\\") return n;
+      var clean = String(n).replace(/[\t\n\r]/g, "");
+      if (clean.charAt(0) === "/" && clean.charAt(1) !== "/" && clean.charAt(1) !== "\\") {
+        var u = new URL(clean, location.origin);
+        if (u.origin === location.origin) return clean;
+      }
     } catch (e) {}
     return "";
   }
@@ -308,7 +315,7 @@
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function fmtTime(iso) {
     if (!iso) return "—";

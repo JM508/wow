@@ -1,0 +1,4 @@
+Contact: https://github.com/JM508/wow/issues
+Expires: 2027-10-04T00:00:00.000Z
+Preferred-Languages: zh-CN, en
+Canonical: https://wow-d9s.pages.dev/.well-known/security.txt
