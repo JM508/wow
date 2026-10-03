@@ -95,7 +95,7 @@
     {
       id: "hoshino", name: "星野", price: 2333, tag: "限定",
       desc: "来自《碧蓝档案》的小鸟游星野。",
-      sprite: { run: "hoshino-runner", duck: "hoshino-duck" },
+      sprite: { run: "hoshino-runner2", duck: "hoshino-duck2" },
       runH: 78, duckH: 48
     },
     {
