@@ -156,11 +156,17 @@
 
   function renderAll() {
     var i;
-    for (i = 0; i < Skins.PLAYERS.length; i++) {
-      gridPlayers.appendChild(buildCard("player", Skins.PLAYERS[i]));
+    /* 商店卡片按价格升序排列（便宜在前）：排序副本渲染，不改 Skins 内部定义顺序 */
+    function byPrice(list) {
+      return [].slice.call(list).sort(function (a, b) { return a.price - b.price; });
     }
-    for (i = 0; i < Skins.COINS.length; i++) {
-      gridCoins.appendChild(buildCard("coin", Skins.COINS[i]));
+    var players = byPrice(Skins.PLAYERS);
+    var coins = byPrice(Skins.COINS);
+    for (i = 0; i < players.length; i++) {
+      gridPlayers.appendChild(buildCard("player", players[i]));
+    }
+    for (i = 0; i < coins.length; i++) {
+      gridCoins.appendChild(buildCard("coin", coins[i]));
     }
   }
 
