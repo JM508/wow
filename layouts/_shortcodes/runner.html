@@ -15,10 +15,10 @@
       <span id="run-coins" title="本局收集的金币">🪙 0</span>
     </div>
     <div class="run-tools">
-      <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">🏆 排行榜</button>
+      <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">排行榜</button>
       <button type="button" class="run-shop-btn" id="run-shop-btn" data-open-shop title="用金币兑换皮肤">🛍 商店</button>
-      <button type="button" class="run-ach-btn" id="run-ach-btn" title="成就：看看解锁了多少">🏅 成就<span class="ach-count">0/18</span></button>
-      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键">⚙ 设置</button>
+      <button type="button" class="run-ach-btn" id="run-ach-btn" title="成就：看看解锁了多少">成就<span class="ach-count">0/18</span></button>
+      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键" aria-label="设置">⚙</button>
       <button type="button" id="run-help" title="玩法说明">玩法</button>
     </div>
   </div>
@@ -48,9 +48,9 @@
   <p class="run-foot run-wallet-bar">
     <span id="run-wallet">钱包 0</span> ·
     <button type="button" class="run-link-btn" data-open-shop>🛍 皮肤商店</button> ·
-    <button type="button" class="run-link-btn" data-open-rank>🏆 云端排行榜</button> ·
-    <button type="button" class="run-link-btn" data-open-ach>🏅 成就</button> ·
-    <button type="button" class="run-link-btn" data-open-set>⚙ 设置</button>
+    <button type="button" class="run-link-btn" data-open-rank>云端排行榜</button> ·
+    <button type="button" class="run-link-btn" data-open-ach>成就</button> ·
+    <button type="button" class="run-link-btn" data-open-set aria-label="设置">⚙</button>
     —— 每局收集的金币都会存进钱包，可在这里兑换火柴人皮肤与金币皮肤；登录后钱包与成绩还能同步到云端。
   </p>
   <p class="run-foot">
@@ -73,7 +73,7 @@
 <div id="run-rank" class="run-rank hidden" data-rank-panel role="dialog" aria-modal="true" aria-labelledby="run-rank-title">
   <div class="run-rank-box">
     <div class="run-rank-head">
-      <strong id="run-rank-title">🏆 云端排行榜</strong>
+      <strong id="run-rank-title">云端排行榜</strong>
       <button type="button" class="run-rank-x" id="run-rank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
     </div>
     <div class="rank-status" id="rank-status" role="status" aria-live="polite"></div>
@@ -98,7 +98,7 @@
 <div id="run-ach" class="run-ach hidden" data-ach-panel role="dialog" aria-modal="true" aria-labelledby="run-ach-title">
   <div class="run-ach-box">
     <div class="run-ach-head">
-      <strong id="run-ach-title">🏅 成就</strong>
+      <strong id="run-ach-title">成就</strong>
       <button type="button" class="run-ach-x" id="run-ach-close" title="关闭成就" aria-label="关闭成就">✕</button>
     </div>
     <div id="ach-progress" aria-live="polite"></div>
