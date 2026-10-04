@@ -63,6 +63,7 @@
       <div class="me-tabs" role="tablist" aria-label="个人中心页面">
         <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="true">商店</button>
         <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
       </div>
       <button type="button" class="run-shop-x" id="run-shop-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
     </div>
@@ -87,7 +88,7 @@
     <nav class="rank-pager" id="rank-pager" aria-label="排行榜分页"></nav>
     <div class="rank-mine" id="rank-mine"></div>
     <p class="rank-foot">
-      排行榜展示<b>前 100 名</b>（每页 10 名，共 10 页），对所有访客可见（只显示昵称与分数）；
+      排行榜展示<b>前 100 名</b>（每页 10 名，共 10 页），对所有访客可见（只显示昵称、头像与分数）；
       未登录走<b>访客模式</b>：不能自己取名，成绩以「访客 N」自动上传；
       登录后可用自己的昵称（榜上不允许重名）。
       登录还会开启<b>云存档</b>：金币与已购皮肤会同步到云端，换设备也不丢。
@@ -103,6 +104,7 @@
       <div class="me-tabs" role="tablist" aria-label="个人中心页面">
         <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">商店</button>
         <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="true">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
       </div>
       <button type="button" class="run-ach-x" id="run-ach-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
     </div>
@@ -112,6 +114,49 @@
       局内达成的（分数 / 里程 / 跳跃 / 满速）当场解锁，其余在一局结束时结算；
       「无伤」指整局一次都没碰到障碍（用护盾撞碎障碍也算碰到）。成就存在哪、有没有同步到云端，看上方 ☁️ 那行。
     </p>
+  </div>
+</div>
+
+<!-- ═══ 个人中心（个人页）：头像 + 成就进度，逻辑在 /runner.js ═══ -->
+<div id="run-me" class="run-me hidden" data-me-panel role="dialog" aria-modal="true" aria-labelledby="run-me-title">
+  <div class="run-me-box">
+    <div class="run-me-head me-head">
+      <strong id="run-me-title" class="me-title">个人中心</strong>
+      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">商店</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="true">个人</button>
+      </div>
+      <button type="button" class="run-me-x" id="run-me-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
+    </div>
+
+    <section class="me-card">
+      <div class="me-ava">
+        <img class="me-ava-img hidden" id="me-ava-img" alt="我的头像">
+        <span class="me-ava-ph" id="me-ava-ph" aria-hidden="true">＋</span>
+      </div>
+      <div class="me-id">
+        <strong class="me-nick" id="me-nick">无名火柴人</strong>
+        <span class="me-sub" id="me-sub">未登录 · 头像只存在本机</span>
+      </div>
+      <div class="me-ava-act">
+        <button type="button" class="me-btn" id="me-ava-pick">选择图片</button>
+        <button type="button" class="me-btn me-btn-quiet hidden" id="me-ava-clear">移除头像</button>
+      </div>
+      <input type="file" class="me-file" id="me-ava-file" accept="image/png,image/jpeg,image/webp,image/gif">
+      <p class="me-hint" id="me-ava-hint">头像会公开显示在云端排行榜上。建议用正方形图片，会自动裁成圆形并压缩。</p>
+    </section>
+
+    <section class="me-card">
+      <div class="me-ach">
+        <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">18</span></span>
+        <span class="me-ach-lab">成就已解锁</span>
+      </div>
+      <div class="me-bar" id="me-bar" role="progressbar" aria-valuemin="0" aria-valuemax="18" aria-valuenow="0" aria-label="成就进度"><i id="me-bar-fill"></i></div>
+      <ul class="me-tiers" id="me-tiers"></ul>
+    </section>
+
+    <p class="me-foot">头像与成就都跟着账号走：登录后换设备也能看到同一张头像、同一份成就进度。</p>
   </div>
 </div>
 

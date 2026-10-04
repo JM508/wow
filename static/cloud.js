@@ -53,6 +53,9 @@
   var LEADER_PAGE   = 10;                 // 排行榜每页人数
   var LEADER_LIMIT  = 100;                // 榜单总席位 = 10 页 × 10
   var GUEST_RE      = /^访客 ([0-9]{1,3})$/;   // 访客昵称格式（与服务端 RLS 校验一致）
+  var AVATAR_KEY    = "runner-avatar";       // 我的头像本地缓存（data URL）
+  var AVATAR_SYNC_KEY = "runner-avatar-synced"; // 上次成功同步到云端的头像值（没同步成功就下次补）
+  var AVATAR_MAX    = 16384;              // 头像 data URL 上限（与 runner_scores.avatar 的 CHECK 一致）
 
   /* ═══════════ 客户端（只建一次） ═══════════ */
   var client = null;
@@ -231,9 +234,10 @@
   function scoreTop(limit) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
-    /* 只取展示需要的字段：owner_id 这类身份标识不下发给所有访客 */
+    /* 只取展示需要的字段：owner_id / device_id 这类身份标识不下发给所有访客。
+       avatar 是「公开的脸」，和昵称一样属于展示信息，所以照发不误。 */
     return d.from(TABLE_SCORES)
-      .select("nickname, score, coins, distance, created_at")
+      .select("nickname, avatar, score, coins, distance, created_at")
       .order("score", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(limit || LEADER_LIMIT);
@@ -304,6 +308,13 @@
        （距离上限收紧到 2000 米）而不是直接拒收，玩家不会白跑一局。 */
     var durMs = Math.round(Number(entry.durationMs) || 0);
     if (durMs > 0) row.duration_ms = durMs;
+    /* 头像快照：登录玩家每局带上当前头像，榜上这一行才有脸（调用方没传就用本机缓存的那张）。
+       访客没有账号，自然也没有头像。数据本身不合法（太长 / 不是图片）就干脆不带，
+       别让一张坏图把整局成绩连坐拒收。 */
+    if (!guest) {
+      var av = entry.avatar ? String(entry.avatar) : avatarGet();
+      if (av && av.length <= AVATAR_MAX && av.indexOf("data:image/") === 0) row.avatar = av;
+    }
     /* 访客模式：未登录也能上传，但昵称必须是「访客 N」——
        服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称。
        同时带上本机 device_id：之后登录时可以凭它把这些访客行过户到账号名下。 */
@@ -388,6 +399,136 @@
       }).catch(function (e) {
         return { data: 0, error: { kind: "network", message: "网络异常，稍后重试", status: 0, cause: e } };
       });
+    });
+  }
+
+  /* ═══════════ 我的头像 ═══════════
+     存两份：本地一份（runner-avatar，界面立刻画得出来、离线也在），
+     云端一份（runner_scores.avatar）。
+     为什么是「压缩小图存进成绩表」而不是丢云存储：
+       · 云存储只发短时效签名链接、且只发给登录用户；而排行榜对所有访客开放，读不到；
+       · runner_scores 的 avatar 列是公开列，见库即见图，未登录访客也能看到别人的脸。
+     图片在客户端就已裁成正方形并压缩（约 2~6KB 的 data URL），不会把库撑肥。
+     换头像要「整张脸一起换」：只改新交上去的那行，榜上会出现新旧混杂，
+     所以统一走服务端函数 set_my_avatar —— SECURITY DEFINER，只动自己的行、只动 avatar 一列。 */
+  function avatarGet() {
+    try { return localStorage.getItem(AVATAR_KEY) || ""; } catch (e) { return ""; }
+  }
+  function avatarWriteLocal(dataUrl) {
+    try {
+      if (dataUrl) localStorage.setItem(AVATAR_KEY, dataUrl);
+      else localStorage.removeItem(AVATAR_KEY);
+    } catch (e) {}
+    return dataUrl || "";
+  }
+  /* 同步标记只存一个短指纹（长度 + 尾巴），不用把整张图再存一遍 */
+  function avatarMark(dataUrl) {
+    try {
+      if (dataUrl) localStorage.setItem(AVATAR_SYNC_KEY, dataUrl.length + ":" + dataUrl.slice(-32));
+      else localStorage.removeItem(AVATAR_SYNC_KEY);
+    } catch (e) {}
+  }
+  function avatarSyncedAlready(dataUrl) {
+    try {
+      return (localStorage.getItem(AVATAR_SYNC_KEY) || "") === (dataUrl ? dataUrl.length + ":" + dataUrl.slice(-32) : "");
+    } catch (e) { return false; }
+  }
+
+  /* 推给云端（null = 卸下头像）：成功后记下同步指纹 */
+  function avatarPush(val) {
+    var c = build();
+    if (!c) return Promise.resolve({ data: null, error: envUnavailable() });
+    var v = val ? String(val) : null;
+    if (v && (v.length > AVATAR_MAX || v.indexOf("data:image/") !== 0)) {
+      return Promise.resolve({ data: null, error: { kind: "invalid-request", message: "这张图不能当头像（太大或不是图片），换一张试试", status: 0 } });
+    }
+    return c.auth.getAccessToken().then(function (tok) {
+      if (!tok) return { data: null, error: { kind: "unauthenticated", message: "登录状态已失效，请重新登录", status: 0 } };
+      return fetch(API + "/.cloud/database/rest/rpc/set_my_avatar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wb-webapp-access-key": PUBLIC_CONFIG.publishableKey,
+          "Authorization": "Bearer " + tok
+        },
+        body: JSON.stringify({ p_avatar: v })
+      }).then(function (r) {
+        if (!r.ok) {
+          return {
+            data: null,
+            error: { kind: r.status === 401 || r.status === 403 ? "unauthenticated" : "unknown",
+                     message: "头像没能同步到云端（HTTP " + r.status + "）", status: r.status }
+          };
+        }
+        return r.json().then(function (n) {
+          avatarMark(v || "");
+          return { data: typeof n === "number" ? n : 0, error: null };
+        });
+      }).catch(function (e) {
+        return { data: null, error: { kind: "network", message: "网络异常，头像稍后自动重试", status: 0, cause: e } };
+      });
+    });
+  }
+
+  /* 取「我的头像」：本人最新一条带头像的成绩行（换设备登录后把脸捡回来） */
+  function myAvatar() {
+    var d = db();
+    if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
+    var u = user();
+    if (!u) return Promise.resolve({ data: null, error: null });
+    return d.from(TABLE_SCORES)
+      .select("avatar")
+      .eq("owner_id", u.id)
+      .order("created_at", { ascending: false })
+      .limit(20)
+      .then(function (r) {
+        if (r.error) return { data: null, error: r.error };
+        var rows = r.data || [];
+        for (var i = 0; i < rows.length; i++) if (rows[i] && rows[i].avatar) return { data: rows[i].avatar, error: null };
+        return { data: null, error: null };
+      });
+  }
+
+  /* 设置 / 更换 / 卸下头像：本地先落，云端尽力而为（失败下次自动补） */
+  function avatarSet(dataUrl) {
+    var v = avatarWriteLocal(dataUrl ? String(dataUrl) : "");
+    if (!user()) return Promise.resolve({ data: null, error: null, localOnly: true });
+    return avatarPush(v || null);
+  }
+
+  /* 登录后补同步：本地有脸、但和云端上次同步的不一样 → 推一次 */
+  function avatarSync() {
+    var local = avatarGet();
+    if (!user()) return Promise.resolve({ ok: false, needLogin: true });
+    if (avatarSyncedAlready(local)) return Promise.resolve({ ok: true, skipped: true });
+    return avatarPush(local || null).then(function (r) {
+      return r.error ? { ok: false, error: r.error } : { ok: true };
+    });
+  }
+
+  /* 本机没存过脸而云端有 → 捡回来（换设备 / 清过缓存） */
+  function avatarRestore() {
+    if (avatarGet() || !user()) return Promise.resolve({ ok: false, skipped: true });
+    return myAvatar().then(function (r) {
+      if (r.data) { avatarWriteLocal(r.data); return { ok: true, data: r.data }; }
+      return { ok: false };
+    });
+  }
+
+  function notifyAvatar() {
+    try { global.document.dispatchEvent(new CustomEvent("cloud:avatar", { detail: { avatar: avatarGet() } })); } catch (e) {}
+  }
+
+  /* 登录 / 登出时自动对齐一次头像（登出只是不再上云，本机的脸留着） */
+  function bindAvatarAutoSync() {
+    if (bindAvatarAutoSync.bound) return;
+    bindAvatarAutoSync.bound = true;
+    onAuthChange(function () {
+      if (!user()) return;
+      avatarRestore().then(function (r) {
+        if (r.ok) notifyAvatar();
+        return avatarSync();
+      }).then(function () { notifyAvatar(); });
     });
   }
 
@@ -634,6 +775,19 @@
       guestName: guestName,
       claimGuest: claimGuestScores,
       deviceId: deviceId
+    },
+    /* 我的头像：本地缓存 + 云端 runner_scores.avatar（公开列，排行榜读它） */
+    avatar: {
+      get: avatarGet,
+      set: avatarSet,
+      push: avatarPush,
+      pull: myAvatar,
+      sync: avatarSync,
+      restore: avatarRestore,
+      bind: bindAvatarAutoSync,
+      writeLocal: avatarWriteLocal,
+      notify: notifyAvatar,
+      MAX: AVATAR_MAX
     }
   };
 })(window);

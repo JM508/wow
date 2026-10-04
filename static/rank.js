@@ -75,6 +75,23 @@
   /* ═══════════ 渲染 ═══════════
      · 名次是「全局名次」：第 3 页第一条显示 41，不是 1
      · 前三名的金银铜配色只看全局名次，翻到后面的页不会再出现 */
+  /* ═══════════ 头像 ═══════════
+     榜上每一行都带一张脸：玩家在「个人中心 → 个人」里设过头像就显示他自己的，
+     没设过（含访客）就用昵称现做一张 —— 首字 + 由昵称算出的固定底色，
+     同一个人每次进来颜色都一样，不会满屏灰头像。 */
+  function avatarHtml(r) {
+    var av = (r && r.avatar) ? String(r.avatar) : "";
+    if (av && av.indexOf("data:image/") === 0) {
+      return "<img class='rank-ava' src='" + esc(av) + "' alt='' loading='lazy' decoding='async'>";
+    }
+    var name = String((r && r.nickname) || "");
+    var ch = name ? name.slice(0, 1) : "?";
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return "<span class='rank-ava rank-ava-ph' style='background:hsl(" + h + ",52%,46%)' aria-hidden='true'>" +
+      esc(ch) + "</span>";
+  }
+
   function renderRows(rows, mineSet) {
     if (!elList) return;
     if (!rows || !rows.length) {
@@ -95,6 +112,7 @@
       var mine = mineSet && mineSet[r.nickname];
       html += "<li class='rank-row" + (mine ? " is-me" : "") + "'>" +
         "<b class='rank-no " + (no <= 3 ? "rank-top" + no : "") + "'>" + no + "</b>" +
+        avatarHtml(r) +
         "<span class='rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) + "</span>" +
         "<span class='rank-score'>" + (Number(r.score) || 0) + "</span>" +
         "<span class='rank-day'>" + esc(fmtDay(r.created_at)) + "</span>" +

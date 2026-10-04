@@ -186,6 +186,22 @@
   var btnSetX   = document.getElementById("run-set-close");
   var btnSetBack = document.getElementById("run-set-back");
   var elSetTitle = document.getElementById("run-set-title");
+  /* 个人中心「个人」页（头像 + 成就进度） */
+  var elMe      = document.getElementById("run-me");
+  var btnMeX    = document.getElementById("run-me-close");
+  var elMeAvaImg = document.getElementById("me-ava-img");
+  var elMeAvaPh  = document.getElementById("me-ava-ph");
+  var elMeNick   = document.getElementById("me-nick");
+  var elMeSub    = document.getElementById("me-sub");
+  var btnMePick  = document.getElementById("me-ava-pick");
+  var btnMeClear = document.getElementById("me-ava-clear");
+  var elMeFile   = document.getElementById("me-ava-file");
+  var elMeHint   = document.getElementById("me-ava-hint");
+  var elMeGot    = document.getElementById("me-ach-got");
+  var elMeTotal  = document.getElementById("me-ach-total");
+  var elMeBar    = document.getElementById("me-bar");
+  var elMeBarFill = document.getElementById("me-bar-fill");
+  var elMeTiers  = document.getElementById("me-tiers");
 
   var KEY_BEST = "runner-best";
   var KEY_SCORES = "runner-scores";
@@ -424,6 +440,8 @@
      页面没引入时三个调用自动跳过，游戏本体不受影响。
      本局快照就直接用 S —— 成就模块只读 jumps/shields/smashes/dist/score/coins/speed/crashed。 */
   var Ach = window.RunnerAch || null;
+  /* 云服务（/cloud.js）：头像走它的 avatar.*，未接入时头像功能整体降级为本地 */
+  var CLOUD = window.WowCloud || null;
   function achLive() { if (Ach && Ach.live) Ach.live(S); }
   function achFinish() { if (Ach && Ach.finish) Ach.finish(S); }
   if (!Skins) {
@@ -1072,23 +1090,41 @@
     refreshSkin();
   }
 
-  /* 个人中心：商店与成就共用一个入口（工具条「个人中心」按钮 / 页脚链接 / 面板页签）。
-     tab = "shop"（默认）或 "ach"。已经在该页面时什么都不做；
-     从另一页面切过来时不走定格/恢复（见 meSwitching）。 */
+  /* 个人中心：商店 / 成就 / 个人 三个页面共用一个入口（工具条「个人中心」按钮 / 页脚链接 / 面板页签）。
+     已经在该页面时什么都不做；从另一个页面切过来时不走定格/恢复（见 meSwitching）。 */
+  var ME_TABS = ["shop", "ach", "me"];
+
+  function meTabOpen(t) {
+    if (t === "shop") return shopOpen();
+    if (t === "ach") return achOpen();
+    return meOpen();
+  }
+  function openMeTab(t) {
+    if (t === "shop") openShop();
+    else if (t === "ach") { if (Ach && Ach.open) Ach.open(); }
+    else openMePanel();
+  }
+  function closeMeTab(t) {
+    if (t === "shop") closeShop();
+    else if (t === "ach") { if (Ach && Ach.close) Ach.close(); }
+    else closeMePanel();
+  }
+  function anyMeTabOpen() {
+    for (var i = 0; i < ME_TABS.length; i++) if (meTabOpen(ME_TABS[i])) return ME_TABS[i];
+    return null;
+  }
+
   function openMe(tab) {
     if (helpVisible) return;                          // 玩法说明开着时先看说明
-    var wantAch = tab === "ach";
-    if (wantAch ? achOpen() : shopOpen()) return;
-    if (wantAch ? shopOpen() : achOpen()) {           // 另一个页面正开着 → 是页签切换
+    var want = (tab === "ach" || tab === "me") ? tab : "shop";
+    if (meTabOpen(want)) return;                      // 已经停在这个页面
+    var cur = anyMeTabOpen();
+    if (cur) {                                        // 另一个页面正开着 → 是页签切换
       meSwitching = true;
-      try {
-        if (wantAch) { closeShop(); if (Ach && Ach.open) Ach.open(); }
-        else { if (Ach && Ach.close) Ach.close(); openShop(); }
-      } finally { meSwitching = false; }
+      try { closeMeTab(cur); openMeTab(want); } finally { meSwitching = false; }
       return;
     }
-    if (wantAch) { if (Ach && Ach.open) Ach.open(); }  // 首次打开
-    else openShop();
+    openMeTab(want);                                  // 首次打开
   }
 
   function openShop() {
@@ -1100,6 +1136,178 @@
     if (!shopOpen()) return;
     if (window.Shop && window.Shop.close) window.Shop.close(); // close() 会派发 shop:close
     else { elShop.classList.add("hidden"); afterShopClose(); }
+  }
+
+  /* ═══════════ 个人中心「个人」页：头像 + 成就进度 ═══════════ */
+  function meOpen() { return !!elMe && !elMe.classList.contains("hidden"); }
+
+  function openMePanel() {
+    if (!elMe || meOpen() || helpVisible) return;
+    elMe.classList.remove("hidden");
+    renderMe();
+    document.dispatchEvent(new CustomEvent("me:open"));   // 借这条让局面定格
+    avatarAlign();                                        // 顺手和云端对齐一次头像
+  }
+  function closeMePanel() {
+    if (!meOpen()) return;
+    elMe.classList.add("hidden");
+    document.dispatchEvent(new CustomEvent("me:close"));
+  }
+
+  function escHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  /* ── 头像 ──
+     本地一份（runner-avatar）+ 云端一份（runner_scores.avatar，公开列，排行榜读它）。
+     选图 → canvas 居中裁正方形 → 压到 96×96 webp（不支持 webp 就退 jpeg），一张约 2~6KB。
+     云存储那条路走不通：它只发短时效签名链接、且只给登录用户，而排行榜对所有访客开放。 */
+  var AVATAR_SIDE = 96;
+  var AVATAR_MAX_BYTES = 8 * 1024 * 1024;   // 原图上限：再大就先劝退，别把浏览器拖死
+
+  function avatarLocal() { return (CLOUD && CLOUD.avatar) ? CLOUD.avatar.get() : ""; }
+
+  function renderAvatar() {
+    var av = avatarLocal();
+    if (elMeAvaImg) {
+      if (av) {
+        if (elMeAvaImg.getAttribute("src") !== av) elMeAvaImg.src = av;
+        elMeAvaImg.classList.remove("hidden");
+      } else {
+        elMeAvaImg.removeAttribute("src");
+        elMeAvaImg.classList.add("hidden");
+      }
+    }
+    if (elMeAvaPh) elMeAvaPh.classList.toggle("hidden", !!av);
+    if (btnMeClear) btnMeClear.classList.toggle("hidden", !av);
+  }
+
+  function compressAvatar(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type || "")) { reject(new Error("请选择图片文件")); return; }
+      if (file.size > AVATAR_MAX_BYTES) { reject(new Error("图片太大了（超过 8MB），换一张小一点的")); return; }
+      if (!window.FileReader || !document.createElement) {
+        reject(new Error("这个浏览器不支持图片处理")); return;
+      }
+      /* ⚠️ 必须用 FileReader 读成 data URL 再喂给 <img>，不能用 URL.createObjectURL：
+         本站 CSP 是 img-src 'self' data:，blob: 会被拦下（表现为 img.onerror），选图就永远失败。 */
+      var fr = new FileReader();
+      var done = false;
+      var once = function (fn) {
+        return function (v) {
+          if (done) return;
+          done = true;
+          fn(v);
+        };
+      };
+      fr.onerror = once(function () { reject(new Error("这张图读不出来，换一张试试")); });
+      fr.onload = once(function () {
+        var src = String(fr.result || "");
+        if (src.indexOf("data:image/") !== 0) { reject(new Error("这张图读不出来，换一张试试")); return; }
+        var img = new Image();
+        img.onerror = function () { reject(new Error("这张图读不出来，换一张试试")); };
+        img.onload = function () {
+          try {
+            var side = AVATAR_SIDE;
+            var cv = document.createElement("canvas");
+            cv.width = side; cv.height = side;
+            var ctx = cv.getContext && cv.getContext("2d");
+            if (!ctx) { reject(new Error("这个浏览器不支持图片处理")); return; }
+            var w = img.naturalWidth || img.width || side;
+            var h = img.naturalHeight || img.height || side;
+            var s = Math.min(w, h) || side;                    // 居中取正方形
+            ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, side, side);
+            var out = "";
+            try { out = cv.toDataURL("image/webp", 0.72); } catch (e) {}
+            if (!out || out.indexOf("data:image/webp") !== 0) out = cv.toDataURL("image/jpeg", 0.8);
+            if (!out || out.indexOf("data:image/") !== 0) { reject(new Error("图片转换失败，换一张试试")); return; }
+            resolve(out);
+          } catch (e) { reject(e); }
+        };
+        img.src = src;
+      });
+      try { fr.readAsDataURL(file); } catch (e) { reject(new Error("这张图读不出来，换一张试试")); }
+    });
+  }
+
+  function saveAvatar(dataUrl) {
+    if (!CLOUD || !CLOUD.avatar) { toast("头像功能暂时不可用，请刷新页面重试"); return Promise.resolve(); }
+    return CLOUD.avatar.set(dataUrl).then(function (r) {
+      renderAvatar();
+      if (r && r.error) toast(CLOUD.describe ? CLOUD.describe(r.error) : "头像保存失败");
+      else if (r && r.localOnly) toast(dataUrl ? "头像已保存（登录后会同步到排行榜）" : "头像已移除");
+      else toast(dataUrl ? "头像已更新，排行榜上也会一起换" : "头像已移除");
+    });
+  }
+
+  function pickAvatar() {
+    if (!CLOUD || !CLOUD.avatar) { toast("头像功能暂时不可用，请刷新页面重试"); return; }
+    if (!elMeFile) return;
+    try { elMeFile.value = ""; } catch (e) {}
+    elMeFile.click();
+  }
+
+  function onAvatarFile() {
+    var f = elMeFile && elMeFile.files && elMeFile.files[0];
+    if (!f) return;
+    compressAvatar(f).then(function (dataUrl) { return saveAvatar(dataUrl); })
+      .catch(function (e) { toast((e && e.message) || "图片处理失败，换一张试试"); });
+  }
+
+  /* 打开个人页时与云端对齐：本机没存过脸而云端有 → 捡回来；本地有但没推上去 → 补推 */
+  function avatarAlign() {
+    var C = CLOUD && CLOUD.avatar;
+    if (!C || !C.sync) { renderAvatar(); return; }
+    C.restore().then(function (r) {
+      if (r && r.ok) renderAvatar();
+      return C.sync();
+    }).then(function () { renderAvatar(); })["catch"](function () {});
+  }
+
+  /* ── 成就进度（总进度 + 三档细分） ── */
+  function renderMeAch() {
+    var snap = (Ach && Ach.snapshot) ? Ach.snapshot() : null;
+    if (!snap) return;
+    var got = snap.unlocked || 0, total = snap.total || 0;
+    if (elMeGot) elMeGot.textContent = got;
+    if (elMeTotal) elMeTotal.textContent = total;
+    if (elMeBarFill) elMeBarFill.style.width = (total ? Math.round(got * 100 / total) : 0) + "%";
+    if (elMeBar) {
+      elMeBar.setAttribute("aria-valuemax", String(total));
+      elMeBar.setAttribute("aria-valuenow", String(got));
+    }
+    if (elMeTiers) {
+      var tiers = Ach.TIERS || [], rows = snap.rows || [], html = "";
+      for (var i = 0; i < tiers.length; i++) {
+        var n = 0, m = 0;
+        for (var j = 0; j < rows.length; j++) {
+          if (rows[j].tier === tiers[i].id) { m++; if (rows[j].got) n++; }
+        }
+        html += "<li class='me-tier'><span class='me-tier-ico' aria-hidden='true'>" + escHtml(tiers[i].icon) +
+          "</span><span class='me-tier-name'>" + escHtml(tiers[i].name) + "</span>" +
+          "<span class='me-tier-num'>" + n + "/" + m + "</span></li>";
+      }
+      elMeTiers.innerHTML = html;
+    }
+  }
+
+  function renderMe() {
+    if (elMeNick) elMeNick.textContent = CLOUD ? CLOUD.nickOrDefault() : "无名火柴人";
+    var logged = !!(CLOUD && CLOUD.user && CLOUD.user());
+    if (elMeSub) {
+      elMeSub.textContent = logged
+        ? "已登录 · 头像与成就跟账号走，换设备也在"
+        : "未登录 · 头像只存在本机，登录后才会出现在排行榜";
+    }
+    if (elMeHint) {
+      elMeHint.textContent = logged
+        ? "头像会公开显示在云端排行榜上。建议用正方形图片，会自动裁成圆形并压缩。"
+        : "头像公开显示在云端排行榜上，需要先登录；未登录时只在本机可见。";
+    }
+    renderAvatar();
+    renderMeAch();
   }
 
   document.addEventListener("shop:open", afterShopOpen);
@@ -1114,6 +1322,12 @@
   /* 设置面板同理：打开时定格（改键 / 试听音效都不该让角色在背后跑） */
   document.addEventListener("set:open", afterShopOpen);
   document.addEventListener("set:close", afterShopClose);
+  /* 个人中心「个人」页同理（开关在 runner.js 自己手里） */
+  document.addEventListener("me:open", afterShopOpen);
+  document.addEventListener("me:close", afterShopClose);
+  /* 成就解锁 / 云端同步后，个人页的进度条跟着动（页面开着时才重画） */
+  document.addEventListener("ach:sync", function () { if (meOpen()) renderMeAch(); });
+  document.addEventListener("cloud:avatar", function () { renderAvatar(); if (meOpen()) renderMe(); });
   /* rank.js 借这里弹提示（成绩上传结果、云存档同步结果） */
   document.addEventListener("run:toast", function (e) { if (e.detail) toast(e.detail); });
 
@@ -1982,6 +2196,12 @@
       if (isMuteKey(k, code)) toggleMute();
       return;
     }
+    /* 个人中心「个人」页：按键不穿透，Escape 关掉它 */
+    if (meOpen()) {
+      if (k === "Escape" || code === "Escape") { e.preventDefault(); closeMePanel(); }
+      else if (isMuteKey(k, code)) toggleMute();
+      return;
+    }
 
     if (isJumpKey(k, code)) {
       e.preventDefault();
@@ -2273,6 +2493,14 @@
     if (elShop) elShop.addEventListener("click", function (e) {   // 点遮罩空白处也关掉
       if (e.target === elShop) closeShop();
     });
+    /* 个人页：✕ / 点空白关闭；选图、移除头像 */
+    if (btnMeX) btnMeX.addEventListener("click", closeMePanel);
+    if (elMe) elMe.addEventListener("click", function (e) {
+      if (e.target === elMe) closeMePanel();
+    });
+    if (btnMePick) btnMePick.addEventListener("click", pickAvatar);
+    if (btnMeClear) btnMeClear.addEventListener("click", function () { saveAvatar(""); });
+    if (elMeFile) elMeFile.addEventListener("change", onAvatarFile);
 
     if (elOvBtn) elOvBtn.addEventListener("click", function () {
       if (elOvBtn.dataset.mode === "help") { closeHelp(); return; }
@@ -2523,6 +2751,9 @@
   bind();
   syncSetUi();                    // 把设置里的值刷到面板控件上（音效开关 / 音量 / 各开关 / 键位）
   render();
+  /* 头像：先把本机缓存的那张画到个人页上；登录 / 换设备时由 cloud.js 自动对齐云端那份 */
+  renderAvatar();
+  if (CLOUD && CLOUD.avatar && CLOUD.avatar.bind) CLOUD.avatar.bind();
   /* 首次打开自动弹玩法说明（本机没记过「已读」才弹）。
      __RUNNER_MANUAL__ 是自动化测试的「手动驱动」标记：跑测试时跳过自动弹窗，
      免得每个用例都先要伸手点掉它；自动弹出的行为由 _help_test / _help_probe 专门覆盖。 */
@@ -2592,6 +2823,25 @@
     achOpen: function () { return achOpen(); },
     achState: function () { return Ach && Ach.snapshot ? Ach.snapshot() : null; },
     achReset: function () { if (Ach && Ach.reset) Ach.reset(); },
+    /* 个人中心「个人」页（头像 + 成就进度）：供控制台与测试使用 */
+    openMe: openMe,
+    closeMe: closeMePanel,
+    meOpen: meOpen,
+    meState: function () {
+      var snap = (Ach && Ach.snapshot) ? Ach.snapshot() : null;
+      return {
+        open: meOpen(),
+        avatar: avatarLocal(),
+        nick: elMeNick ? elMeNick.textContent : "",
+        got: snap ? snap.unlocked : null,
+        total: snap ? snap.total : null,
+        tiers: elMeTiers ? elMeTiers.querySelectorAll(".me-tier").length : 0,
+        bar: elMeBarFill ? elMeBarFill.style.width : ""
+      };
+    },
+    setAvatar: saveAvatar,
+    compressAvatar: compressAvatar,
+    avatar: avatarLocal,
     /* 钱包 / 皮肤（供控制台与测试使用） */
     wallet: function () { return Skins.getWallet(); },
     setWallet: function (n) { var v = Skins.setWallet(n); updateHud(); return v; },
