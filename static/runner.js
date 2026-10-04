@@ -985,7 +985,7 @@
       elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
         keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
-        "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
+        "钱包余额 <b>" + Skins.getWallet() + "</b> 💰 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
       renderRecords();
     } else if (kind === "paused") {
@@ -997,7 +997,7 @@
       elOvTitle.textContent = S.isBest ? "🎉 新纪录！" : "本轮结束";
       elOvText.innerHTML = "<span class='run-big'>" + Math.floor(S.score) + "</span>" +
         "最高分 <b>" + Math.floor(S.best) + "</b> ｜ 跑了 <b>" + Math.floor(S.dist / 100) + "</b> 米<br>" +
-        "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b> 🪙<br>" + SHOP_LINK;
+        "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b> 💰<br>" + SHOP_LINK;
       elOvBtn.textContent = "再来一局";
       renderRecords();
     }
@@ -1071,7 +1071,7 @@
   function updateHud() {
     if (elScore) elScore.textContent = "得分：" + pad5(S ? S.score : 0);
     if (elBest) elBest.textContent = "最高：" + pad5(lastBest);
-    if (elCoins) elCoins.textContent = "🪙 " + (S ? S.coins : 0);
+    if (elCoins) elCoins.textContent = "💰 " + (S ? S.coins : 0);
     if (elWallet) elWallet.textContent = "钱包 " + Skins.getWallet();
   }
 

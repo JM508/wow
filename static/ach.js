@@ -55,7 +55,7 @@
       test: function (s) { return s.meters >= 1000; },
       prog: function (s) { return [Math.min(best(s.meters, s.bestMeters), 1000), 1000, "米"]; } },
 
-    { id: "coins20", tier: "novice", icon: "🪙", name: "金币新手",
+    { id: "coins20", tier: "novice", icon: "💰", name: "金币新手",
       desc: "单局收集 20 枚金币",
       live: true,
       test: function (s) { return s.coins >= 20; },
@@ -123,7 +123,7 @@
       test: function (s) { return s.noHit && s.meters >= 2000; },
       prog: function (s) { return [Math.min(s.noHit ? s.meters : 0, 2000), 2000, "米"]; } },
 
-    { id: "jump200", tier: "master", icon: "🪽", name: "永不落地",
+    { id: "jump200", tier: "master", icon: "🕊️", name: "永不落地",
       desc: "单局起跳 200 次",
       live: true,
       test: function (s) { return s.jumps >= 200; },

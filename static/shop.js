@@ -73,7 +73,7 @@
     var strong = mk("strong", "shop-wallet-num", left);
     elWalletNum = mk("span", null, strong, "0");
     elWalletNum.id = "shop-coins";
-    strong.appendChild(document.createTextNode(" 🪙"));
+    strong.appendChild(document.createTextNode(" 💰"));
 
     if (panel) {                                   // 弹层里给一个「关掉继续玩」的出口
       var back = mk("button", "shop-go", bar, "继续奔跑");
@@ -213,7 +213,7 @@
         btn.textContent = "装备";
         btn.classList.add("is-own");
       } else {
-        btn.textContent = "🪙 " + def.price;
+        btn.textContent = "💰 " + def.price;
         if (wallet < def.price) btn.classList.add("is-poor");
       }
     }
@@ -240,7 +240,7 @@
     } else {
       var r = Skins.buy(kind, id);
       if (r.ok) {
-        say("🎉 买下了「" + def.name + "」并自动换上，钱包还剩 " + r.left + " 🪙。");
+        say("🎉 买下了「" + def.name + "」并自动换上，钱包还剩 " + r.left + " 💰。");
       } else if (r.reason === "poor") {
         say("金币不够，还差 " + r.need + " 枚 —— 再去跑几局吧！", true);
       }

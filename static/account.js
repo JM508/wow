@@ -352,7 +352,7 @@
       } else {
         var row = r.data;
         var ownedN = Array.isArray(row.owned) ? row.owned.length : 0;
-        html += fact("云端金币", (Number(row.coins) || 0) + " 🪙");
+        html += fact("云端金币", (Number(row.coins) || 0) + " 💰");
         html += fact("云端皮肤", ownedN + " 件");
         html += fact("当前皮肤", esc(row.skin || "默认") + " ｜ " + esc(row.coin_skin || "默认"));
         html += fact("最近同步", esc(fmtTime(row.updated_at)));
