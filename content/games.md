@@ -6,6 +6,8 @@ description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑�
 # 页面上不显示大标题与描述行（卡片里已有「游戏合集」），title/description 仍用于 SEO
 hideTitle = true
 hideDescription = true
+# 顶部的日期 / 阅读时长那行 meta 也一并去掉
+hideMeta = true
 # 站名下方那一行「返回」入口：合集页回首页
 backHref = '/'
 backLabel = '返回首页'
