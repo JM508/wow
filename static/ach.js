@@ -530,7 +530,7 @@
   var panel = document.getElementById("run-ach");
   var elList = document.getElementById("ach-list");
   var elProg = document.getElementById("ach-progress");
-  var btnOpen = document.getElementById("run-ach-btn");
+  var btnOpen = document.getElementById("run-me-btn");     // 工具条「个人中心」（成就进度角标挂它上面）
   var btnClose = document.getElementById("run-ach-close");
 
   function unlockedCount() {
@@ -668,13 +668,10 @@
   }
 
   if (panel) {
-    if (btnOpen) btnOpen.addEventListener("click", open);
+    /* 开关交给 runner.js：工具条「个人中心」按钮与面板里的页签要同时管商店、成就两个页面，
+       由它统一处理（见 runner.js 的 openMe）。这里只保留 ✕、Esc 与点遮罩关闭；
+       btnOpen 仅用于同步进度角标与「刚解锁闪一下」。 */
     if (btnClose) btnClose.addEventListener("click", close);
-    /* 正文里的「🏅 成就」链接式入口（长得像链接，其实是开面板的按钮） */
-    document.addEventListener("click", function (e) {
-      var t = e.target;
-      if (t && t.closest && t.closest("[data-open-ach]")) { e.preventDefault(); open(); }
-    });
     /* 点遮罩空白处关闭（点面板本体不关） */
     panel.addEventListener("click", function (e) { if (e.target === panel) close(); });
     document.addEventListener("keydown", function (e) {

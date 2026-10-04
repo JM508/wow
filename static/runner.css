@@ -307,7 +307,7 @@
 }
 .run-link-btn:hover { text-decoration: underline; }
 
-/* 顶部工具条里的商店按钮（现在是 <button>，样式沿用 .run-shop-btn） */
+/* 工具条主按钮（个人中心）：沿用 .run-shop-btn 的彩色样式 */
 .run-tools button.run-shop-btn { font-weight: 700; }
 
 /* 排行榜按钮用金色，和商店的蓝紫区分开 */
@@ -634,12 +634,52 @@ html.run-calm .run-rank,
 html.run-calm .set-key-wait,
 html.run-calm .run-tools button,
 html.run-calm .set-switch,
-html.run-calm .run-ach-btn {
+html.run-calm .run-shop-btn {
   animation: none !important;
   transition: none !important;
 }
-/* 成就按钮解锁时「闪两下」也是闪烁 */
-html.run-calm .run-ach-btn.is-new { animation: none !important; }
+/* 个人中心按钮解锁新成就时「闪两下」也是闪烁 */
+html.run-calm .run-shop-btn.is-new { animation: none !important; }
+
+/* ── 个人中心：商店 / 成就两个页面共用外框与页签 ──
+   两个面板（#run-shop / #run-ach）各带一份完全相同的页签栏，
+   同一时刻只显示一个面板，视觉上就等于「同一个面板的页签切换」。 */
+.me-tabs {
+  display: flex;
+  flex: 0 1 auto;
+  gap: 3px;
+  padding: 3px;
+  background: var(--tertiary, #ececec);
+  border-radius: 10px;
+}
+.me-tabs .me-tab {
+  padding: 5px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--secondary, #5b6470);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.me-tabs .me-tab:hover { color: var(--primary, #1f1f1f); }
+.me-tabs .me-tab[aria-selected="true"] {
+  color: var(--primary, #1f1f1f);
+  background: var(--theme, #ffffff);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+html.run-bigtext .me-tabs .me-tab { font-size: 15px; padding: 7px 16px; }
+/* 窄屏：藏掉「个人中心」标题，宽度让给页签 */
+@media (max-width: 460px) {
+  .me-head .me-title { display: none; }
+  .me-tabs { flex: 1 1 auto; }
+  .me-tabs .me-tab { flex: 1 1 0; }
+}
 
 /* ── 大字模式：HUD / 遮罩 / 弹层 / 页脚整体放大一档 ── */
 html.run-bigtext #run-root { font-size: 18px; }

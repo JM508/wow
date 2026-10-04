@@ -961,7 +961,7 @@
   }
 
   /* ═══════════ 遮罩层 ═══════════ */
-  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-shop>皮肤商店</button>";
+  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-me>皮肤商店</button>";
 
   /* 帮助文本里的键位跟着自定义按键走，改完键这里立刻同步 */
   function helpHtml() {
@@ -1018,19 +1018,44 @@
     updateHud();
   }
 
+  /* 个人中心在「商店 / 成就」两个页面之间切换时，面板只是换了个内容：
+     先关旧面板、再开新面板会各触发一次「定格 / 恢复」，中途还会闪一下遮罩。
+     用 meSwitching 把这两次都跳过，游戏状态与 shopPrev 保持不动。 */
+  var meSwitching = false;
+
   function afterShopOpen() {
+    if (meSwitching) return;
     shopPrev = state;
     if (state === "playing") state = "paused";   // 逛商店时先定格，回来再接着跑
     hideOverlay();
   }
 
   function afterShopClose() {
+    if (meSwitching) return;
     if (shopPrev === "playing") { state = "playing"; hideOverlay(); }
     else if (shopPrev === "over") showOverlay("over");
     else if (shopPrev === "paused") showOverlay("paused");
     else showOverlay("ready");
     shopPrev = null;
     refreshSkin();
+  }
+
+  /* 个人中心：商店与成就共用一个入口（工具条「个人中心」按钮 / 页脚链接 / 面板页签）。
+     tab = "shop"（默认）或 "ach"。已经在该页面时什么都不做；
+     从另一页面切过来时不走定格/恢复（见 meSwitching）。 */
+  function openMe(tab) {
+    var wantAch = tab === "ach";
+    if (wantAch ? achOpen() : shopOpen()) return;
+    if (wantAch ? shopOpen() : achOpen()) {           // 另一个页面正开着 → 是页签切换
+      meSwitching = true;
+      try {
+        if (wantAch) { closeShop(); if (Ach && Ach.open) Ach.open(); }
+        else { if (Ach && Ach.close) Ach.close(); openShop(); }
+      } finally { meSwitching = false; }
+      return;
+    }
+    if (wantAch) { if (Ach && Ach.open) Ach.open(); }  // 首次打开
+    else openShop();
   }
 
   function openShop() {
@@ -2175,16 +2200,25 @@
     if (btnHelp) btnHelp.addEventListener("click", openHelp);
     bindSet();
 
-    /* 所有「商店 / 皮肤商店 / ⚙ 设置」入口共用一套点击委托 */
+    /* 工具条 / 页脚里的「个人中心」「⚙ 设置」入口共用一套点击委托 */
     root.addEventListener("click", function (e) {
       var n = e.target;
       while (n && n !== root) {
         if (n.hasAttribute) {
-          if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openShop(); return; }
+          if (n.hasAttribute("data-open-me")) { e.preventDefault(); openMe("shop"); return; }
+          if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openMe("shop"); return; }
           if (n.hasAttribute("data-open-set")) { e.preventDefault(); openSet(); return; }
         }
         n = n.parentNode;
       }
+    });
+    /* 个人中心面板里的「商店 / 成就」页签：面板在 #run-root 之外，单独在 document 上监听 */
+    document.addEventListener("click", function (e) {
+      var t = e.target;
+      var tab = t && t.closest && t.closest("[data-me-tab]");
+      if (tab) { e.preventDefault(); openMe(tab.getAttribute("data-me-tab")); }
+      var achLink = t && t.closest && t.closest("[data-open-ach]");   // 正文里的成就入口（若有）
+      if (achLink) { e.preventDefault(); openMe("ach"); }
     });
     if (btnShopX) btnShopX.addEventListener("click", closeShop);
     if (elShop) elShop.addEventListener("click", function (e) {   // 点遮罩空白处也关掉
@@ -2212,7 +2246,7 @@
       stage.addEventListener("mousedown", function (e) {
         if (e.button !== 0) return;
         if (Date.now() - lastTouchAt < 700) return;
-        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 点商店入口别顺手开局
+        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set],[data-open-me]")) return;  // 点商店入口别顺手开局
         if (state === "paused") { togglePause(); return; }
         if (state === "ready" || state === "over") { if (mayRestart()) startGame(); return; }
         pressJump();
@@ -2223,7 +2257,7 @@
       var touchY = null;
       stage.addEventListener("touchstart", function (e) {
         lastTouchAt = Date.now();
-        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 同上
+        if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set],[data-open-me]")) return;  // 同上
         if (state === "paused") { e.preventDefault(); togglePause(); return; }
         /* 手机端：开始 / 重开只能点「开始奔跑 / 再来一局」按钮（或按键盘）。
            这里直接放行——不 preventDefault、也不 startGame，让触摸照常派发到按钮的 click；

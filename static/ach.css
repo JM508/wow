@@ -216,21 +216,14 @@
   color: var(--secondary, #6b7280);
 }
 
-/* ── 工具条里的成就按钮：金色，和商店按钮区分 ── */
-.run-tools button.run-ach-btn {
-  font-weight: 700;
-  color: #6b4a00;
-  background: linear-gradient(135deg, #ffd979, #f0b429);
-  border-color: transparent;
-}
-.run-tools button.run-ach-btn:hover { filter: brightness(1.06); }
-.run-tools button.run-ach-btn .ach-count {
+/* ── 工具条里的「个人中心」按钮（商店/成就共用）：成就进度角标就挂在这里 ── */
+.run-tools button.run-shop-btn .ach-count {
   margin-left: 5px;
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
 }
 /* 刚解锁时闪一下，提示「有新的」 */
-.run-tools button.run-ach-btn.is-new { animation: ach-btn-flash 0.5s ease 2; }
+.run-tools button.run-shop-btn.is-new { animation: ach-btn-flash 0.5s ease 2; }
 @keyframes ach-btn-flash {
   0%, 100% { filter: none; }
   50% { filter: brightness(1.35) saturate(1.3); }
