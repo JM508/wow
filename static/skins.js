@@ -84,25 +84,25 @@
       id: "seia", name: "圣娅", price: 2888, tag: "限定",
       desc: "来自碧蓝档案的百合园圣娅",
       sprite: { run: "seia-runner", duck: "seia-duck" },
-      runH: 78, duckH: 48
+      runH: 78, duckH: 34
     },
     {
       id: "zxf", name: "张雪峰", price: 1888, tag: "限定",
       desc: "白衬衫加眼镜，一手话筒一手规划，冲就完事了。",
       sprite: { run: "zhang-runner", duck: "zhang-duck" },
-      runH: 78, duckH: 48
+      runH: 78, duckH: 34
     },
     {
       id: "hoshino", name: "星野", price: 2333, tag: "限定",
       desc: "来自《碧蓝档案》的小鸟游星野。",
       sprite: { run: "hoshino-runner3", duck: "hoshino-duck3" },
-      runH: 78, duckH: 48
+      runH: 78, duckH: 34
     },
     {
       id: "pixelrun", name: "监控人", price: 3333, tag: "史诗",
       desc: "从监控录像里跑出来的像素小人，一步一帧都在狂奔。",
       sprite: { run: { sheet: "pixelrun-sheet", n: 12, fps: 15 }, duck: "pixelrun-duck" },
-      runH: 78, duckH: 48
+      runH: 78, duckH: 34
     }
   ];
 
@@ -497,7 +497,10 @@
             pose === "run" ? Math.sin(run) * 1.8 * bobK : 0,
             pose === "run" ? Math.sin(run) * 0.035 * bobK : 0, t);
         }
-        if (okD && aDuck > 0.002) drawSpriteFrame(ctx, imD, spD, skin.duckH || 36, aDuck, 0, 0, t);
+        /* duckH 必须等于 runner.js 的 CFG.DUCK_H：贴图脚底对齐、向上长 duckH 像素，
+           高度与蹲下碰撞盒一致，「看着能钻过去」＝「真能钻过去」。
+           兜底值同样取 34（老默认 36 比碰撞盒高 2px，会造成视觉欺骗）。 */
+        if (okD && aDuck > 0.002) drawSpriteFrame(ctx, imD, spD, skin.duckH || 34, aDuck, 0, 0, t);
         ctx.restore();
         return;
       }
