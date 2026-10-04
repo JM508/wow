@@ -961,7 +961,7 @@
   }
 
   /* ═══════════ 遮罩层 ═══════════ */
-  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-shop>🛍 皮肤商店</button>";
+  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-shop>皮肤商店</button>";
 
   /* 帮助文本里的键位跟着自定义按键走，改完键这里立刻同步 */
   function helpHtml() {
@@ -1071,7 +1071,7 @@
   function updateHud() {
     if (elScore) elScore.textContent = "得分：" + pad5(S ? S.score : 0);
     if (elBest) elBest.textContent = "最高：" + pad5(lastBest);
-    if (elCoins) elCoins.textContent = "💰 " + (S ? S.coins : 0);
+    if (elCoins) elCoins.textContent = "金币 " + (S ? S.coins : 0);
     if (elWallet) elWallet.textContent = "钱包 " + Skins.getWallet();
   }
 
@@ -2175,7 +2175,7 @@
     if (btnHelp) btnHelp.addEventListener("click", openHelp);
     bindSet();
 
-    /* 所有「🛍 商店 / 皮肤商店 / ⚙ 设置」入口共用一套点击委托 */
+    /* 所有「商店 / 皮肤商店 / ⚙ 设置」入口共用一套点击委托 */
     root.addEventListener("click", function (e) {
       var n = e.target;
       while (n && n !== root) {
