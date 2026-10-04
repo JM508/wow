@@ -30,13 +30,6 @@
   box-shadow: 0 18px 34px -14px rgba(79, 140, 255, 0.95);
 }
 
-.games-entry-sub {
-  display: block;
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--secondary, #888888);
-}
-
 /* 小屏：按钮收窄 */
 @media (max-width: 520px) {
   .games-entry-btn { padding: 12px 38px; font-size: 16px; }
