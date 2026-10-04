@@ -44,28 +44,79 @@ const MIME = {
   '.mp4': 'video/mp4'
 };
 
-/* 与 static/_headers 完全一致的安全头（镜像域此前完全没有，属补课）。
- * 注意：第一条 CSP 不写 frame-ancestors——网关会给它追加 *（'none' * 按规范
- * 是非法源列表，整条指令被浏览器忽略并告警）。防嵌套由第二条 CSP 策略承担：
- * 多条策略按规范取交集，第二条 frame-ancestors 'none' 原样存活生效。 */
-var CSP_MAIN =
+/* ── 安全头：从 _headers 读取（唯一维护点） ──
+ * _headers 由 hugo 原样拷进 public/，与本文件同目录。主站（pages.dev）和镜像
+ * 的安全策略都只维护 _headers 一处，镜像自动跟随，杜绝两份 CSP 字符串漂移。
+ *
+ * ⚠️ 网关改写规避（2026-10-04 实测仍在，勿删）：
+ * 平台网关会把单条 CSP 里的 frame-ancestors 无条件追加 *（'none' * 按规范是
+ * 非法源列表，整条指令被浏览器忽略），并剥掉 X-Frame-Options。对策：把 CSP
+ * 拆成两条响应头发出——网关会逗号合并成单头，但单头内的逗号按 CSP 规范拆成
+ * 多条独立策略取交集，第二条 frame-ancestors 'none' 原样存活，防嵌套实际生效。
+ * （曾试过合并单策略，实测线上立即变回 frame-ancestors 'none' *。） */
+const HEADERS_FILE = path.join(ROOT, '_headers');
+
+/* 应急兜底：_headers 读不到时用这份（与 _headers 保持同步），站点不能裸奔 */
+const CSP_FALLBACK =
   "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
   "font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; " +
-  "object-src 'none'; base-uri 'self'; form-action 'self'; " +
+  "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; " +
   'upgrade-insecure-requests';
-/* 第二条 CSP：仅 frame-ancestors。多条 CSP 按规范取交集（每条都必须放行），
- * 专防中间层改写第一条后防护失效。 */
-var CSP_FRAME = "frame-ancestors 'none'";
-
-const SECURITY_HEADERS = {
+const SECURITY_FALLBACK = {
   'X-Frame-Options': 'SAMEORIGIN',
-  'Content-Security-Policy': [CSP_MAIN, CSP_FRAME],
+  'Content-Security-Policy': CSP_FALLBACK,
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()',
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains'
 };
+
+function parseGlobalHeaders(file) {
+  const out = {};
+  let text = '';
+  try {
+    text = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    return null;
+  }
+  let inGlobal = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line || line.charAt(0) === '#') continue;
+    if (!inGlobal) {
+      if (line === '/*') inGlobal = true;   // _headers 里 /* 段对所有路径生效
+      continue;
+    }
+    const m = line.match(/^([A-Za-z0-9-]+):\s*(.+)$/);
+    if (m) out[m[1]] = m[2];
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/* 把 CSP 按 frame-ancestors 拆成两条策略（见顶部的网关规避说明） */
+function splitCsp(csp) {
+  const parts = csp.split(';').map(function (s) { return s.trim(); }).filter(Boolean);
+  const main = [];
+  const frame = [];
+  for (let i = 0; i < parts.length; i++) {
+    (/^frame-ancestors\b/i.test(parts[i]) ? frame : main).push(parts[i]);
+  }
+  const out = [];
+  if (main.length) out.push(main.join('; '));
+  if (frame.length) out.push(frame.join('; '));   // 无 frame-ancestors 就单条原样发
+  return out;
+}
+
+const PARSED = parseGlobalHeaders(HEADERS_FILE);
+const SECURITY_HEADERS = PARSED || SECURITY_FALLBACK;
+if (SECURITY_HEADERS['Content-Security-Policy']) {
+  SECURITY_HEADERS['Content-Security-Policy'] =
+    splitCsp(SECURITY_HEADERS['Content-Security-Policy']);
+}
+if (!PARSED) {
+  console.warn('mirror server: _headers 读取失败，使用内置兜底安全头');
+}
 
 /* 与 static/_headers 一致的缓存策略 */
 const IMMUTABLE_EXT = new Set(['.js', '.css', '.webp', '.png', '.svg', '.ico', '.woff2', '.gif', '.mp3']);
