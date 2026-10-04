@@ -705,9 +705,9 @@
     { id: "cone",  w: 36, h: 50 },
     { id: "stack", w: 44, h: 72 }
   ];
-  var AIR_KINDS = [                            // 飞行物只有宽窄两种瓶身，高统一 = CFG.AIR_H
-    { id: "paper", w: 52 },
-    { id: "drone", w: 70 }
+  var AIR_KINDS = [                            // 飞行物统一宽度 = 图片固有比例（高 93 → 宽 28），id 仅作记录
+    { id: "paper", w: 28 },
+    { id: "drone", w: 28 }
   ];
 
   function addObstacle(kind, x, hOverride) {
@@ -1624,32 +1624,32 @@
     if (!(bottom > top)) return;
     var x = cx - w / 2;
     var full = bottom - top;
-    /* 瓶盖（顶端，通常在画面外沿） */
+    /* 瓶盖（底端，与贴图一致：盖朝下） */
     ctx.fillStyle = "#7fd4e8";
-    rr(ctx, x + w * 0.28, top - 4, w * 0.44, 10, 2); ctx.fill();
-    /* 瓶颈：从瓶盖下面收窄，往下渐宽过渡到瓶身 */
+    rr(ctx, x + w * 0.28, bottom - 6, w * 0.44, 10, 2); ctx.fill();
+    /* 瓶颈：从瓶盖上面收窄，往上渐宽过渡到瓶身 */
     ctx.fillStyle = "rgba(94,196,166,0.92)";
     ctx.beginPath();
-    ctx.moveTo(x + w * 0.34, top + 5);
-    ctx.lineTo(x + w * 0.66, top + 5);
-    ctx.lineTo(x + w * 0.82, top + Math.min(46, full * 0.28));
-    ctx.lineTo(x + w * 0.18, top + Math.min(46, full * 0.28));
+    ctx.moveTo(x + w * 0.34, bottom - 5);
+    ctx.lineTo(x + w * 0.66, bottom - 5);
+    ctx.lineTo(x + w * 0.82, bottom - Math.min(46, full * 0.28));
+    ctx.lineTo(x + w * 0.18, bottom - Math.min(46, full * 0.28));
     ctx.closePath(); ctx.fill();
-    /* 瓶身：一条拉长的圆角矩形，直到贴近地面的瓶底 */
-    var bodyTop = top + Math.min(46, full * 0.28) - 2;
-    var bodyH = bottom - bodyTop;
+    /* 瓶身：一条拉长的圆角矩形，从顶部瓶底一直到瓶颈 */
+    var bodyBtm = bottom - Math.min(46, full * 0.28) + 2;
+    var bodyH = bodyBtm - top;
     var g = ctx.createLinearGradient(x, 0, x + w, 0);
     g.addColorStop(0, "rgba(74,168,140,0.94)");
     g.addColorStop(0.45, "rgba(133,214,183,0.96)");
     g.addColorStop(1, "rgba(58,142,118,0.94)");
     ctx.fillStyle = g;
-    rr(ctx, x, bodyTop, w, bodyH, Math.min(9, w / 2)); ctx.fill();
+    rr(ctx, x, top, w, bodyH, Math.min(9, w / 2)); ctx.fill();
     /* 高光竖线 + 标签横带，一眼认出是「瓶子」 */
     ctx.strokeStyle = "rgba(255,255,255,0.4)";
     ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(x + w * 0.24, bodyTop + 8); ctx.lineTo(x + w * 0.24, bottom - 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + w * 0.24, top + 8); ctx.lineTo(x + w * 0.24, bodyBtm - 8); ctx.stroke();
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillRect(x + 2, bottom - full * 0.42, w - 4, Math.max(6, full * 0.05));
+    ctx.fillRect(x + 2, top + full * 0.37, w - 4, Math.max(6, full * 0.05));
   }
 
   /* ── 色盲模式的形状标记 ──
