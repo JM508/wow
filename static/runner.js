@@ -30,8 +30,11 @@
     /* ── 画布形状变化的两个闸门（详见 resize()）──
        画布高度改成按视口自适应之后，画面就在「前方视野」和「放大倍数」之间取舍：
        VIEW_MIN_W 是横向最少要能看到的世界宽度，再窄前方障碍就来不及反应；
-       VIEW_MAX_H 是纵向最多显示的世界高度，再多就是一大片空天空、反而更难看。 */
+       VIEW_MAX_H 是纵向最多显示的世界高度，再多就是一大片空天空、反而更难看。
+       竖屏/窄屏用 VIEW_MIN_W_NARROW：手机上 880 的视野把人物压得只有指甲盖大
+       （实测反馈「看不清」），收窄到 720 换来约 1/3 的放大，前方仍有 ~0.7 秒反应时间。 */
     VIEW_MIN_W: 880,
+    VIEW_MIN_W_NARROW: 720,
     VIEW_MAX_H: 500,
     PX: 148,                // 角色固定 x
 
@@ -1363,9 +1366,18 @@
 
     var prevGround = CFG.GROUND;
     if (cssW > 0 && cssH > 0) {
+      /* 视野下限按视口形状二选一：宽屏（与 runner.css 的 75vh 媒体查询同条件）
+         保持 880 的远视野；竖屏/窄屏收窄到 720，把人物放大约 1/3。
+         用 matchMedia 而不是画布宽度判断，才能和 CSS 的媒体查询保持同一把尺子
+         （jsdom 没有 matchMedia 时退回按画布宽粗判，仅影响测试环境）。 */
+      var wideVp = window.matchMedia
+        ? window.matchMedia("(min-width: 700px) and (min-aspect-ratio: 4 / 3)").matches
+        : cssW >= 900;
+      var minW = wideVp ? CFG.VIEW_MIN_W : CFG.VIEW_MIN_W_NARROW;
+      CFG.VIEW_MIN_W_EFF = minW;   // 探针/测试读取实际生效值
       var fit = cssW / CFG.W;
       zoom = Math.max(fit, Math.min(Math.max(fit, cssH / CFG.VIEW_MAX_H),
-                                    cssW / CFG.VIEW_MIN_W));
+                                    cssW / minW));
       /* 像素密度按设备像素比给足（画面被放大 zoom 倍，密度不够就糊），
          再夹在 [1, DPR_MAX]，最后兜一道总像素上限。 */
       dpr = Math.max(1, Math.min(CFG.DPR_MAX, window.devicePixelRatio || 1));
