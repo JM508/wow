@@ -128,6 +128,20 @@
   transition: opacity 0.18s ease;
 }
 .run-overlay.hidden { display: none; }
+/* 玩法说明：铺满整个视口（跳出画布），把工具条一起挡在下面 ——
+   它是首次进入的强制说明，除了卡片最底下的「我知道了」，别的哪儿都点不动 */
+.run-overlay.is-help {
+  position: fixed;
+  z-index: 300;                 /* 高于商店 / 排行榜 / 个人中心 / 设置（都是 200） */
+  padding: 16px;
+}
+.run-overlay.is-help .run-card {
+  width: min(460px, 100%);
+  max-height: min(86vh, 680px);
+  max-height: min(86dvh, 680px);
+}
+.run-overlay.is-help .run-ov-text { text-align: left; }
+.run-overlay.is-help .run-primary { margin-top: 4px; min-width: 160px; }
 
 .run-card {
   width: min(420px, 100%);

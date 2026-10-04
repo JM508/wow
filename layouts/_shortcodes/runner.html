@@ -17,8 +17,7 @@
     <div class="run-tools">
       <button type="button" id="run-rank-btn" title="云端排行榜：看别人的最好成绩">排行榜</button>
       <button type="button" class="run-shop-btn" id="run-me-btn" data-open-me title="个人中心：皮肤商店与成就">个人中心<span class="ach-count">0/18</span></button>
-      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键" aria-label="设置">⚙</button>
-      <button type="button" id="run-help" title="玩法说明">玩法</button>
+      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键、玩法说明" aria-label="设置">⚙</button>
     </div>
   </div>
 
@@ -128,6 +127,15 @@
     <!-- 视图 1：设置总览 -->
     <div id="set-view-main" class="set-view">
       <section class="set-sec">
+        <h4 class="set-h">📖 玩法</h4>
+        <button type="button" class="set-entry" id="set-open-help">
+          <span class="set-entry-t">玩法说明</span>
+          <span class="set-entry-s">起跳 / 下蹲、金币与护盾、速度与计分规则（首次进入会自动弹一次）</span>
+          <span class="set-arrow" aria-hidden="true">›</span>
+        </button>
+      </section>
+
+      <section class="set-sec">
         <h4 class="set-h">🔊 音效</h4>
         <div class="set-row">
           <div class="set-lab"><span>音效开关</span><small>跳跃、金币、撞击等音效（快捷键可在「自定义按键」里改）</small></div>
@@ -163,7 +171,7 @@
       <section class="set-sec">
         <h4 class="set-h">🧹 缓存与数据</h4>
         <div class="set-row">
-          <div class="set-lab"><span>清理本地缓存</span><small>清空本机这一份存档：成就进度、金币与已购皮肤、单机最高分、上榜昵称。云端账号数据不受影响，已登录时清理后会立刻从云端恢复（成就 + 钱包）；音效、无障碍与按键设置会保留。</small></div>
+          <div class="set-lab"><span>清理本地缓存</span><small>清空本机这一份存档：成就进度、金币与已购皮肤、单机最高分、上榜昵称、玩法「已读」标记（清完再进游戏会重新弹一次玩法说明）。云端账号数据不受影响，已登录时清理后会立刻从云端恢复（成就 + 钱包）；音效、无障碍与按键设置会保留。</small></div>
           <button type="button" id="set-clear" class="set-btn set-danger" title="清理本机存档">清理缓存</button>
         </div>
         <div class="set-clear-confirm hidden" id="set-clear-confirm" role="group" aria-labelledby="set-clear-tip">

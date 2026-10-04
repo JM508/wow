@@ -191,6 +191,7 @@
   var KEY_SCORES = "runner-scores";
   var KEY_MUTE = "runner-mute";
   var KEY_SET = "runner-set";        // 设置（JSON：sfx / vol / cb / calm / big / keys）
+  var KEY_HELP = "runner-help-seen"; // 玩法说明「已读」标记：首次进入自动弹一次，之后不再打扰
 
   /* ═══════════ 设置（⚙ 设置面板：音效、无障碍、自定义按键） ═══════════
      和钱包、成就一样只写本机 localStorage，不联网。面板里所有控件都读写同一个
@@ -666,7 +667,8 @@
   var obstacles = [], items = [], parts = [];
   var debris = [];                             // 被无敌撞碎的障碍：短暂存活、被打飞、淡出
   var input = { jumpHeld: false, duckHeld: false };
-  var shake = 0, overAt = 0, lastBest = 0, prevState = "ready";
+  var shake = 0, overAt = 0, lastBest = 0;
+  var prevState = "ready";    // 玩法说明打开前的界面状态：关掉说明后原样回到这个界面
   var bgDist = 0;             // 背景滚动距离（非游戏中也缓慢流动）
 
   function newState() {
@@ -963,6 +965,23 @@
   /* ═══════════ 遮罩层 ═══════════ */
   var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-me>皮肤商店</button>";
 
+  /* ── 玩法说明 ──
+     第一次打开游戏时自动弹一次，本机记下「已读」（runner-help-seen），之后再来就不打扰；
+     工具条上的「玩法」按钮已经拿掉，设置面板里随时可以重新打开。
+     弹窗打开期间是一道硬门：键盘（空格 / Enter / Esc）、点画面、屏幕上的「跳跃 / 下蹲」
+     全部不生效，只有卡片最底下的「我知道了」能把它关掉。 */
+  var helpVisible = false;
+
+  function helpOpen() { return helpVisible; }
+
+  function helpSeen() {
+    /* 存储被禁用（隐私模式 / 拒绝 Cookie）时当作「已读」，不然每次进来都被拦一道 */
+    try { return localStorage.getItem(KEY_HELP) === "1"; } catch (e) { return true; }
+  }
+  function markHelpSeen() {
+    try { localStorage.setItem(KEY_HELP, "1"); } catch (e) {}
+  }
+
   /* 帮助文本里的键位跟着自定义按键走，改完键这里立刻同步 */
   function helpHtml() {
     return "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳得更高；<br>" +
@@ -972,6 +991,7 @@
       "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
       "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
       "速度会越来越快，坚持越久分数越高。<br>" +
+      "手机：点屏幕起跳，向下滑动或按「下蹲」躲飞行物；电脑：也可以直接用键盘。" +
       "键位不舒服？在 <b>⚙ 设置 → 自定义按键</b> 里改；色盲模式 / 减少闪烁 / 大字模式在 " +
       "<b>⚙ 设置 → 无障碍选项</b> 里。";
   }
@@ -980,6 +1000,8 @@
     if (!elOverlay) return;
     elOvBtn.dataset.mode = "";
     elOverlay.classList.remove("hidden");
+    /* 玩法说明铺满整屏（见 .run-overlay.is-help），把工具条一起挡在下面 */
+    elOverlay.classList.toggle("is-help", kind === "help");
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
       elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
@@ -1000,9 +1022,19 @@
         "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b> 💰<br>" + SHOP_LINK;
       elOvBtn.textContent = "再来一局";
       renderRecords();
+    } else if (kind === "help") {
+      elOvTitle.textContent = "玩法说明";
+      elOvText.innerHTML = helpHtml();
+      elOvBtn.textContent = "我知道了";
+      elOvBtn.dataset.mode = "help";        // 只有这个按钮能把说明关掉
+      elRecords.innerHTML = "";
     }
   }
-  function hideOverlay() { if (elOverlay) elOverlay.classList.add("hidden"); }
+  function hideOverlay() {
+    if (!elOverlay) return;
+    elOverlay.classList.add("hidden");
+    elOverlay.classList.remove("is-help");
+  }
 
   /* ═══════════ 皮肤商店（就在本页弹层里，不跳页） ═══════════
      shop.js 负责商品与购买，这里只管「逛店时把局面定格、关掉后原样恢复」。 */
@@ -1044,6 +1076,7 @@
      tab = "shop"（默认）或 "ach"。已经在该页面时什么都不做；
      从另一页面切过来时不走定格/恢复（见 meSwitching）。 */
   function openMe(tab) {
+    if (helpVisible) return;                          // 玩法说明开着时先看说明
     var wantAch = tab === "ach";
     if (wantAch ? achOpen() : shopOpen()) return;
     if (wantAch ? shopOpen() : achOpen()) {           // 另一个页面正开着 → 是页签切换
@@ -1059,7 +1092,7 @@
   }
 
   function openShop() {
-    if (!elShop || shopOpen()) return;
+    if (!elShop || shopOpen() || helpVisible) return;
     if (window.Shop && window.Shop.open) window.Shop.open();   // open() 会派发 shop:open
     else { elShop.classList.remove("hidden"); afterShopOpen(); }
   }
@@ -1921,6 +1954,10 @@
       return;
     }
 
+    /* 玩法说明开着：只认卡片底下的「我知道了」——
+       空格 / Enter 不许开局，Esc / P 不许关掉它，键盘一律不穿透 */
+    if (helpVisible) return;
+
     /* 设置面板开着的时候，键盘只服务面板，其余键不穿透到游戏
        （否则空格会在面板后面把游戏跑起来，玩家看不见角色、直接撞死） */
     if (setOpen()) {
@@ -1972,9 +2009,9 @@
     if (isDuckKey(k, code)) { input.duckHeld = false; applyDuck(false); }
   }
 
-  function pressJump() { input.jumpHeld = true; doJump(); }
+  function pressJump() { if (helpVisible) return; input.jumpHeld = true; doJump(); }
   function releaseJump() { input.jumpHeld = false; }
-  function pressDuck() { input.duckHeld = true; applyDuck(true); }
+  function pressDuck() { if (helpVisible) return; input.duckHeld = true; applyDuck(true); }
   function releaseDuck() { input.duckHeld = false; applyDuck(false); }
 
   function bindHold(el, down, up) {
@@ -2049,7 +2086,7 @@
   }
 
   function openSet() {
-    if (!elSet || setOpen()) return;
+    if (!elSet || setOpen() || helpVisible) return;   // 玩法说明开着时不开设置（它本来就盖在上面）
     showSetView("main");
     elSet.classList.remove("hidden");
     document.dispatchEvent(new CustomEvent("set:open"));   // runner 自己监听：把局面定格
@@ -2173,15 +2210,27 @@
     renderKeys();
   }
 
+  /* 打开玩法说明：入口有两个 —— 首次进入自动弹（初始化里那一次）、设置面板里的「玩法说明」。
+     打开前记住当时的界面（准备中 / 跑着 / 暂停 / 结算），关掉后原样回去。 */
   function openHelp() {
+    if (!elOverlay || helpVisible) return;
+    helpVisible = true;
     prevState = state;
-    if (state === "playing") state = "paused";
-    showOverlay("paused");
-    elOvTitle.textContent = "玩法说明";
-    elOvText.innerHTML = helpHtml();
-    elOvBtn.textContent = "知道了";
-    elRecords.innerHTML = "";
-    elOvBtn.dataset.mode = "back";
+    if (state === "playing") state = "paused";    // 定格：别让角色在说明背后继续跑
+    showOverlay("help");
+  }
+
+  /* 关掉玩法说明：只有卡片最底下的「我知道了」会走到这里（键盘 / Esc / 点空白都进不来）。
+     顺手写下「已读」标记，下次打开游戏就不再自动弹了。 */
+  function closeHelp() {
+    if (!helpVisible) return;
+    helpVisible = false;
+    markHelpSeen();
+    if (prevState === "playing") { state = "playing"; hideOverlay(); Sfx.wake(); }
+    else if (prevState === "over") { state = "over"; showOverlay("over"); }
+    else if (prevState === "paused") { state = "paused"; showOverlay("paused"); }
+    else { state = "ready"; showOverlay("ready"); }
+    prevState = "ready";
   }
 
   function bind() {
@@ -2197,7 +2246,7 @@
         bindHold(btnMute, toggleMute, function () {});
       }
     }
-    if (btnHelp) btnHelp.addEventListener("click", openHelp);
+    if (btnHelp) btnHelp.addEventListener("click", openHelp);   // 老页面（工具条还有「玩法」）兼容
     bindSet();
 
     /* 工具条 / 页脚里的「个人中心」「⚙ 设置」入口共用一套点击委托 */
@@ -2226,14 +2275,7 @@
     });
 
     if (elOvBtn) elOvBtn.addEventListener("click", function () {
-      if (elOvBtn.dataset.mode === "back") {
-        elOvBtn.dataset.mode = "";
-        if (prevState === "over") showOverlay("over");
-        else if (prevState === "paused") showOverlay("paused");
-        else if (prevState === "playing") { state = "playing"; hideOverlay(); }
-        else showOverlay("ready");
-        return;
-      }
+      if (elOvBtn.dataset.mode === "help") { closeHelp(); return; }
       if (state === "paused") togglePause();
       else startGame();
     });
@@ -2245,6 +2287,7 @@
       var lastTouchAt = 0;
       stage.addEventListener("mousedown", function (e) {
         if (e.button !== 0) return;
+        if (helpVisible) return;                       // 玩法说明开着：点画面不开局、也不解除暂停
         if (Date.now() - lastTouchAt < 700) return;
         if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set],[data-open-me]")) return;  // 点商店入口别顺手开局
         if (state === "paused") { togglePause(); return; }
@@ -2257,6 +2300,7 @@
       var touchY = null;
       stage.addEventListener("touchstart", function (e) {
         lastTouchAt = Date.now();
+        if (helpVisible) return;                       // 玩法说明开着：触摸也不穿透
         if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set],[data-open-me]")) return;  // 同上
         if (state === "paused") { e.preventDefault(); togglePause(); return; }
         /* 手机端：开始 / 重开只能点「开始奔跑 / 再来一局」按钮（或按键盘）。
@@ -2407,6 +2451,15 @@
       if (b) bindViewEntry(b, entries[i][1]);
     }
 
+    /* 设置 → 玩法说明：先把设置收起来（set:close 会把局面恢复原样，不再定格），
+       再弹说明；关掉说明后回到的还是进设置之前那个界面。 */
+    var btnSetHelp = document.getElementById("set-open-help");
+    if (btnSetHelp) btnSetHelp.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (setOpen()) closeSet();
+      openHelp();
+    });
+
     var toggles = [elSetCb, elSetCalm, elSetBig];
     for (var t = 0; t < toggles.length; t++) {
       (function (entry, name) {
@@ -2470,6 +2523,10 @@
   bind();
   syncSetUi();                    // 把设置里的值刷到面板控件上（音效开关 / 音量 / 各开关 / 键位）
   render();
+  /* 首次打开自动弹玩法说明（本机没记过「已读」才弹）。
+     __RUNNER_MANUAL__ 是自动化测试的「手动驱动」标记：跑测试时跳过自动弹窗，
+     免得每个用例都先要伸手点掉它；自动弹出的行为由 _help_test / _help_probe 专门覆盖。 */
+  if (!window.__RUNNER_MANUAL__ && !helpSeen()) openHelp();
   if (!window.__RUNNER_MANUAL__ && window.requestAnimationFrame) rafId = window.requestAnimationFrame(frame);
 
   /* ═══════════ 对外接口（控制台调试 / 自动化测试） ═══════════ */
@@ -2502,6 +2559,11 @@
     closeSet: closeSet,
     setOpen: setOpen,
     setView: showSetView,
+    /* 玩法说明（首访自动弹 / 设置里手动开）：供控制台与测试使用 */
+    openHelp: openHelp,
+    closeHelp: closeHelp,
+    helpOpen: helpOpen,
+    helpSeen: helpSeen,
     /* 蹲下 / 起立 过渡（0 站立 → 1 蹲下）：供控制台与自动化测试查看 */
     crouch: function () { return P.crouch; },
     crouchEased: easeCrouch,
