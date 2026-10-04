@@ -41,6 +41,8 @@
     BODY_W: 30,             // 站立碰撞盒宽
     STAND_H: 62,            // 站立碰撞盒高
     DUCK_H: 34,             // 下蹲碰撞盒高
+    CROUCH_IN: 0.20,        // 站立 → 蹲下 的过渡时长（秒）
+    CROUCH_OUT: 0.14,       // 蹲下 → 站立 的过渡时长（秒）：起立快一点，少一点「还蹲着」的时间
     HIT_PAD: 5,             // 碰撞盒内缩（手感宽容度）
 
     GRAVITY: 2900,          // 重力加速度 px/s²
@@ -684,7 +686,7 @@
 
   function resetGame() {
     S = newState();
-    P = { y: CFG.GROUND, vy: 0, onGround: true, duck: false, coyote: 0, run: 0 };
+    P = { y: CFG.GROUND, vy: 0, onGround: true, duck: false, crouch: 0, coyote: 0, run: 0 };
     obstacles.length = 0; items.length = 0; parts.length = 0; debris.length = 0;
     itemLog.length = 0;                            // 道具出生记录也一起清
     input.jumpHeld = false; input.duckHeld = false;
@@ -817,7 +819,43 @@
   function dangerColor() { return cbOn() ? "#ffb020" : "#ff7a86"; }
 
   /* ═══════════ 操作 ═══════════ */
-  function curH() { return P.duck ? CFG.DUCK_H : CFG.STAND_H; }
+
+  /* ── 蹲下 / 起立 的过渡 ──
+     以前 P.duck 一翻，姿态当帧就在「站立」和「蹲下」两套骨架之间硬切，能看出跳变。
+     现在用进度量 P.crouch（0 站立 → 1 蹲下）描述这次转换：
+       · 按键只改**目标值**，进度按各自时长匀速推进（CROUCH_IN 蹲下 / CROUCH_OUT 起立）；
+       · 画出来、算高度时再套 smoothstep（= ease-in-out，两头慢中间快），
+         所以起步和收尾都不突兀，中途也不拖沓。
+     反向打断（按一下就松开）时进度只是掉头往回走，数值本身连续，不会闪。 */
+  function easeCrouch(t) {                         // smoothstep：ease-in-out 曲线
+    t = clamp(t, 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  function crouchK() {                             // 已缓动的过渡进度
+    return easeCrouch(P.crouch);
+  }
+
+  function crouchVisH() {                          // 画面上的身高：站立 62 → 蹲下 34
+    return CFG.STAND_H + (CFG.DUCK_H - CFG.STAND_H) * crouchK();
+  }
+
+  function updateCrouch(dt) {
+    var target = P.duck ? 1 : 0;
+    if (P.crouch === target) return;
+    var stepT = dt / (target > P.crouch ? CFG.CROUCH_IN : CFG.CROUCH_OUT);
+    P.crouch = clamp(P.crouch + (target > P.crouch ? stepT : -stepT), 0, 1);
+    if (Math.abs(P.crouch - target) < 1e-4) P.crouch = target;   // 收尾对齐，避免永远差一点点
+  }
+
+  /* 命中盒高度：
+     · 下蹲键一按就**立刻**收到最低（保持原本「按下即安全」的手感，不让玩家吃过渡的亏）；
+     · 起立时则跟着动画一起长高 —— 「画面上还蹲着、却被判定成站着撞死」是最不能接受的。
+     等价于「取即时高度和画面高度的较小者」。 */
+  function curH() {
+    if (P.duck) return CFG.DUCK_H;
+    return Math.min(CFG.STAND_H, crouchVisH());
+  }
 
   function doJump() {
     if (state !== "playing") return;
@@ -1047,6 +1085,9 @@
 
   /* ═══════════ 主逻辑步进 ═══════════ */
   function step(dt) {
+    /* 蹲下 / 起立的过渡：暂停时定格，其它状态照常推进（免得死在半蹲上定住不动） */
+    if (state !== "paused") updateCrouch(dt);
+
     if (state !== "playing") {
       bgDist += 40 * dt;
       updateParticles(dt);
@@ -1779,8 +1820,10 @@
   /* ── 角色：火柴人（外观由 skins.js 的装备皮肤决定） ── */
   function drawPlayer(pal) {
     var x = CFG.PX, gy = P.y;
-    var ducking = P.duck && P.onGround;
-    var h = ducking ? CFG.DUCK_H : CFG.STAND_H;
+    /* 过渡进度只在**落地**时作用于姿态：空中按下蹲只管加速下落，动作保持跳跃姿
+       （蹲着往下掉的样子很怪），所以空中直接给 0，落地后接着从当前进度长回来。 */
+    var k = P.onGround ? crouchK() : 0;
+    var h = CFG.STAND_H + (CFG.DUCK_H - CFG.STAND_H) * k;   // 护盾光环跟着身形走
     var t = S ? S.time : 0;
 
     ctx.fillStyle = "rgba(0,0,0,0.18)";           // 地面影子
@@ -1792,8 +1835,8 @@
     ctx.save();
     ctx.translate(x, gy);
     Skins.drawStick(ctx, skinPlayer, {
-      pose: ducking ? "duck" : (P.onGround ? "run" : "jump"),
-      t: t, run: P.run, night: pal.nightK > 0.5
+      pose: P.onGround ? "run" : "jump",
+      t: t, run: P.run, night: pal.nightK > 0.5, crouch: k
     });
 
     if (S && S.boost > 0) {                       // 护盾光环（收尾期转暗、闪烁加快 = 无敌要没了）
@@ -2423,6 +2466,10 @@
     closeSet: closeSet,
     setOpen: setOpen,
     setView: showSetView,
+    /* 蹲下 / 起立 过渡（0 站立 → 1 蹲下）：供控制台与自动化测试查看 */
+    crouch: function () { return P.crouch; },
+    crouchEased: easeCrouch,
+    visHeight: crouchVisH,
     settings: function () {
       var keys = {};
       for (var a = 0; a < KEY_ACTIONS.length; a++) keys[KEY_ACTIONS[a]] = keyList(KEY_ACTIONS[a]).slice();
@@ -2481,7 +2528,8 @@
         state: state, speed: S.speed, dist: S.dist, score: S.score, coins: S.coins,
         boost: S.boost, best: lastBest, isBest: S.isBest,
         wallet: Skins.getWallet(), banked: S.banked,
-        player: { y: P.y, vy: P.vy, onGround: P.onGround, duck: P.duck, h: curH() },
+        player: { y: P.y, vy: P.vy, onGround: P.onGround, duck: P.duck, h: curH(),
+                  crouch: P.crouch, crouchK: crouchK(), visH: crouchVisH() },
         obstacles: obstacles.length, items: items.length,
         waves: S.waves, groups: S.groups,
         /* 成就统计（本局） */

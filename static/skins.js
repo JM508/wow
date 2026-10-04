@@ -313,17 +313,19 @@
   }
 
   /* ═══════════════ 火柴人：三种姿态的骨架 ═══════════════
-     坐标系：脚底为 (0,0)，向上为负 y；head 为头部圆心 */
+     坐标系：脚底为 (0,0)，向上为负 y；head 为头部圆心。
+     ⚠️ limbs 的顺序三种姿态必须一致：躯干 / 腿 / 腿 / 手臂 / 手臂 ——
+     因为「站立 ⇄ 蹲下」的过渡是按序号逐条插值的，顺序错位会把腿插成手。 */
   function poseGeo(pose, run) {
     if (pose === "duck") {
       return {
         head: { x: 10, y: -24, r: 9 },
         limbs: [
           [-1, -17, 9, -15],        // 躯干（压得近乎水平）
-          [8, -16, 15, -8],         // 手前伸
-          [8, -16, 2, -7],
           [-1, -17, -10, -1],       // 腿
-          [-1, -17, 5, -1]
+          [-1, -17, 5, -1],
+          [8, -16, 15, -8],         // 手前伸
+          [8, -16, 2, -7]
         ]
       };
     }
@@ -350,6 +352,25 @@
         [0, -37, s * 11, -26]
       ]
     };
+  }
+
+  /* 两套骨架之间做线性插值 —— 「站立 → 蹲下」的过渡就靠它逐条骨骼变形。
+     k = 0 取 a（站），k = 1 取 b（蹲）。 */
+  function lerpGeo(a, b, k) {
+    var head = {
+      x: a.head.x + (b.head.x - a.head.x) * k,
+      y: a.head.y + (b.head.y - a.head.y) * k,
+      r: a.head.r + (b.head.r - a.head.r) * k
+    };
+    var limbs = [], n = Math.min(a.limbs.length, b.limbs.length), i;
+    for (i = 0; i < n; i++) {
+      var A = a.limbs[i], B = b.limbs[i];
+      limbs.push([
+        A[0] + (B[0] - A[0]) * k, A[1] + (B[1] - A[1]) * k,
+        A[2] + (B[2] - A[2]) * k, A[3] + (B[3] - A[3]) * k
+      ]);
+    }
+    return { head: head, limbs: limbs };
   }
 
   /* 头顶装饰 */
@@ -413,9 +434,35 @@
     ctx.restore();
   }
 
+  /* 画一张立绘（或逐帧精灵图的当前帧）：脚底对齐原点、左右居中。
+     sp 为 { sheet, n, fps } 时按 t 取帧循环；alpha 用于蹲⇄站过渡的交叉淡入淡出。 */
+  function drawSpriteFrame(ctx, im, sp, dh, alpha, bob, tilt, t) {
+    if (!im || alpha <= 0.002) return;
+    var frames = (sp && typeof sp === "object") ? (sp.n || 1) : 1;
+    var sx = 0, sw = im.naturalWidth, dw;
+    if (frames > 1) {
+      var fw = im.naturalWidth / frames;
+      sx = (Math.floor(t * (sp.fps || 15)) % frames) * fw;
+      sw = fw;
+      dw = dh * fw / im.naturalHeight;
+    } else {
+      dw = dh * im.naturalWidth / im.naturalHeight;
+    }
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    if (bob || tilt) {
+      ctx.translate(0, bob);                        // 步伐起伏
+      ctx.rotate(tilt);                             // 轻微前后倾
+    }
+    ctx.drawImage(im, sx, 0, sw, im.naturalHeight, -dw / 2, -dh, dw, dh);
+    ctx.restore();
+  }
+
   /* ═══════════════ 画一个火柴人 ═══════════════
      ctx 需已平移到「脚底」位置；opts:
        pose  run | jump | duck      t 秒   run 摆臂相位
+       crouch 0..1 蹲下过渡进度（已缓动）：0 站立、1 蹲下；不传则按 pose 推断
+              （老人调用方传 pose:"duck" 时视作 1，行为与以前完全一致）
        scale 缩放   night 是否夜间背景 */
   function drawStick(ctx, skin, opts) {
     if (!skin) skin = PLAYERS[0];
@@ -425,40 +472,42 @@
     var run = opts.run || 0;
     var scale = opts.scale || 1;
     var night = !!opts.night;
+    var kd = opts.crouch === undefined ? (pose === "duck" ? 1 : 0)
+                                       : Math.max(0, Math.min(1, opts.crouch));
 
     /* ── 立绘皮肤：直接贴图（跑动带轻微起伏 / 前后倾，蹲用专属立绘）──
        逐帧动画皮肤（史诗）：run/duck 可以是 { sheet: "文件名", n: 帧数, fps: 帧率 }，
-       sheet 为横排精灵图，按 t 取当前帧循环播放；静图皮肤照旧。 */
+       sheet 为横排精灵图，按 t 取当前帧循环播放；静图皮肤照旧。
+       蹲⇄站过渡：立绘是两张成品图，没法骨骼变形，改成按进度**交叉淡入淡出**，
+       观感就是「一边起立一边显形」，比当帧硬切自然得多。 */
     if (skin.sprite) {
-      var sp = pose === "duck" ? skin.sprite.duck : skin.sprite.run;
-      var frames = (sp && typeof sp === "object") ? (sp.n || 1) : 1;
-      var im = spriteImg(typeof sp === "object" ? sp.sheet : sp);
-      if (imgOk(im)) {
-        var dh = pose === "duck" ? (skin.duckH || 36) : (skin.runH || 66);
-        var dw;
+      var spR = skin.sprite.run, spD = skin.sprite.duck;
+      var imR = spriteImg(typeof spR === "object" ? spR.sheet : spR);
+      var imD = spriteImg(typeof spD === "object" ? spD.sheet : spD);
+      var okR = imgOk(imR), okD = imgOk(imD);
+      /* 当前该显形的那张还没就绪 → 照老规矩退回经典火柴人（预加载下几乎不会发生） */
+      if (kd > 0.5 ? okD : okR) {
         ctx.save();
         ctx.scale(scale, scale);
-        if (frames > 1) {
-          /* 逐帧动画：素材本身就是完整跑步循环，自带步伐感，不再叠加起伏/倾斜 */
-          var fw = im.naturalWidth / frames;
-          var fi = Math.floor((opts.t || 0) * (sp.fps || 15)) % frames;
-          dw = dh * fw / im.naturalHeight;
-          ctx.drawImage(im, fi * fw, 0, fw, im.naturalHeight, -dw / 2, -dh, dw, dh);
-        } else {
-          dw = dh * im.naturalWidth / im.naturalHeight;
-          if (pose === "run") {
-            ctx.translate(0, Math.sin(run) * 1.8);          // 步伐起伏
-            ctx.rotate(Math.sin(run) * 0.035);              // 轻微前后倾
-          }
-          ctx.drawImage(im, -dw / 2, -dh, dw, dh);
+        var al = skin.alpha === undefined ? 1 : skin.alpha;
+        var aRun = (1 - kd) * al, aDuck = kd * al;
+        var bobK = 1 - kd;                             // 起伏/倾斜随蹲下进度收掉
+        if (okR && aRun > 0.002) {
+          drawSpriteFrame(ctx, imR, spR, skin.runH || 66, aRun,
+            pose === "run" ? Math.sin(run) * 1.8 * bobK : 0,
+            pose === "run" ? Math.sin(run) * 0.035 * bobK : 0, t);
         }
+        if (okD && aDuck > 0.002) drawSpriteFrame(ctx, imD, spD, skin.duckH || 36, aDuck, 0, 0, t);
         ctx.restore();
         return;
       }
       skin = PLAYERS[0];                                  // 图没就绪 → 经典火柴人兜底
     }
 
-    var g = poseGeo(pose, run);
+    /* 站姿参照：蹲下是从「跑」压下去的（pose 为 duck 时按 run 取基准） */
+    var standPose = pose === "duck" ? "run" : pose;
+    var g = poseGeo(kd <= 0 ? standPose : "duck", run);
+    if (kd > 0 && kd < 1) g = lerpGeo(poseGeo(standPose, run), g, kd);
     var headC = g.head, headR = g.head.r, limbs = g.limbs;
 
     var ink = night ? (skin.inkNight || skin.ink) : skin.ink;
@@ -466,7 +515,7 @@
     var scarf = night && skin.scarfNight ? skin.scarfNight : skin.scarf;
     var headFill = night && skin.headFillNight ? skin.headFillNight : (skin.headFill || "#ffdfc6");
     var eye = night && skin.eyeNight ? skin.eyeNight : (skin.eye || "#28324a");
-    var lw = pose === "duck" ? 6 : 6.8;
+    var lw = 6.8 - 0.8 * kd;                               // 线条随蹲下略变细（6.8 → 6）
 
     ctx.save();
     ctx.scale(scale, scale);
