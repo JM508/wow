@@ -54,25 +54,32 @@
     ],
     noDelay: 1100,   // 选「否」后停留多久（毫秒）再跳转
 
-    /* 第二步：出生日期核验（选「是」后进入，用生日真正校验年龄） */
-    birthTitle: "出生日期验证",
-    okText: "确认",
+    /* 第二步：滑块人机验证（选「是」后进入）
+       判定口径（三条同时成立才算通过）：
+         ① 松手时滑块已经贴到轨道最右端
+         ② 从按下到松开的时长 ≥ slideMinMs
+         ③ 拖动过程中至少收到 slideMinSteps 次位置更新
+       ②③ 是给「脚本一次性把滑块瞬间置底」准备的；真人随手一拖都会远超这个门槛。
+       连续失败 slideRelaxAfter 次后放宽 ②③（宁可放行真人，也别把人卡死在验证页）。 */
+    captchaTitle: "人机验证",
     backText: "返回上一步",
-    labelY: "年", labelM: "月", labelD: "日",
-    yearMin: 1000, yearMax: 3000   // 年份下限校验（yearMin）；yearMax 留作配置口径
+    slideHint: "按住滑块，拖到最右端",
+    slideDone: "验证通过",
+    slideFast: "拖得太快了，请按住滑块慢慢拖到底",
+    slideMinMs: 180,
+    slideMinSteps: 3,
+    slideRelaxAfter: 3,
+    slideTrackFallback: 320,   // 拿不到布局时的兜底轨道宽度（jsdom / 隐藏容器）
+    slideKnobSize: 44          // 拿不到布局时的兜底滑块宽度
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
   CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
-             CFG.minAge + " 周岁</b>；选「是」后需填写出生日期完成核验，未满 " +
-             CFG.minAge + " 周岁请选择「否」。";
+             CFG.minAge + " 周岁</b>；选「是」后需通过一次人机验证，" +
+             "未满 " + CFG.minAge + " 周岁请选择「否」。";
   CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
-  CFG.birthDesc = "为确认您已年满 <b>" + CFG.minAge + " 周岁</b>，请填写您的出生日期。";
-  CFG.birthNote = "出生日期仅在您的浏览器本地用于年龄核验，不会上传或保存。" +
-    "年 / 月 / 日 直接输入数字即可（例如 1990 / 3 / 15）：输完自动跳下一格，手机会自动弹出数字键盘。";
-  CFG.birthErrEmpty = "请选择完整的出生日期";
-  CFG.birthErrInvalid = "该日期不存在，请重新选择";
-  CFG.birthUnder = "您填写的出生日期显示尚未满 " + CFG.minAge + " 周岁";
+  CFG.captchaDesc = "按住下方滑块，把它拖到轨道最右端即可通过验证。";
+  CFG.captchaNote = "验证只在本机浏览器内完成：不填任何个人信息，也不上传、不保存。";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -161,6 +168,17 @@
     ' aria-hidden="true" focusable="false"><path d="M12 4.5v13"/>' +
     '<path d="M6.6 12.4 12 17.8l5.4-5.4"/></svg>';
 
+  /* 滑块人机验证用到的两个小图标：未通过 = 右箭头，通过 = 对勾 */
+  var ICON_ARROW =
+    '<svg class="ag-ico ag-ico-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round"' +
+    ' aria-hidden="true" focusable="false"><path d="M5 12h13"/><path d="M12.6 6.6 18 12l-5.4 5.4"/></svg>';
+
+  var ICON_CHECK =
+    '<svg class="ag-ico ag-ico-check" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"' +
+    ' aria-hidden="true" focusable="false"><path d="M5 12.6 9.8 17.4 19 8.2"/></svg>';
+
   var ICON_EYE_BODY =
     '<path d="M2.2 12S6 5.6 12 5.6 21.8 12 21.8 12 18 18.4 12 18.4 2.2 12 2.2 12Z"/>' +
     '<circle cx="12" cy="12" r="3"/>';
@@ -226,55 +244,7 @@
     if (isHome || isGames) setupViewer(el);
   }
 
-  /* ---------- 日期工具：出生日期核验 ---------- */
-  function isLeap(y) { return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0; }
-  function daysInMonth(y, m) {
-    if (m === 2) return isLeap(y) ? 29 : 28;
-    return (m === 4 || m === 6 || m === 9 || m === 11) ? 30 : 31;
-  }
-  /* 按「今天」算周岁：今年生日还没到就减一岁（闰日 2/29 生在平年按 3/1 前未到处理） */
-  function ageAt(y, m, d) {
-    var t = new Date();
-    var a = t.getFullYear() - y;
-    var tm = t.getMonth() + 1, td = t.getDate();
-    if (tm < m || (tm === m && td < d)) a--;
-    return a;
-  }
-
-  /* ---------- 日期直接输入 ---------- */
-  /* 年 / 月 / 日用三个纯数字输入框（inputmode=numeric）：
-     手机唤起数字软键盘、电脑直接打字，两端行为一致。
-     —— 旧版是 <select> + 「敲数字前缀匹配」：手机上 select 唤起的是原生滚轮，
-     keydown 全被吞掉（键盘输入完全不可用）；电脑上选中值随前缀在选项间来回跳
-     （敲 1 跳 1999、敲 2 又跳 2999），停顿超过缓冲时间还会吞位 —— 实测「有点怪」。
-     改输入框后这些问题一并消失。 */
-  function wireDateInput(inp, prev, next, onEnter) {
-    var maxLen = parseInt(inp.getAttribute("maxlength"), 10) || 2;
-    inp.addEventListener("focus", function () {          // 点回来改 → 全选，直接覆盖
-      try { inp.select(); } catch (e) {}
-    });
-    inp.addEventListener("input", function () {
-      var v = inp.value.replace(/\D+/g, "");             // 只留数字（粘贴也一并净化）
-      if (v !== inp.value) inp.value = v;
-      if (next && v.length > 0) {
-        var n = parseInt(v, 10);
-        /* 满 4 位（年）/ 2 位（月日）自动跳下一格；月敲 2-9、日敲 4-9
-           已不可能是两位数的开头，敲一位就跳（1-3 等第二位） */
-        var done = v.length >= maxLen ||
-          (maxLen === 2 && n >= (inp.id === "ag-m" ? 2 : 4));
-        if (done) { try { next.focus(); } catch (e) {} }
-      }
-    });
-    inp.addEventListener("keydown", function (e) {
-      if (e.key === "Enter") { e.preventDefault(); onEnter(); return; }
-      if (e.key === "Backspace" && inp.value === "" && prev) {
-        e.preventDefault();                              // 空位退格 → 回上一格改
-        try { prev.focus(); } catch (e2) {}
-      }
-    });
-  }
-
-  /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「出生日期核验」 ---------- */
+  /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「滑块人机验证」 ---------- */
   function cardHtml(inner) {
     return '<div class="ag-card">' +
         '<div class="ag-badge" aria-hidden="true">🔞</div>' +
@@ -311,11 +281,11 @@
     var no = el.querySelector("#ag-no");
     var busy = false;                          // 防重复点击
 
-    // 选「是」→ 进入第二步：填写出生日期做实际核验
+    // 选「是」→ 进入第二步：过一次滑块人机验证
     yes.addEventListener("click", function () {
       if (busy) return;
       busy = true;
-      showStep2(el);
+      showCaptcha(el);
     });
 
     // 选「否」→ 不写入任何缓存 → 随机跳转短视频官网
@@ -328,80 +298,170 @@
     setTimeout(function () { try { yes.focus(); } catch (e) {} }, 60);
   }
 
-  /* ── 第二步：填写出生日期，真正核验年龄 ── */
-  function showStep2(el) {
-    /* 年 / 月 / 日是三个纯数字输入框：手机弹数字软键盘、电脑直接打字，
-       不用再面对两千项的年份下拉（详见 wireDateInput 注释） */
+  /* ── 第二步：滑块人机验证 ──
+     目的：确认操作者是真人（拦住脚本 / 自动点击）。拖到最右端才算通过，
+     判不过就回弹重来，过不了就停在遮罩上（本站不提供「跳过」）。
+     无障碍：滑块是 role="slider" + tabindex=0，方向键 / Home / End / 空格都可用。 */
+  function showCaptcha(el) {
     el.setAttribute("aria-labelledby", "ag-title");
     el.innerHTML = cardHtml(
-        '<h1 class="ag-title" id="ag-title">' + CFG.birthTitle + '</h1>' +
-        '<p class="ag-desc" id="ag-text">' + CFG.birthDesc + '</p>' +
+        '<h1 class="ag-title" id="ag-title">' + CFG.captchaTitle + '</h1>' +
+        '<p class="ag-desc" id="ag-text">' + CFG.captchaDesc + '</p>' +
         '<p class="ag-err" id="ag-err" role="alert" hidden></p>' +
-        '<div class="ag-birth">' +
-          '<input class="ag-input" id="ag-y" type="text" inputmode="numeric" enterkeyhint="next" ' +
-            'maxlength="4" placeholder="' + CFG.labelY + '" aria-label="出生年份（4 位数字）" ' +
-            'autocomplete="bday-year">' +
-          '<input class="ag-input" id="ag-m" type="text" inputmode="numeric" enterkeyhint="next" ' +
-            'maxlength="2" placeholder="' + CFG.labelM + '" aria-label="出生月份（1-12）" ' +
-            'autocomplete="bday-month">' +
-          '<input class="ag-input" id="ag-d" type="text" inputmode="numeric" enterkeyhint="done" ' +
-            'maxlength="2" placeholder="' + CFG.labelD + '" aria-label="出生日期（1-31）" ' +
-            'autocomplete="bday-day">' +
+        '<div class="ag-slider" id="ag-slider">' +
+          '<div class="ag-slider-fill" id="ag-slider-fill" aria-hidden="true"></div>' +
+          '<div class="ag-slider-hint" id="ag-slider-hint">' + CFG.slideHint + '</div>' +
+          '<div class="ag-slider-knob" id="ag-slider-knob" role="slider" tabindex="0"' +
+            ' aria-label="人机验证滑块：按住并拖到最右端"' +
+            ' aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"' +
+            ' aria-valuetext="0%，未通过">' + ICON_ARROW + '</div>' +
         '</div>' +
         '<div class="ag-actions">' +
-          '<button type="button" class="ag-btn ag-yes" id="ag-birth-ok">' + CFG.okText + '</button>' +
-          '<button type="button" class="ag-btn ag-no" id="ag-birth-back">' + CFG.backText + '</button>' +
+          '<button type="button" class="ag-btn ag-no" id="ag-back">' + CFG.backText + '</button>' +
         '</div>' +
-        '<p class="ag-note">' + CFG.birthNote + '</p>');
+        '<p class="ag-note">' + CFG.captchaNote + '</p>');
 
-    var selY = el.querySelector("#ag-y");
-    var selM = el.querySelector("#ag-m");
-    var selD = el.querySelector("#ag-d");
-    var err = el.querySelector("#ag-err");
-    var ok = el.querySelector("#ag-birth-ok");
-    var back = el.querySelector("#ag-birth-back");
-    var busy = false;
+    var track = el.querySelector("#ag-slider");
+    var knob  = el.querySelector("#ag-slider-knob");
+    var fill  = el.querySelector("#ag-slider-fill");
+    var hint  = el.querySelector("#ag-slider-hint");
+    var err   = el.querySelector("#ag-err");
+    var back  = el.querySelector("#ag-back");
 
+    var busy = false;                 // 通过 / 返回后锁死，防重复操作
+    var done = false;
+    var maxX = 1, x = 0;
+    var dragging = false, startX = 0, startAt = 0, steps = 0, fails = 0;
+
+    function knobW() { return knob.offsetWidth || CFG.slideKnobSize; }
+    /* 可用行程 = 轨道宽 - 滑块宽 - 左右各 2px 内边距；拿不到布局时退回兜底宽度 */
+    function geom() {
+      var tw = track.clientWidth || CFG.slideTrackFallback;
+      maxX = Math.max(1, tw - knobW() - 4);
+    }
+    function place(v) {
+      var n = (typeof v === "number" && isFinite(v)) ? v : 0;
+      x = Math.max(0, Math.min(maxX, n));
+      knob.style.transform = "translateX(" + x + "px)";
+      fill.style.width = (x + knobW()) + "px";
+      var pct = Math.round((x / maxX) * 100);
+      knob.setAttribute("aria-valuenow", String(pct));
+      knob.setAttribute("aria-valuetext", pct >= 100 ? "已到最右端" : pct + "%，未通过");
+    }
     function showErr(t) { err.textContent = t; err.hidden = false; }
     function clearErr() { err.hidden = true; }
-
-    /* 核验：年份下限（yearMin）+ 月 1-12 + 日与年月匹配的真实天数。
-       输入框里能敲出「2 月 30 日」这类日期，确认时给出行内提示；
-       未来年份会被 ageAt 判成负岁，照旧走「未满 18」拒绝路径 */
-    function submit() {
-      if (busy) return;
-      var yv = parseInt(selY.value, 10);
-      var mv = parseInt(selM.value, 10);
-      var dv = parseInt(selD.value, 10);
-      if (!(yv && mv && dv)) { showErr(CFG.birthErrEmpty); return; }
-      if (yv < CFG.yearMin || mv > 12 || dv > 31 || dv > daysInMonth(yv, mv)) {
-        showErr(CFG.birthErrInvalid); return;
-      }
+    /* 回弹：加一次性过渡类，让滑块滑回起点（拖动过程中不加，免得跟手发飘） */
+    function snapBack() {
+      knob.classList.add("ag-slider-snap");
+      place(0);
+      setTimeout(function () { knob.classList.remove("ag-slider-snap"); }, 260);
+    }
+    function passCaptcha() {
+      done = true;
       busy = true;
-      if (ageAt(yv, mv, dv) < CFG.minAge) {     // 未满 18：与选「否」同一条拒绝路径
-        reject(el, CFG.birthUnder);
-      } else {
-        pass(el);
+      place(maxX);
+      knob.classList.add("ag-slider-done");
+      knob.innerHTML = ICON_CHECK;
+      hint.textContent = CFG.slideDone;
+      track.classList.add("ag-slider-ok");
+      clearErr();
+      cleanup();                                       // 通过了就别再监听指针
+      setTimeout(function () { pass(el); }, 520);
+    }
+    /* 松手 / 键盘操作后判定 */
+    function settle() {
+      if (done) return;
+      if (x < maxX - 2) { snapBack(); return; }        // 没拖到底：不算失败，回弹重来
+      var ms = Date.now() - startAt;
+      if (fails < CFG.slideRelaxAfter && (ms < CFG.slideMinMs || steps < CFG.slideMinSteps)) {
+        fails++;                                       // 连续失败几次后放宽，别把真人卡死
+        showErr(CFG.slideFast);
+        snapBack();
+        return;
       }
+      passCaptcha();
     }
 
-    /* 三个输入框：数字净化 + 自动跳格 + Enter 提交 + 空位退格回上一格 */
-    wireDateInput(selY, null, selM, submit);
-    wireDateInput(selM, selY, selD, submit);
-    wireDateInput(selD, selM, null, submit);
-    /* 重新输入即清除错误提示 */
-    selY.addEventListener("input", clearErr);
-    selM.addEventListener("input", clearErr);
-    selD.addEventListener("input", clearErr);
+    /* 指针：鼠标 / 触摸 / 触控笔统一走 pointer 事件。
+       按下绑在滑块上，移动与松手绑在 document —— 只要手一拖，指针立刻就跑出这 44px 的滑块，
+       光靠 setPointerCapture 兜不住（某些环境里它不生效，事件会发给指针底下的元素，
+       滑块就「不跟手」了，真机实测踩过）。capture 仍然设上，作为移动端的补充。 */
+    knob.addEventListener("pointerdown", function (e) {
+      if (busy || typeof e.clientX !== "number") return;
+      e.preventDefault();
+      dragging = true;
+      steps = 0;
+      startAt = Date.now();
+      startX = e.clientX - x;
+      try { knob.setPointerCapture(e.pointerId); } catch (e2) {}
+      clearErr();
+    });
+    function onMove(e) {
+      if (!dragging || busy || typeof e.clientX !== "number") return;
+      e.preventDefault();
+      steps++;
+      place(e.clientX - startX);
+    }
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      settle();
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", endDrag);
+    document.addEventListener("pointercancel", endDrag);
 
-    ok.addEventListener("click", submit);
+    /* 键盘：方向键 10% 一档，Home 归零，End / 空格 / Enter 直接到底。
+       键盘通道不做时长与轨迹判定 —— 那是给脚本准备的门槛，不该拦键盘用户。 */
+    knob.addEventListener("keydown", function (e) {
+      if (busy) return;
+      var k = e.key;
+      if (k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown" || k === "ArrowLeft" ||
+          k === "Home" || k === "End" || k === " " || k === "Enter" || k === "Spacebar") {
+        e.preventDefault();
+      } else {
+        return;
+      }
+      clearErr();
+      startAt = Date.now() - CFG.slideMinMs;
+      steps += CFG.slideMinSteps;
+      if (k === "Home") { place(0); return; }
+      if (k === "ArrowLeft") { place(x - maxX / 10); return; }
+      if (k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown") {
+        place(x + maxX / 10);
+        if (x >= maxX - 2) settle();
+        return;
+      }
+      place(maxX);                                     // End / 空格 / Enter
+      settle();
+    });
+
     back.addEventListener("click", function () {
       if (busy) return;
       busy = true;
-      showStep1(el);                            // 回到第一步
+      cleanup();
+      showStep1(el);                                   // 回到第一步
     });
 
-    setTimeout(function () { try { selY.focus(); } catch (e) {} }, 60);
+    /* 通过 / 返回后摘掉 document 与 window 上的监听，别给页面留挂载点 */
+    function cleanup() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", endDrag);
+      document.removeEventListener("pointercancel", endDrag);
+      window.removeEventListener("resize", onResize);
+    }
+
+    /* 视口变化（极窄屏 / 旋转屏幕）：重算行程，别让滑块越界或卡在半路 */
+    function onResize() {
+      if (!el.parentNode) return;
+      geom();
+      place(Math.min(x, maxX));
+    }
+    window.addEventListener("resize", onResize);
+
+    geom();
+    place(0);
+    setTimeout(function () { try { knob.focus(); } catch (e) {} }, 60);
   }
 
   /* ── 通过：写入会话标记 → 淡出 → 进入网站 ── */
@@ -452,8 +512,13 @@
       btns[i].style.pointerEvents = "none";
       btns[i].setAttribute("aria-hidden", "true");
     }
-    var sels = el.querySelectorAll(".ag-select, .ag-input");
-    for (var j = 0; j < sels.length; j++) sels[j].disabled = true;
+    /* 锁死滑块（第二步才存在；第一步里选「否」时这里是空集，无副作用） */
+    var knobs = el.querySelectorAll(".ag-slider-knob");
+    for (var j = 0; j < knobs.length; j++) {
+      knobs[j].style.pointerEvents = "none";
+      knobs[j].setAttribute("aria-disabled", "true");
+      knobs[j].removeAttribute("tabindex");
+    }
 
     setTimeout(function () { location.replace(t.url); }, CFG.noDelay);
   }
