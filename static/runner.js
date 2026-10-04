@@ -1031,8 +1031,8 @@
   }
 
   function updateHud() {
-    if (elScore) elScore.textContent = "SCORE: " + pad5(S ? S.score : 0);
-    if (elBest) elBest.textContent = "HI: " + pad5(lastBest);
+    if (elScore) elScore.textContent = "得分：" + pad5(S ? S.score : 0);
+    if (elBest) elBest.textContent = "最高：" + pad5(lastBest);
     if (elCoins) elCoins.textContent = "🪙 " + (S ? S.coins : 0);
     if (elWallet) elWallet.textContent = "钱包 " + Skins.getWallet();
   }
