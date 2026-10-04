@@ -2205,8 +2205,13 @@
     });
 
     if (stage) {
+      /* 触屏设备在 touchend 之后还会再合成一整套鼠标事件（mousedown / mouseup / click）。
+         用时间戳把这类合成事件挡在鼠标路径之外，否则「手指点画面」会从 mousedown 分支再开局一次，
+         手机端就绕过「必须点开始按钮」的规则了。真实鼠标点击（离上次触摸 > 700ms）不受影响。 */
+      var lastTouchAt = 0;
       stage.addEventListener("mousedown", function (e) {
         if (e.button !== 0) return;
+        if (Date.now() - lastTouchAt < 700) return;
         if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 点商店入口别顺手开局
         if (state === "paused") { togglePause(); return; }
         if (state === "ready" || state === "over") { if (mayRestart()) startGame(); return; }
@@ -2217,13 +2222,14 @@
 
       var touchY = null;
       stage.addEventListener("touchstart", function (e) {
+        lastTouchAt = Date.now();
         if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set]")) return;  // 同上
         if (state === "paused") { e.preventDefault(); togglePause(); return; }
-        if (state === "ready" || state === "over") {
-          e.preventDefault();
-          if (mayRestart()) startGame();
-          return;
-        }
+        /* 手机端：开始 / 重开只能点「开始奔跑 / 再来一局」按钮（或按键盘）。
+           这里直接放行——不 preventDefault、也不 startGame，让触摸照常派发到按钮的 click；
+           点画面空白则完全没反应，避免误触直接开局 / 跳过结算界面。
+           （鼠标端仍保留「点画面开局」的便利，见上面的 mousedown） */
+        if (state === "ready" || state === "over") return;
         e.preventDefault();
         touchY = e.touches[0].clientY;
         pressJump();
@@ -2234,6 +2240,9 @@
         if (e.touches[0].clientY - touchY > 28) { releaseJump(); pressDuck(); }
       }, { passive: false });
       stage.addEventListener("touchend", function (e) {
+        /* ready / over 下的这一次触摸是「点按钮开始」，别在这里 preventDefault，
+           否则浏览器不会补发 click，按钮就按下没反应了 */
+        if (state === "ready" || state === "over") return;
         e.preventDefault();
         touchY = null;
         releaseJump(); releaseDuck();
