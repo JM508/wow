@@ -79,10 +79,12 @@
     DASH_COINS_MAX: 5,      // 每排最多颗数
     DASH_Y: 36,             // 冲刺币中心离地高度（站着跑就能吃到）
 
-    AIR_GAP: 44,            // 飞行物底边离地高度（只能下蹲穿过）
-    AIR_TOP: 130,           // 飞行物碰撞盒顶（离地 170）：比满跳脚底最高点（离地 ≈155）还高
-                            // → 跳不过去；但不再是顶天立地的大柱子，瓶子只适度拉长
-    AIR_LEAD: 0.25,         // 飞行物这一波额外后推的时间（秒）：留出「上一跳落地」的反应余量
+    AIR_GAP: 44,            // 飞行物底边离地高度（站着会撞、下蹲能钻过）
+    AIR_H: 93,              // 飞行物瓶身高 = 站立身高 × 1.5：顶在离地 ≈137，比满跳脚底
+                            // 最高点（≈155）低 18px → 提前起跳能整个越过去（可跳可蹲）；
+                            // 判定盒 = 画出的瓶身，宽高完全一致，不再有隐形竖井
+    AIR_LEAD: 0.25,         // 飞行物这一波额外后推的时间（秒）：玩家可能正处在上一跳
+                            // 的半空中，多留这点距离让它落地后再从容选择跳或蹲
     GAP_MIN: 0.80,          // 障碍间距系数下限（× 当前速度）
     GAP_MAX: 1.55,          // 障碍间距系数上限
 
@@ -703,25 +705,23 @@
     { id: "cone",  w: 36, h: 50 },
     { id: "stack", w: 44, h: 72 }
   ];
-  var AIR_KINDS = [
-    { id: "paper", w: 52, h: 26 },
-    { id: "drone", w: 70, h: 30 }
+  var AIR_KINDS = [                            // 飞行物只有宽窄两种瓶身，高统一 = CFG.AIR_H
+    { id: "paper", w: 52 },
+    { id: "drone", w: 70 }
   ];
 
   function addObstacle(kind, x, hOverride) {
     var def = kind === "air" ? pick(AIR_KINDS) : pick(GROUND_KINDS);
-    var h = hOverride || def.h;
+    var h = kind === "air" ? CFG.AIR_H : (hOverride || def.h);
     var o = {
       kind: kind, id: def.id, x: x, w: def.w, h: h,
       phase: random() * 6.28
     };
     if (kind === "air") {
-      /* 飞行障碍 = 适度拉长+加宽的雪碧瓶：碰撞盒顶在离地 170（比满跳脚底最高
-         ≈155 还高 15px）→ 跳不过去，只能蹲钻；但盒子不再顶到画面外，
-         瓶子贴图整体拉伸填满碰撞盒即可，肉眼看到的就是判定范围。 */
-      o.body = h;
-      o.y = CFG.AIR_TOP;
-      o.h = (CFG.GROUND - CFG.AIR_GAP) - CFG.AIR_TOP;
+      /* 飞行障碍 = 无绳悬浮的雪碧瓶：瓶身贴图就画在碰撞盒上（所见即所撞）。
+         顶在离地 ≈137（比满跳脚底 ≈155 低 18px）→ 提前起跳可以从上面整个
+         越过去；底在离地 44 → 蹲着能钻、站着跑会撞。跳或蹲都行，但必须二选一。 */
+      o.y = CFG.GROUND - CFG.AIR_GAP - CFG.AIR_H;
     } else {
       o.y = CFG.GROUND - h;
     }
@@ -967,8 +967,8 @@
   function helpHtml() {
     return "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳得更高；<br>" +
       "按 <b>" + keyHint("duck") + "</b> 下蹲，空中按下蹲可加速下落；<br>" +
-      "地面的障碍要 <b>跳过</b>；天上的大雪碧瓶只能 <b>下蹲</b> 从下面的缝隙钻过去" +
-      "（瓶子比满跳的最高点还高，跳起来会迎面撞上）；<br>" +
+      "地面的障碍要 <b>跳过</b>；天上的悬浮雪碧瓶 <b>跳过去</b> 或 <b>蹲下去</b> 都行" +
+      "（瓶子只有 1.5 倍身高，提前起跳能整个越过去；蹲着能从下面钻过，站着跑会撞上）；<br>" +
       "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
       "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
       "速度会越来越快，坚持越久分数越高。<br>" +
@@ -983,7 +983,7 @@
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
       elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
-        keyHint("duck") + "</b> 下蹲钻过天上的大雪碧瓶。<br>" +
+        keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶（跳过去也行）。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
         "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
@@ -1278,7 +1278,7 @@
     }
 
     if (isAir) {
-      push("air", from);                           // 飞行物：必须下蹲
+      push("air", from);                           // 飞行物：可跳可蹲（站着会撞）
     } else {
       var r = random();
       if (r < 0.5) {
@@ -1298,13 +1298,10 @@
     S.waves++;
   }
 
-  /* 障碍「本体」矩形（瓶子 / 纸 / 无人机那一段）。
-     地面障碍的本体就是碰撞盒；空中障碍的碰撞盒是「吊到天花板的整条竖井」，
-     绘制时整根瓶子拉伸填满竖井，但碎块/撞碎粒子仍按本体那一截走，
-     否则碎块会在屏幕顶上炸开。 */
+  /* 障碍「本体」矩形 = 碰撞盒本身：地面障碍与悬浮瓶都是所见即所撞，
+     碎块/撞碎粒子从这里出发。 */
   function obBody(o) {
-    var h = o.kind === "air" ? (o.body || o.h) : o.h;
-    return { x: o.x, y: o.y + o.h - h, w: o.w, h: h };
+    return { x: o.x, y: o.y, w: o.w, h: o.h };
   }
 
   function hit(o) {
@@ -1315,7 +1312,7 @@
        地面障碍换成贴图后，图片是按高度定比例的细长条（巧乐兹宽高比 0.42），
        画出来比碰撞盒窄 18px 左右；若还按碰撞盒算，玩家会在离障碍还有十几像素
        时就看到它碎掉（无敌冲刺撞碎时特别刺眼）。
-       画面比碰撞盒宽的（空中雪碧瓶）仍按碰撞盒算——那是偏袒玩家的宽容。 */
+       空中悬浮瓶的画面就画在碰撞盒上，两边天然一致。 */
     var vis = obVisual(o);
     var ow = vis ? Math.min(o.w, vis.w) : o.w;
     var ox = o.x + (o.w - ow) / 2;                // 图片以碰撞盒中心为轴，左右对称
@@ -1594,11 +1591,10 @@
   })();
   function obImgOk(im) { return !!im && im.complete && im.naturalWidth > 0; }
 
-  /* 障碍「看起来多大」的参数。地面障碍按碰撞盒高定画面高（略大一点点），
-     空中障碍按碰撞盒宽定画面宽。 */
+  /* 障碍「看起来多大」的参数。地面障碍按碰撞盒高定画面高（略大一点点）；
+     空中悬浮瓶的画面 = 碰撞盒原样，不需要参数。 */
   var OB_VIS = {
-    ghScale: 1.12, ghPad: 8, ghMin: 48, ghMax: 82,     // 地面：画面高 = clamp(h × 1.12 + 8, 48, 82)
-    airScale: 1.05, airPad: 4                          // 空中：画面宽 = w × 1.05 + 4
+    ghScale: 1.12, ghPad: 8, ghMin: 48, ghMax: 82     // 地面：画面高 = clamp(h × 1.12 + 8, 48, 82)
   };
 
   /* ⚠️ 绘制与判定**共用同一份几何**（hit() 也调它）。
@@ -1615,15 +1611,14 @@
     } else {
       im = OB_IMG.sprite;
       if (!obImgOk(im)) return null;
-      w = o.w * OB_VIS.airScale + OB_VIS.airPad;
-      h = w * im.naturalHeight / im.naturalWidth;
+      w = o.w; h = o.h;            // 悬浮瓶：贴图直接画进碰撞盒，所见即所撞
     }
     return { im: im, w: w, h: h };
   }
 
-  /* ── 飞行障碍 = 一根「适度拉长 + 加宽的雪碧瓶」──
-     碰撞盒顶在离地 170（比满跳最高点还高），瓶子贴图纵向拉伸填满碰撞盒，
-     宽度与碰撞盒一致 —— 看到的就是撞到的，「跳不过去、只能蹲钻」一眼可见。
+  /* ── 飞行障碍 = 一只「无绳悬浮的雪碧瓶」──
+     瓶身高 = 1.5 × 站立身高，顶在离地 ≈137（比满跳最高点低 18px），
+     跳或蹲都能过、站着会撞 —— 看到的就是撞到的。
      这是图片没加载出来（含无图测试环境）时的矢量兜底画法。 */
   function drawTallBottle(cx, top, bottom, w) {
     if (!(bottom > top)) return;
@@ -1707,13 +1702,11 @@
         cbMarkObstacle(o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
         ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, CFG.GROUND - vis.h, vis.w, vis.h);
       } else {
-        /* 空中障碍 = 雪碧瓶适度拉长：同一张贴图纵向拉伸填满碰撞盒
-           （碰撞盒顶在离地 170，高约 126px —— 比正常瓶子高但不是通天柱），
-           底边抬 10px，与下蹲头顶最少留 2.5px。跳起来必然迎面撞上。 */
-        var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3.5;      // 沿用飞行物的浮动
-        var btm = o.y + o.h - 10 + bob;
-        cbMarkObstacle(o.x + o.w / 2 - vis.w / 2, o.y, vis.w, btm - o.y);
-        ctx.drawImage(vis.im, o.x + o.w / 2 - vis.w / 2, o.y, vis.w, btm - o.y);
+        /* 空中障碍 = 无绳悬浮的雪碧瓶：贴图原样画进碰撞盒（不拉伸、无竖井），
+           带一点上下浮动；判定盒不跟着浮，±3px 的浮动落在 hit() 的宽容边里。 */
+        var bob = Math.sin(o.phase + (S ? S.time : 0) * 5.5) * 3;
+        cbMarkObstacle(o.x, o.y + bob, vis.w, vis.h);
+        ctx.drawImage(vis.im, o.x, o.y + bob, vis.w, vis.h);
       }
       ctx.restore();
       return;
@@ -1722,9 +1715,9 @@
     var bb = obBody(o);
     var x = bb.x, y = bb.y, w = bb.w, h = bb.h;
     if (o.kind === "air") {
-      /* 无图兜底：整个空中障碍就是一整根拉长的瓶子，不再叠画纸/无人机 */
-      cbMarkObstacle(o.x, o.y, o.w, o.h - 10);
-      drawTallBottle(o.x + o.w / 2, o.y, o.y + o.h - 10, o.w);
+      /* 无图兜底：悬浮瓶身（矢量画法），不再叠画纸/无人机 */
+      cbMarkObstacle(o.x, o.y, o.w, o.h);
+      drawTallBottle(o.x + o.w / 2, o.y, o.y + o.h, o.w);
       ctx.restore();
       return;
     }
@@ -2499,11 +2492,17 @@
     setWallet: function (n) { var v = Skins.setWallet(n); updateHud(); return v; },
     skins: function () { return { player: skinPlayer, coin: skinCoin }; },
     clearObstacles: function () { obstacles.length = 0; },
+    /* 测试钩子：把速度（近似）拉到 v —— 速度由 S.time 推导，这里直接改时间轴，
+       下一帧起 S.speed = SPEED0 + SPEED_ACC × S.time 生效 */
+    setSpeed: function (v) {
+      S.time = Math.max(0, (Math.max(CFG.SPEED0, Math.min(CFG.SPEED_MAX, v)) - CFG.SPEED0) / CFG.SPEED_ACC);
+      return CFG.SPEED0 + CFG.SPEED_ACC * S.time;
+    },
     /* 只读快照：供调试与「自动试跑」测试读取当前障碍分布 */
     obstacles: function () {
       return obstacles.map(function (o) {
-        /* y/h 是碰撞盒（空中障碍=吊到天花板的整条竖井）；
-           by/bh 是本体（瓶子那一段）的顶边与高度，测试与工具看这个更直观 */
+        /* y/h 是碰撞盒（空中障碍=悬浮瓶身，所见即所撞）；
+           by/bh 是本体矩形的顶边与高度，测试与工具看这个更直观 */
         var bb = obBody(o);
         return { kind: o.kind, id: o.id, x: o.x, y: o.y, w: o.w, h: o.h,
                  by: bb.y, bh: bb.h };
