@@ -983,7 +983,7 @@
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
       elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
-        keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶（跳过去也行）。<br>" +
+        keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶。<br>" +
         "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
         "钱包余额 <b>" + Skins.getWallet() + "</b> 🪙 · " + SHOP_LINK;
       elOvBtn.textContent = "开始奔跑";
