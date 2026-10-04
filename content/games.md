@@ -3,6 +3,9 @@ date = '2026-10-02T10:05:00+08:00'
 draft = false
 title = '游戏合集'
 description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑，点开即玩。'
+# 页面上不显示大标题与描述行（卡片里已有「游戏合集」），title/description 仍用于 SEO
+hideTitle = true
+hideDescription = true
 # 站名下方那一行「返回」入口：合集页回首页
 backHref = '/'
 backLabel = '返回首页'
