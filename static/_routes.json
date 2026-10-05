@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/.cloud/*", "/.ip"],
+  "include": ["/.cloud/*", "/.ip", "/server.js"],
   "exclude": []
 }

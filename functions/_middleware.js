@@ -220,6 +220,11 @@ export async function onRequest(context) {
   /* 排行榜 IP 属地端点：先于云代理短路处理 */
   if (url.pathname === "/.ip") return ipInfo(request, url);
 
+  /* 渗透测试修复（2026-10-05）：服务器源码不允许被当静态资源下载。
+     public 里必须保留 server.js（镜像部署入口），故用 Functions 拦，
+     _redirects 的 404 状态码 CF Pages 不支持。 */
+  if (url.pathname === "/server.js") return notFound();
+
   /* 非云接口请求原样交给静态资源，零影响 */
   if (!isCloudPath(url.pathname)) return next();
 
