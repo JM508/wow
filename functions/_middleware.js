@@ -176,12 +176,46 @@ const CN_CITIES = [
   ["内蒙古", "hohhot"], ["宁夏", "yinchuan"], ["青海", "xining"], ["西藏", "lhasa"]
 ];
 
-/* 属地字符串（≤32 字，与库约束一致）；取不到就 null，前端静默跳过 */
+/* 2026-10-05 用户要求属地精确到市：CF 的 cf.city 是英文城市名 → 中文名。
+   覆盖国内主要城市；表外城市沿用省级展示（不至于空白）。 */
+const CN_CITY_ZH = {
+  beijing:"北京", tianjin:"天津", shanghai:"上海", chongqing:"重庆",
+  guangzhou:"广州", shenzhen:"深圳", dongguan:"东莞", foshan:"佛山", zhuhai:"珠海", zhongshan:"中山", huizhou:"惠州",
+  nanjing:"南京", suzhou:"苏州", wuxi:"无锡", changzhou:"常州", nantong:"南通", xuzhou:"徐州", yangzhou:"扬州",
+  hangzhou:"杭州", ningbo:"宁波", wenzhou:"温州", jiaxing:"嘉兴", shaoxing:"绍兴", jinhua:"金华",
+  jinan:"济南", qingdao:"青岛", yantai:"烟台", weifang:"潍坊", linyi:"临沂",
+  zhengzhou:"郑州", luoyang:"洛阳", kaifeng:"开封", xinxiang:"新乡",
+  wuhan:"武汉", yichang:"宜昌", xiangyang:"襄阳",
+  changsha:"长沙", zhuzhou:"株洲", xiangtan:"湘潭", hengyang:"衡阳",
+  chengdu:"成都", mianyang:"绵阳", deyang:"德阳",
+  fuzhou:"福州", xiamen:"厦门", quanzhou:"泉州", zhangzhou:"漳州",
+  hefei:"合肥", wuhu:"芜湖",
+  shijiazhuang:"石家庄", tangshan:"唐山", baoding:"保定",
+  taiyuan:"太原", nanchang:"南昌", ganzhou:"赣州",
+  shenyang:"沈阳", dalian:"大连", anshan:"鞍山",
+  changchun:"长春", jilin:"吉林", harbin:"哈尔滨", haerbin:"哈尔滨", daqing:"大庆",
+  xian:"西安", xianyang:"咸阳",
+  lanzhou:"兰州", guiyang:"贵阳", kunming:"昆明", qujing:"曲靖",
+  nanning:"南宁", liuzhou:"柳州", haikou:"海口", sanya:"三亚",
+  wulumuqi:"乌鲁木齐", urumqi:"乌鲁木齐", huhehaote:"呼和浩特", hohhot:"呼和浩特",
+  yinchuan:"银川", xining:"西宁", lhasa:"拉萨"
+};
+
+/* 属地字符串（≤32 字，与库约束一致）；取不到就 null，前端静默跳过。
+   2026-10-05 用户要求精确到市：国内输出「省 市」（如「广东 深圳」），
+   直辖市与省级同名时只输出一遍（如「上海」）；海外仍到国家。 */
 function regionOf(request) {
   const cf = request.cf;
   if (!cf) return null;
   const country = cf.country || null;
-  if (country === "CN") return cnRegionName(cf) || "中国";
+  if (country === "CN") {
+    const prov = cnRegionName(cf);
+    const city = cf.city ? CN_CITY_ZH[String(cf.city).toLowerCase()] : null;
+    if (prov && city && city !== prov) return (prov + " " + city);
+    if (prov) return prov;
+    if (city) return city;
+    return "中国";
+  }
   if (country === "HK") return "中国香港";
   if (country === "MO") return "中国澳门";
   if (country === "TW") return "中国台湾";

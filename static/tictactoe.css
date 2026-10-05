@@ -1,0 +1,124 @@
+/* ══ 井字棋（/tictactoe/）══
+   跟站点同一套观感：卡片圆角 + PaperMod 主题变量（暗色自动跟随）。
+   棋盘 3×3，格子随宽度伸缩，手机上单手就能点。 */
+
+#ttt-root {
+  max-width: 420px;
+  margin: 1.2rem auto 0;
+  padding: 18px 18px 14px;
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── 工具条：难度 / 战绩 / 清战绩 ── */
+.ttt-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.ttt-bar select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #cfcfcf);
+  background: var(--theme, #1d1e20);
+  color: var(--primary, #1f1f1f);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ttt-score {
+  display: inline-flex;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--secondary, #888888);
+}
+
+.ttt-sc b { color: var(--primary, #1f1f1f); font-size: 15px; }
+.ttt-sc-win b { color: #1d8a40; }
+.ttt-sc-lose b { color: #c2344a; }
+
+.ttt-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #cfcfcf);
+  background: var(--theme, #1d1e20);
+  color: var(--secondary, #888888);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.ttt-btn:hover { color: var(--primary, #1f1f1f); border-color: var(--secondary, #9a9a9a); }
+
+/* ── 棋盘 ── */
+#ttt-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.ttt-cell {
+  aspect-ratio: 1 / 1;
+  font-size: clamp(38px, 11vw, 56px);
+  font-weight: 700;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid var(--border, #dcdcdc);
+  background: var(--theme, #1d1e20);
+  color: var(--primary, #1f1f1f);
+  cursor: pointer;
+  transition: background 0.12s ease, transform 0.1s ease, border-color 0.12s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  user-select: none;
+}
+
+.ttt-cell:hover:enabled { background: var(--code-bg, #f4f4f4); }
+.ttt-cell:active:enabled { transform: scale(0.96); }
+.ttt-cell:disabled { cursor: default; }
+
+/* 玩家 × 电脑 ○ 各给一点颜色，赢的那条线整条高亮 */
+.ttt-cell.ttt-x { color: #e4574f; }
+.ttt-cell.ttt-o { color: #4f8cff; }
+.ttt-cell.ttt-win {
+  background: linear-gradient(135deg, rgba(79, 140, 255, 0.22), rgba(106, 92, 255, 0.22));
+  border-color: rgba(79, 140, 255, 0.65);
+}
+
+/* ── 提示条 ── */
+.ttt-msg {
+  margin: 14px auto 2px;
+  text-align: center;
+  font-size: 14px;
+  min-height: 1.5em;
+  color: var(--secondary, #888888);
+}
+.ttt-msg.ttt-msg-end { font-weight: 700; font-size: 16px; color: var(--primary, #1f1f1f); }
+.ttt-msg .ttt-again {
+  margin-left: 10px;
+  padding: 5px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: none;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4f8cff, #6a5cff);
+  cursor: pointer;
+}
+.ttt-msg .ttt-again:hover { filter: brightness(1.08); }
+
+/* 小屏 */
+@media (max-width: 520px) {
+  #ttt-root { padding: 14px 12px 10px; }
+  .ttt-score { gap: 6px; font-size: 12px; }
+}

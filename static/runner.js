@@ -1076,7 +1076,8 @@
 
   function openMe(tab) {
     if (helpVisible) return;                          // 玩法说明开着时先看说明
-    var want = (tab === "ach" || tab === "me") ? tab : "shop";
+    /* 2026-10-05 用户要求：个人中心一打开就是「个人」页（不再是商店/成就） */
+    var want = (tab === "shop" || tab === "ach") ? tab : "me";
     if (meTabOpen(want)) return;                      // 已经停在这个页面
     var cur = anyMeTabOpen();
     if (cur) {                                        // 另一个页面正开着 → 是页签切换
@@ -2392,7 +2393,7 @@
       var n = e.target;
       while (n && n !== root) {
         if (n.hasAttribute) {
-          if (n.hasAttribute("data-open-me")) { e.preventDefault(); openMe("shop"); return; }
+          if (n.hasAttribute("data-open-me")) { e.preventDefault(); openMe("me"); return; }
           if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openMe("shop"); return; }
           if (n.hasAttribute("data-open-set")) { e.preventDefault(); openSet(); return; }
         }
