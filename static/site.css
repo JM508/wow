@@ -56,18 +56,9 @@
   margin-bottom: 14px;
 }
 
-.games-card-head .games-sub { margin-left: 0; }   /* 不再被推到最右 */
-
 .games-card-head strong {
   font-size: 20px;
   letter-spacing: 0.02em;
-}
-
-.games-sub {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--secondary, #888888);
-  white-space: nowrap;
 }
 
 .games-row {
@@ -132,7 +123,6 @@
     max-width: none;
     padding: 16px 14px 12px;
   }
-  .games-sub { display: none; }
   .games-name { font-size: 15px; }
 }
 
@@ -208,3 +198,27 @@
 }
 .net-status.is-on { display: block; }
 html.has-net-status .header { top: 34px; }   /* 别盖住站点头部（吸顶导航） */
+
+/* ══ 背景图模式下的文字可读性（2026-10-05 用户反馈：压在背景上的有些文字看不清）══
+   html[data-ag-bg] 时页面底色透明，标题与页脚直接压在背景图上；
+   背景 20 张轮换、明暗都有 —— 压图文字加投影勾边；暗色主题下页脚整体调亮。 */
+html[data-ag-bg] .first-entry h1,
+html[data-ag-bg] .header .logo,
+html[data-ag-bg] .footer,
+html[data-ag-bg] .footer-repo {
+  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5);
+}
+html[data-theme="dark"][data-ag-bg] .first-entry h1,
+html[data-theme="dark"][data-ag-bg] .header .logo,
+html[data-theme="dark"][data-ag-bg] .footer,
+html[data-theme="dark"][data-ag-bg] .footer-repo {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.6);
+  color: #f2f2f2;
+}
+html[data-theme="dark"][data-ag-bg] .footer a,
+html[data-theme="dark"][data-ag-bg] .footer-repo a {
+  color: #ffffff;
+}
+
+/* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
+.games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }

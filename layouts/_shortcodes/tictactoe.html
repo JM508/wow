@@ -1,0 +1,30 @@
+<!-- 井字棋小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
+<link rel="stylesheet" href="/tictactoe.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<div id="ttt-root" aria-label="井字棋">
+  <div class="ttt-bar">
+    <select id="ttt-level" aria-label="难度">
+      <option value="easy" selected>简单</option>
+      <option value="mid">中等</option>
+      <option value="hard">困难</option>
+    </select>
+    <div class="ttt-score" title="本难度的战绩（胜 / 平 / 负）">
+      <span class="ttt-sc ttt-sc-win">胜 <b id="ttt-sc-win">0</b></span>
+      <span class="ttt-sc ttt-sc-draw">平 <b id="ttt-sc-draw">0</b></span>
+      <span class="ttt-sc ttt-sc-lose">负 <b id="ttt-sc-lose">0</b></span>
+    </div>
+    <button type="button" id="ttt-reset" class="ttt-btn" title="清空本难度的战绩">清战绩</button>
+  </div>
+  <div id="ttt-board" role="grid" aria-label="井字棋棋盘，3 行 3 列">
+    <button type="button" class="ttt-cell" role="gridcell" data-i="0" aria-label="第 1 格，第 1 行第 1 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="1" aria-label="第 2 格，第 1 行第 2 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="2" aria-label="第 3 格，第 1 行第 3 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="3" aria-label="第 4 格，第 2 行第 1 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="4" aria-label="第 5 格，第 2 行第 2 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="5" aria-label="第 6 格，第 2 行第 3 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="6" aria-label="第 7 格，第 3 行第 1 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="7" aria-label="第 8 格，第 3 行第 2 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="8" aria-label="第 9 格，第 3 行第 3 列"></button>
+  </div>
+  <p id="ttt-msg" class="ttt-msg" role="status" aria-live="polite">你执 × 先手，点格子落子</p>
+</div>
+<script src="/tictactoe.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
