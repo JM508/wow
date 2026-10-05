@@ -53,5 +53,8 @@
 </div>
 
 <script src="/minesweeper.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+{{/* 云 SDK 必须在 cloud.js 之前：cloud.js 的 build() 依赖 window.WorkBuddyCloud，
+     缺了它 msrank.js 会判定「云服务不可用」而拒绝加载榜单（2026-10-05 用户报障） */}}
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
