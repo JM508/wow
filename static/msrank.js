@@ -93,7 +93,18 @@
   }
 
   function load(mode, page) {
-    if (!ready()) { cur.err = "unavailable"; render(); return; }
+    if (!ready()) {
+      cur.err = "unavailable";
+      /* 两种「不可用」要分开说：真断网 vs 云 SDK 没就绪（引入漏了 / 加载失败）。
+         都报「离线」会把用户支去查网络 —— 2026-10-05 扫雷页漏引 SDK 就是这么被误报的。 */
+      var ie = null;
+      try { ie = (cloud() && cloud().initError) ? cloud().initError() : null; } catch (e) { ie = null; }
+      cur.errMsg = ie
+        ? "云服务组件未加载，暂时看不到排行榜（刷新页面试试；单机玩法不受影响）。"
+        : "离线或云服务不可用，暂时看不到排行榜（离线也能照常玩）。";
+      render(); return;
+    }
+    cur.errMsg = null;
     cur.loading = true; cur.err = null; cur.mode = mode || cur.mode; cur.page = page || 1;
     render();
     top(cur.mode).then(function (r) {
@@ -125,7 +136,7 @@
   /* ═══════════ 渲染 ═══════════ */
   function render() {
     if (statusEl) {
-      if (cur.err === "unavailable") statusEl.textContent = "离线或云服务不可用，暂时看不到排行榜（离线也能照常玩）。";
+      if (cur.err === "unavailable") statusEl.textContent = cur.errMsg || "离线或云服务不可用，暂时看不到排行榜（离线也能照常玩）。";
       else if (cur.err === "error") statusEl.textContent = "排行榜加载失败，稍后重试。";
       else statusEl.textContent = cur.loading ? "加载中…" : "";
       statusEl.className = "ms-rank-status" + (cur.err ? " is-err" : "");
