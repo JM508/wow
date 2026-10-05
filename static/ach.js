@@ -1,8 +1,9 @@
 /* ══════════════════════════════════════════════════════════════
    火柴人快跑 · 成就系统
    ──────────────────────────────────────────────────────────────
-   · 19 个成就，分「入门 / 进阶 / 大师」三档，含 1 个隐藏成就
+   · 19 个成就，含 1 个隐藏成就
      （「达成全部成就」：其余全部解锁时自动触发，解锁前在列表里显示为 ???）
+   · 成就不分档、不显示图标，整块平铺（用户 2026-10-05 要求）
    · 数据存本机浏览器（localStorage: runner-ach）；登录云账号后另外记一份在
      云端（runner_achievements），换设备 / 清缓存都能恢复。没接云服务、
      没登录、或页面没引 cloud.js 时，整条云链路自动失效，只存本机。
@@ -21,12 +22,8 @@
   var MAX_SPEED = 880;     // 与 runner.js 的 CFG.SPEED_MAX 一致（音速冲刺用）
   var KEY = "runner-ach";
 
-  /* ═══════════════ 档位 ═══════════════ */
-  var TIERS = [
-    { id: "novice",      name: "入门", icon: "🌱" },
-    { id: "progressive", name: "进阶", icon: "🚀" },
-    { id: "master",      name: "大师", icon: "👑" }
-  ];
+  /* 档位（入门/进阶/大师）已于 2026-10-05 按需求取消：成就不再分组，
+     列表一整块平铺。成就定义里保留 tier 字段只为兼容旧存档数据，界面不再用。 */
 
   /* ═══════════════ 成就定义 ═══════════════
      test(s) 判定是否达成；prog(s) 给出未解锁时的进度 [当前, 目标, 单位]。
@@ -623,32 +620,20 @@
     }
 
     if (!elList) return;
-    var html = "";
-    for (i = 0; i < TIERS.length; i++) {
-      var t = TIERS[i], got = 0, rows = "";
-      for (j = 0; j < ACHS.length; j++) if (ACHS[j].tier === t.id) {
-        if (data.got[ACHS[j].id]) got++;
-        rows += (ACHS[j].hidden && !data.got[ACHS[j].id])
-          ? hiddenRowHtml()                              // 隐藏成就：解锁前只显示 ？？？
-          : rowHtml(ACHS[j], c);
-      }
-      html += "<section class='ach-group ach-" + t.id + "'>" +
-        "<h4><span class='ach-tier-ico'>" + t.icon + "</span>" + t.name +
-        "<em>" + got + " / " + countTier(t.id) + "</em></h4>" +
-        "<ul class='ach-rows'>" + rows + "</ul></section>";
+    /* 成就已不再分档、不再显示图标（用户 2026-10-05 要求）：整块平铺，
+       进度看上方总进度条，隐藏成就解锁前仍以 ？？？ 占位。 */
+    var rows = "";
+    for (j = 0; j < ACHS.length; j++) {
+      rows += (ACHS[j].hidden && !data.got[ACHS[j].id])
+        ? hiddenRowHtml()
+        : rowHtml(ACHS[j], c);
     }
-    elList.innerHTML = html;
-  }
-
-  function countTier(tier) {
-    var n = 0;
-    for (var i = 0; i < ACHS.length; i++) if (ACHS[i].tier === tier) n++;
-    return n;
+    elList.innerHTML = "<section class='ach-group'><ul class='ach-rows'>" + rows + "</ul></section>";
   }
 
   /* 隐藏成就行：解锁前只显示 ？？？（不给进度、不给名字） */
   function hiddenRowHtml() {
-    return "<li class='ach-row ach-hidden'><span class='ach-ico' aria-hidden='true'>🔒</span>" +
+    return "<li class='ach-row ach-hidden'>" +
       "<span class='ach-txt'><b>？？？</b><em>隐藏成就：解锁其余全部成就后揭晓</em></span>" +
       "<span class='ach-todo'>未解锁</span></li>";
   }
@@ -668,7 +653,6 @@
             "<em class='ach-nums'>" + p[0] + " / " + p[1] + " " + p[2] + "</em></span>";
         })();
     return "<li class='ach-row" + (on ? " is-on" : "") + "'>" +
-      "<span class='ach-ico' aria-hidden='true'>" + (on ? a.icon : "🔒") + "</span>" +
       "<span class='ach-txt'><b>" + esc(a.name) + "</b><em>" + esc(a.desc) + "</em></span>" +
       body + "</li>";
   }
@@ -722,7 +706,6 @@
   /* ═══════════════ 对外接口 ═══════════════ */
   global.RunnerAch = {
     KEYS: { ach: KEY },
-    TIERS: TIERS,
     TOTAL: ACHS.length,
     MAX_SPEED: MAX_SPEED,
     live: live,

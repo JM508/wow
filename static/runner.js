@@ -184,7 +184,7 @@
   var elMeTotal  = document.getElementById("me-ach-total");
   var elMeBar    = document.getElementById("me-bar");
   var elMeBarFill = document.getElementById("me-bar-fill");
-  var elMeTiers  = document.getElementById("me-tiers");
+  var elMeTiers  = null;    /* 旧「三档细分」容器已按需求移除，保留变量兼容旧缓存页面 */
 
   var KEY_BEST = "runner-best";
   var KEY_SCORES = "runner-scores";
@@ -1226,7 +1226,7 @@
     }).then(function () { renderAvatar(); })["catch"](function () {});
   }
 
-  /* ── 成就进度（总进度 + 三档细分） ── */
+  /* ── 成就进度（只有一条总进度：成就已不分档，用户 2026-10-05 要求） ── */
   function renderMeAch() {
     var snap = (Ach && Ach.snapshot) ? Ach.snapshot() : null;
     if (!snap) return;
@@ -1237,19 +1237,6 @@
     if (elMeBar) {
       elMeBar.setAttribute("aria-valuemax", String(total));
       elMeBar.setAttribute("aria-valuenow", String(got));
-    }
-    if (elMeTiers) {
-      var tiers = Ach.TIERS || [], rows = snap.rows || [], html = "";
-      for (var i = 0; i < tiers.length; i++) {
-        var n = 0, m = 0;
-        for (var j = 0; j < rows.length; j++) {
-          if (rows[j].tier === tiers[i].id) { m++; if (rows[j].got) n++; }
-        }
-        html += "<li class='me-tier'><span class='me-tier-ico' aria-hidden='true'>" + escHtml(tiers[i].icon) +
-          "</span><span class='me-tier-name'>" + escHtml(tiers[i].name) + "</span>" +
-          "<span class='me-tier-num'>" + n + "/" + m + "</span></li>";
-      }
-      elMeTiers.innerHTML = html;
     }
   }
 

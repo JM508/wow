@@ -8,8 +8,8 @@
       <option value="hard">高级 30×16 · 99 雷</option>
     </select>
     <div class="ms-stat" title="剩余雷数（总雷数 − 已插旗）">💣 <span id="ms-mines">10</span></div>
-    <button type="button" id="ms-face" title="重新开始">🙂 新游戏</button>
     <div class="ms-stat" title="用时（秒）">⏱ <span id="ms-time">0</span></div>
+    <button type="button" id="ms-rank-open" class="ms-rank-btn" title="云端排行榜：各难度的最快通关用时">排行榜</button>
   </div>
   <div class="ms-bar ms-bar-sub">
     <button type="button" id="ms-flagmode" aria-pressed="false" title="开启后左键点击即插旗（适合手机）">🚩 插旗模式：关</button>
@@ -28,4 +28,30 @@
     <button type="button" id="ms-over-btn" class="ms-over-btn">再来一局</button>
   </div>
 </div>
+
+<!-- ═══ 云端排行榜弹层：初级 / 中级 / 高级 三份榜（用时越短越靠前） ═══ -->
+<div id="ms-rank" class="ms-rank hidden" role="dialog" aria-modal="true" aria-labelledby="ms-rank-title">
+  <div class="ms-rank-box">
+    <div class="ms-rank-head">
+      <strong id="ms-rank-title">扫雷排行榜</strong>
+      <button type="button" class="ms-rank-x" id="ms-rank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
+    </div>
+    <div class="ms-rank-tabs" id="ms-rank-tabs" role="tablist" aria-label="难度">
+      <button type="button" class="ms-rtab is-on" role="tab" aria-selected="true" data-mode="easy">初级 9×9</button>
+      <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="mid">中级 16×16</button>
+      <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="hard">高级 30×16</button>
+    </div>
+    <div class="ms-rank-status" id="ms-rank-status" role="status" aria-live="polite"></div>
+    <ol class="ms-rank-list" id="ms-rank-list" aria-label="排行榜前 100 名，每页 10 名"></ol>
+    <nav class="ms-rank-pager" id="ms-rank-pager" aria-label="排行榜分页"></nav>
+    <div class="ms-rank-mine" id="ms-rank-mine"></div>
+    <p class="ms-rank-foot">
+      榜上只收<b>通关</b>的成绩，按用时从快到慢排（同名只留最快的一条）；
+      未登录也能上榜，昵称是<b>访客 N</b>；登录后可以用自己的昵称，并且成绩跟着账号走。
+    </p>
+  </div>
+</div>
+
 <script src="/minesweeper.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

@@ -13,30 +13,50 @@
 'use strict';
 
 /* 从注册 URL（/sw.js?v=xxx）里取版本号，取不到就用时间戳兜底 */
-var SW_VERSION = 'sw-' + (self.location.search.split('v=')[1] || 'dev').split('&')[0];
+var VER = (self.location.search.split('v=')[1] || 'dev').split('&')[0];
+var SW_VERSION = 'sw-' + VER;
 var CACHE = 'wow-' + SW_VERSION;
 
-/* 预缓存核心清单：两个小游戏离线可玩所需的最小集合（≈1MB） */
+/* 页面里的 JS / CSS 都是带 ?v=<assetVer> 引用的（配合 _headers 的一年强缓存），
+   预缓存必须用同样带版本号的 URL —— 否则 caches.match('/runner.js?v=xx')
+   匹配不到预缓存的 '/runner.js'，断网时脚本全取不到，页面打开却玩不了。
+   发新版 = assetVer 变 = 新注册 URL = 新缓存名，旧缓存整体作废，不会串版本。 */
+function ver(p) {
+  return /\.(js|css)$/.test(p) ? p + '?v=' + VER : p;
+}
+
+/* 预缓存核心清单：两个小游戏离线可玩所需的最小集合 */
 var PRECACHE = [
   '/', '/games/', '/minesweeper/', '/runner/', '/account/',
-  '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css',
+  '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css', '/msrank.js',
   '/runner.js', '/runner.css', '/skins.js', '/shop.js', '/shop.css',
   '/ach.js', '/ach.css', '/rank.js', '/rank.css', '/cloud.js',
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
+  '/net-status.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
-  '/img/hoshino-duck3.webp', '/img/hoshino-runner3.webp',
-  '/img/pixelrun-duck.webp', '/img/pixelrun-sheet.webp',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
   '/img/seia-duck.webp', '/img/seia-runner.webp',
   '/img/sprite-bottle.webp',
   '/img/zhang-duck.webp', '/img/zhang-runner.webp',
   '/favicon.ico'
-];
+].map(ver);
 
 /* 版本化资源（带 ?v= 引用的）走缓存优先；判断依据：URL 带 v= 参数 */
 function isVersioned(url) {
   return /[?&]v=/.test(url.search);
 }
+
+/* 最近一次页面导航是不是靠缓存兜住的（= 真的没网）。
+   navigator.onLine 在「有网卡但没连通」以及部分浏览器下会误报在线，
+   页面可以发消息来问 SW 一句实话（见 net-status.js）。 */
+var lastNavOffline = false;
+
+self.addEventListener('message', function (e) {
+  var d = e.data || {};
+  if (d.type === 'net:probe' && e.ports && e.ports[0]) {
+    e.ports[0].postMessage({ offline: lastNavOffline });
+  }
+});
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
@@ -74,10 +94,12 @@ self.addEventListener('fetch', function (e) {
       (req.headers.get('accept') || '').indexOf('text/html') !== -1) {
     e.respondWith(
       fetch(req).then(function (res) {
+        lastNavOffline = false;
         var copy = res.clone();
         caches.open(CACHE).then(function (c) { c.put(req, copy); });
         return res;
       }).catch(function () {
+        lastNavOffline = true;                 // 记住：这次是断网靠缓存撑住的
         return caches.match(req, { ignoreSearch: true }).then(function (r) {
           return r || caches.match('/');
         });
@@ -86,7 +108,8 @@ self.addEventListener('fetch', function (e) {
     return;
   }
 
-  /* ② 版本化静态资源：缓存优先（URL 带 ?v=，内容不可变） */
+  /* 版本化静态资源：缓存优先（URL 带 ?v=，内容不可变）；
+     预缓存里存的就是带版本的 URL，断网时能直接命中。 */
   if (isVersioned(url)) {
     e.respondWith(
       caches.match(req).then(function (r) {
@@ -95,7 +118,7 @@ self.addEventListener('fetch', function (e) {
           caches.open(CACHE).then(function (c) { c.put(req, copy); });
           return res;
         });
-      })
+      }).catch(function () { return caches.match(req, { ignoreSearch: true }); })
     );
     return;
   }

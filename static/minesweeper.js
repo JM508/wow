@@ -19,7 +19,6 @@
   var levelEl = document.getElementById("ms-level");
   var minesEl = document.getElementById("ms-mines");
   var timeEl  = document.getElementById("ms-time");
-  var faceEl  = document.getElementById("ms-face");
   var flagBtn = document.getElementById("ms-flagmode");
   var msgEl   = document.getElementById("ms-msg");
   var overEl  = document.getElementById("ms-over");          // 失败弹窗
@@ -80,7 +79,6 @@
 
     minesEl.textContent = String(S.mines);
     timeEl.textContent = "0";
-    faceEl.textContent = "🙂 新游戏";
     msgEl.textContent = "";
     msgEl.className = "ms-msg";
   }
@@ -202,7 +200,6 @@
         cell.el.classList.add("wrongflag");
       }
     });
-    faceEl.textContent = "😵 再来一局";
     msgEl.textContent = "💥 踩到地雷了！坚持了 " + S.seconds + " 秒。";
     msgEl.className = "ms-msg lose";
     showOver(S.seconds);            // 失败弹窗：自动弹出，只有「再来一局」能关
@@ -232,13 +229,30 @@
       });
       S.flags = S.mines;      // 胜利时剩余雷全部自动插旗，计数同步归零
       updateMineCounter();
-      faceEl.textContent = "😎 太棒了";
       msgEl.textContent = "🎉 扫雷成功！用时 " + S.seconds + " 秒。";
       msgEl.className = "ms-msg win";
+      /* 通关成绩上云榜：只有通关才提交（用时越短越靠前）。
+         MsRank 尚未加载（离线 / 老缓存页面）时静默跳过，不影响单机玩法。 */
+      var again = document.createElement("button");
+      again.type = "button";
+      again.className = "ms-again";
+      again.textContent = "再来一局";
+      again.addEventListener("click", newGame);
+      msgEl.appendChild(again);
+      var mode = levelEl.value, sec = S.seconds;
+      if (window.MsRank) {
+        window.MsRank.submit(mode, sec).then(function (r) {
+          if (r && r.data && r.data.length) {
+            var tip = document.createElement("span");
+            tip.className = "ms-msg-tip";
+            tip.textContent = "成绩已上榜（" + window.MsRank.modeLabel(mode) + "）";
+            msgEl.appendChild(tip);
+          }
+        }).catch(function () {});
+      }
     }
   }
 
-  faceEl.addEventListener("click", newGame);
   levelEl.addEventListener("change", newGame);
   if (overBtnEl) overBtnEl.addEventListener("click", newGame);
   flagBtn.addEventListener("click", function () {

@@ -1,5 +1,5 @@
 +++
-date = '2026-10-04T19:10:00+08:00'
+date = '2026-10-05T19:30:00+08:00'
 draft = false
 title = '游戏合集'
 description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑，点开即玩。'
@@ -14,7 +14,7 @@ backLabel = '返回首页'
 +++
 
 <div class="games-card" aria-label="游戏合集">
-<div class="games-card-head"><span class="games-ico">🎮</span><strong>游戏合集</strong><span class="games-sub">点击进入</span></div>
-<a class="games-row games-ms" href="/minesweeper/"><span class="games-emoji">💣</span><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-10-01</span></span><span class="games-go">点击进入 →</span></a>
-<a class="games-row games-run" href="/runner/"><span class="games-emoji">🏃</span><span class="games-info"><span class="games-name">火柴人快跑</span><span class="games-meta">更新：2026-10-04</span></span><span class="games-go">点击进入 →</span></a>
+<div class="games-card-head"><strong>游戏合集</strong><span class="games-sub">点击进入</span></div>
+<a class="games-row games-ms" href="/minesweeper/"><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-10-05</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-run" href="/runner/"><span class="games-info"><span class="games-name">火柴人快跑</span><span class="games-meta">更新：2026-10-05</span></span><span class="games-go">点击进入 →</span></a>
 </div>

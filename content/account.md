@@ -5,8 +5,10 @@ title = '账号与云存档'
 description = '用邮箱注册 / 登录 Wow 娱乐小站账号：金币与皮肤云存档跨设备同步，跑酷成绩自动上榜。'
 # 本页含登录表单，不参与搜索引擎收录：head 输出 noindex,nofollow，同时不进网站地图
 robotsNoIndex = true
+# 页面上不显示大标题 / 描述行 / 日期阅读时长 meta（title/description 仍用于 SEO）
+hideTitle = true
+hideDescription = true
+hideMeta = true
 +++
-
-用邮箱注册或登录后，你在《火柴人快跑》里攒下的金币和买到的皮肤会存到云端，换设备、换浏览器都不会丢；每局跑完的成绩也会自动挂到云端排行榜上，和别人的纪录比一比。
 
 {{< account >}}

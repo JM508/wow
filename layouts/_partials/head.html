@@ -205,8 +205,10 @@
 {{- /* Service Worker（离线可玩）：版本号跟随 assetVer，发新版自动换缓存 */}}
 {{- with site.Params.assetVer }}
 <script defer src="/sw-reg.js?v={{ . }}"></script>
+<script defer src="/net-status.js?v={{ . }}"></script>
 {{- else }}
 <script defer src="/sw-reg.js"></script>
+<script defer src="/net-status.js"></script>
 {{- end }}
 
 {{- partial "extend_head.html" . -}}

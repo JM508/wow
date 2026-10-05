@@ -58,18 +58,6 @@
 
 .games-card-head .games-sub { margin-left: 0; }   /* 不再被推到最右 */
 
-.games-ico {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  font-size: 20px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #e8f6ee, #d3ecdd);
-  border: 1px solid rgba(64, 145, 108, 0.25);
-}
-
 .games-card-head strong {
   font-size: 20px;
   letter-spacing: 0.02em;
@@ -102,20 +90,6 @@
 }
 
 .games-row:hover .games-go { color: #ffffff; }
-
-.games-emoji {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
-  font-size: 20px;
-  border-radius: 10px;
-  flex: none;
-}
-
-.games-ms .games-emoji { background: linear-gradient(135deg, #ffe9ec, #ffd6db); }
-.games-run .games-emoji { background: linear-gradient(135deg, #e8f1ff, #d8e6ff); }
 
 .games-name {
   font-size: 16px;
@@ -206,3 +180,31 @@
     max-width: min(1180px, 94vw);
   }
 }
+
+/* ══ 页脚：页面自带的开源仓库地址（写在 content front matter 的 footerRepo，渲染在 © 行正上方） ══ */
+.footer-repo {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.footer-repo a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ══ 顶部「无网络」提示条（net-status.js 在离线时挂上去） ══ */
+.net-status {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+  padding: 8px 14px;
+  padding-top: max(8px, env(safe-area-inset-top));
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b2200;
+  background: #ffd98a;
+  border-bottom: 1px solid #e9b949;
+}
+.net-status.is-on { display: block; }
+html.has-net-status .header { top: 34px; }   /* 别盖住站点头部（吸顶导航） */

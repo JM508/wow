@@ -46,7 +46,7 @@
   border-radius: 8px;
 }
 
-#ms-face, #ms-flagmode {
+#ms-flagmode {
   padding: 7px 14px;
   font-size: 13px;
   font-weight: 600;
@@ -57,7 +57,7 @@
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.2s ease;
 }
-#ms-face:active, #ms-flagmode:active { transform: scale(0.96); }
+#ms-flagmode:active { transform: scale(0.96); }
 
 #ms-flagmode[aria-pressed="true"] {
   color: #ffffff;
@@ -206,4 +206,151 @@
 .ms-over-btn:focus-visible { outline: 2px solid var(--secondary, #888888); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ms-over-box { animation: none; }
+}
+
+/* ═══ 排行榜入口按钮（顶部工具条右侧） ═══ */
+#ms-rank-open {
+  margin-left: auto;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #1f1f1f);
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.2s ease;
+}
+#ms-rank-open:hover { box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.5); }
+#ms-rank-open:active { transform: scale(0.96); }
+
+/* 通关后的「再来一局」按钮（页面顶部的「新游戏」按钮按需求去掉了） */
+.ms-again {
+  margin-left: 10px;
+  padding: 5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary, #1f1f1f);
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ms-again:active { transform: scale(0.96); }
+.ms-msg-tip {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 3px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0b6b3a;
+  background: #dcfae6;
+  border-radius: 999px;
+}
+
+/* ═══ 云端排行榜弹层 ═══ */
+.ms-rank {
+  position: fixed;
+  inset: 0;
+  z-index: 220;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+  background: rgba(8, 12, 20, 0.62);
+}
+.ms-rank.hidden { display: none; }
+.ms-rank-box {
+  width: 100%;
+  max-width: 560px;
+  max-height: 86vh;
+  overflow: auto;
+  padding: 16px 18px 14px;
+  background: var(--entry, #ffffff);
+  color: var(--primary, #1f1f1f);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.6);
+}
+.ms-rank-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ms-rank-head strong { font-size: 17px; }
+.ms-rank-x {
+  width: 30px; height: 30px;
+  font-size: 14px;
+  color: var(--secondary, #5b6470);
+  background: transparent;
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ms-rank-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.ms-rtab {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--secondary, #5b6470);
+  background: transparent;
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.ms-rtab.is-on { color: #ffffff; background: #4f8cff; border-color: #4f8cff; }
+.ms-rank-status { min-height: 18px; font-size: 12px; color: var(--secondary, #5b6470); }
+.ms-rank-status.is-err { color: #b42318; }
+.ms-rank-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.ms-rank-row {
+  display: grid;
+  grid-template-columns: 30px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border, #eef1f5);
+  font-size: 14px;
+}
+.ms-rank-row:last-child { border-bottom: none; }
+.ms-rank-no { font-variant-numeric: tabular-nums; color: var(--secondary, #5b6470); text-align: center; }
+.ms-rank-no.is-top { color: #d97706; }
+.ms-rank-name {
+  display: flex; align-items: center; gap: 6px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ms-rank-rg {
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--secondary, #5b6470);
+  background: rgba(91, 100, 112, 0.14);
+  border-radius: 999px;
+}
+.ms-rank-sec { font-weight: 700; font-variant-numeric: tabular-nums; }
+.ms-rank-day { font-size: 12px; color: var(--secondary, #5b6470); }
+.ms-rank-empty { padding: 14px 4px; color: var(--secondary, #5b6470); }
+.ms-rank-pager { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.ms-rank-pg {
+  min-width: 30px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--secondary, #5b6470);
+  background: transparent;
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ms-rank-pg.is-on { color: #ffffff; background: #4f8cff; border-color: #4f8cff; }
+.ms-rank-mine { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; font-size: 13px; }
+.ms-rank-mine-t b { font-variant-numeric: tabular-nums; }
+.ms-rank-mine-d { color: var(--secondary, #5b6470); font-size: 12px; }
+.ms-rank-foot { margin: 12px 0 0; font-size: 12px; line-height: 1.7; color: var(--secondary, #5b6470); }
+
+@media (max-width: 520px) {
+  .ms-rank-box { padding: 14px 12px; max-height: 90vh; }
+  .ms-rank-row { grid-template-columns: 26px 1fr auto; font-size: 13px; }
+  .ms-rank-day { display: none; }
+  #ms-rank-open { margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ms-rank-box { transition: none; }
 }
