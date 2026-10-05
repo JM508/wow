@@ -56,6 +56,11 @@
   var AVATAR_KEY    = "runner-avatar";       // 我的头像本地缓存（data URL）
   var AVATAR_SYNC_KEY = "runner-avatar-synced"; // 上次成功同步到云端的头像值（没同步成功就下次补）
   var AVATAR_MAX    = 16384;              // 头像 data URL 上限（与 runner_scores.avatar 的 CHECK 一致）
+  var REGION_KEY    = "runner-region";    // IP 属地会话缓存（sessionStorage：关页面即忘，不当长期追踪用）
+  var REGION_MAX    = 32;                 // 属地字符串上限（与 runner_scores.region 的 CHECK 一致）
+  /* CF 边缘属地端点（见 functions/_middleware.js）：只返回省级/国家级名称，绝不返回 IP。
+     镜像域页面跨域取它（_headers/meta 的 connect-src 已放行本域）；主站同源访问。 */
+  var REGION_SRC    = "https://wow-d9s.pages.dev/.ip";
 
   /* ═══════════ 客户端（只建一次） ═══════════ */
   var client = null;
@@ -230,14 +235,39 @@
       .select("coins, owned, skin, coin_skin, owner_name, updated_at");
   }
 
+  /* ── IP 属地 ──
+     排行榜展示「IP 属地」用：CF 边缘根据来源 IP 判到省级（国内）/ 国家（海外），
+     客户端拿不到 IP 本身，也没有任何 IP 出库。取不到（超时/被拦/离线）就静默跳过，
+     成绩照常提交、榜上少一个属地小字而已。sessionStorage 会话级缓存：
+     同一访客同一会话固定属地，与「访客 N」编号同生命周期。 */
+  function regionGet() {
+    try { return sessionStorage.getItem(REGION_KEY) || ""; } catch (e) { return ""; }
+  }
+  function regionStore(v) {
+    var s = String(v || "").slice(0, REGION_MAX);
+    if (s) { try { sessionStorage.setItem(REGION_KEY, s); } catch (e) {} }
+    return s;
+  }
+  function regionFetch() {
+    var hit = regionGet();
+    if (hit) return Promise.resolve({ data: hit, error: null });
+    if (typeof global.fetch !== "function") return Promise.resolve({ data: null, error: null });
+    return fetch(REGION_SRC).then(function (r) {
+      if (!r.ok) return { data: null, error: null };
+      return r.json().then(function (v) {
+        return { data: regionStore(v && v.region), error: null };
+      });
+    }).catch(function () { return { data: null, error: null }; });
+  }
+
   /* ═══════════ 排行榜 ═══════════ */
   function scoreTop(limit) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
     /* 只取展示需要的字段：owner_id / device_id 这类身份标识不下发给所有访客。
-       avatar 是「公开的脸」，和昵称一样属于展示信息，所以照发不误。 */
+       avatar 是「公开的脸」、region 是「公开的属地」，和昵称一样属于展示信息，照发不误。 */
     return d.from(TABLE_SCORES)
-      .select("nickname, avatar, score, coins, distance, created_at")
+      .select("nickname, avatar, region, score, coins, distance, created_at")
       .order("score", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(limit || LEADER_LIMIT);
@@ -315,6 +345,10 @@
       var av = entry.avatar ? String(entry.avatar) : avatarGet();
       if (av && av.length <= AVATAR_MAX && av.indexOf("data:image/") === 0) row.avatar = av;
     }
+    /* IP 属地：提前在初始化时预取、此处只读缓存，绝不阻塞提交。
+       没取到（离线 / 超时 / 旧浏览器）就不带这个字段，榜上该行不显示属地。 */
+    var rg = regionGet();
+    if (rg && rg.length <= REGION_MAX) row.region = rg;
     /* 访客模式：未登录也能上传，但昵称必须是「访客 N」——
        服务端 RLS 只放行这种名字（匿名身份其余一律 403），客户端不落本地昵称。
        同时带上本机 device_id：之后登录时可以凭它把这些访客行过户到账号名下。 */
@@ -729,6 +763,9 @@
   }
 
   /* ═══════════ 对外接口 ═══════════ */
+  /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待 */
+  try { regionFetch(); } catch (e) {}
+
   global.WowCloud = {
     PUBLIC_CONFIG: PUBLIC_CONFIG,
     /* 实际使用的数据面地址 / 是否走的同源代理（调试与测试用） */
@@ -775,7 +812,10 @@
       nameTaken: scoreNameTaken,
       guestName: guestName,
       claimGuest: claimGuestScores,
-      deviceId: deviceId
+      deviceId: deviceId,
+      /* IP 属地：get 读会话缓存（同步）、fetch 联网取一次（测试与手动补取用） */
+      region: regionGet,
+      fetchRegion: regionFetch
     },
     /* 我的头像：本地缓存 + 云端 runner_scores.avatar（公开列，排行榜读它） */
     avatar: {

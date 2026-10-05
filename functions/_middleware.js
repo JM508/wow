@@ -71,9 +71,154 @@ function deny(reason) {
   );
 }
 
+/* ══════════════════════════════════════════════════════════════
+   /.ip —— 排行榜「IP 属地」数据端点（只给省级/国家级，绝不返回 IP 本身）
+   ──────────────────────────────────────────────────────────────
+   数据来自 Cloudflare 边缘自带的 request.cf（客户端无法伪造）：
+   中国大陆访客 → 省级行政区中文名；海外访客 → 国家/地区中文名。
+   镜像域页面（connect-src 允许）会跨域 GET 本端点，所以带精确 Origin 白名单的 CORS。
+   ══════════════════════════════════════════════════════════════ */
+
+/* 中国省级行政区：CF 的 region/regionCode/city 里常见的中英名 → 属地名。
+   注意：港/澳/台按规范冠以「中国」。 */
+const CN_REGIONS = [
+  ["北京", "beijing", "北京", "bj"],
+  ["天津", "tianjin", "天津", "tj"],
+  ["上海", "shanghai", "上海", "sh"],
+  ["重庆", "chongqing", "重庆", "cq"],
+  ["河北", "hebei", "河北", "he"],
+  ["山西", "shanxi", "山西", "sx"],
+  ["辽宁", "liaoning", "辽宁", "ln"],
+  ["吉林", "jilin", "吉林", "jl"],
+  ["黑龙江", "heilongjiang", "黑龙江", "hl"],
+  ["江苏", "jiangsu", "江苏", "js"],
+  ["浙江", "zhejiang", "浙江", "zj"],
+  ["安徽", "anhui", "安徽", "ah"],
+  ["福建", "fujian", "福建", "fj"],
+  ["江西", "jiangxi", "江西", "jx"],
+  ["山东", "shandong", "山东", "sd"],
+  ["河南", "henan", "河南", "ha"],
+  ["湖北", "hubei", "湖北", "hb"],
+  ["湖南", "hunan", "湖南", "hn"],
+  ["广东", "guangdong", "广东", "gd"],
+  ["海南", "hainan", "海南", "hi"],
+  ["四川", "sichuan", "四川", "sc"],
+  ["贵州", "guizhou", "贵州", "gz"],
+  ["云南", "yunnan", "云南", "yn"],
+  ["陕西", "shaanxi", "陕西", "sn"],
+  ["甘肃", "gansu", "甘肃", "gs"],
+  ["青海", "qinghai", "青海", "qh"],
+  ["广西", "guangxi", "广西", "gx"],
+  ["内蒙古", "neimenggu", "inner mongolia", "内蒙古", "nm"],
+  ["宁夏", "ningxia", "宁夏", "nx"],
+  ["新疆", "xinjiang", "新疆", "xj"],
+  ["西藏", "xizang", "tibet", "西藏", "xz"],
+  ["中国香港", "hong kong", "香港", "hk"],
+  ["中国澳门", "macau", "macao", "澳门", "mo"],
+  ["中国台湾", "taiwan", "台湾", "tw"]
+];
+
+/* 常见海外国家/地区 ISO 码 → 中文名；表外一律「海外」 */
+const COUNTRY_ZH = {
+  US: "美国", JP: "日本", KR: "韩国", SG: "新加坡", MY: "马来西亚",
+  TH: "泰国", VN: "越南", PH: "菲律宾", ID: "印度尼西亚", IN: "印度",
+  GB: "英国", FR: "法国", DE: "德国", IT: "意大利", ES: "西班牙",
+  NL: "荷兰", PT: "葡萄牙", IE: "爱尔兰", AT: "奥地利", CH: "瑞士",
+  SE: "瑞典", NO: "挪威", DK: "丹麦", FI: "芬兰", PL: "波兰",
+  CZ: "捷克", HU: "匈牙利", GR: "希腊", RU: "俄罗斯", UA: "乌克兰",
+  TR: "土耳其", IL: "以色列", AE: "阿联酋", SA: "沙特阿拉伯",
+  CA: "加拿大", MX: "墨西哥", BR: "巴西", AR: "阿根廷",
+  AU: "澳大利亚", NZ: "新西兰", ZA: "南非"
+};
+
+function cnRegionName(cf) {
+  const candidates = [cf.region, cf.regionCode, cf.city];
+  for (let i = 0; i < CN_REGIONS.length; i++) {
+    const aliases = CN_REGIONS[i];
+    for (let j = 0; j < candidates.length; j++) {
+      const v = candidates[j];
+      if (!v) continue;
+      const lv = String(v).toLowerCase();
+      for (let k = 1; k < aliases.length; k++) {
+        if (lv === aliases[k] || lv.indexOf(aliases[k]) === 0) return aliases[0];
+      }
+    }
+  }
+  /* 兜底：CF 有时只给 city，用主要城市名映射 */
+  const lv = String(cf.city || "").toLowerCase();
+  if (lv) {
+    for (let i = 0; i < CN_CITIES.length; i++) {
+      if (lv.indexOf(CN_CITIES[i][1]) === 0) return CN_CITIES[i][0];
+    }
+  }
+  return null;
+}
+
+/* 主要城市 → 省级行政区（拼音小写前缀匹配） */
+const CN_CITIES = [
+  ["广东", "guangzhou"], ["广东", "shenzhen"], ["广东", "dongguan"], ["广东", "foshan"],
+  ["江苏", "nanjing"], ["江苏", "suzhou"], ["江苏", "wuxi"], ["江苏", "changzhou"],
+  ["浙江", "hangzhou"], ["浙江", "ningbo"], ["浙江", "wenzhou"],
+  ["山东", "jinan"], ["山东", "qingdao"], ["山东", "yantai"],
+  ["河南", "zhengzhou"], ["河南", "luoyang"],
+  ["湖北", "wuhan"], ["湖北", "yichang"],
+  ["湖南", "changsha"], ["湖南", "zhuzhou"],
+  ["四川", "chengdu"], ["四川", "mianyang"],
+  ["福建", "fuzhou"], ["福建", "xiamen"], ["福建", "quanzhou"],
+  ["安徽", "hefei"], ["河北", "shijiazhuang"], ["河北", "tangshan"],
+  ["山西", "taiyuan"], ["江西", "nanchang"],
+  ["辽宁", "shenyang"], ["辽宁", "dalian"],
+  ["吉林", "changchun"], ["黑龙江", "haerbin"], ["黑龙江", "harbin"],
+  ["陕西", "xian"], ["陕西", "xianyang"],
+  ["甘肃", "lanzhou"], ["贵州", "guiyang"], ["云南", "kunming"],
+  ["广西", "nanning"], ["海南", "haikou"], ["海南", "sanya"],
+  ["新疆", "wulumuqi"], ["新疆", "urumqi"], ["内蒙古", "huhehaote"],
+  ["内蒙古", "hohhot"], ["宁夏", "yinchuan"], ["青海", "xining"], ["西藏", "lhasa"]
+];
+
+/* 属地字符串（≤32 字，与库约束一致）；取不到就 null，前端静默跳过 */
+function regionOf(request) {
+  const cf = request.cf;
+  if (!cf) return null;
+  const country = cf.country || null;
+  if (country === "CN") return cnRegionName(cf) || "中国";
+  if (country === "HK") return "中国香港";
+  if (country === "MO") return "中国澳门";
+  if (country === "TW") return "中国台湾";
+  if (country && COUNTRY_ZH[country]) return COUNTRY_ZH[country];
+  if (country) return "海外";
+  return null;
+}
+
+/* /.ip 只允许本站页面（same-origin）与镜像域页面（白名单 Origin）读取 */
+function ipInfo(request, url) {
+  const self = url.origin;
+  const allowOrigin = ["https://wow-blog.app.workbuddy.host"];
+  const origin = request.headers.get("Origin");
+  const site = request.headers.get("Sec-Fetch-Site");
+
+  const sameOrigin = (site && site === "same-origin") || (!origin && !site);
+  const mirrorOrigin = origin && allowOrigin.indexOf(origin) !== -1;
+  if (!sameOrigin && !mirrorOrigin) return deny("cross-site request rejected");
+
+  const region = regionOf(request);
+  const headers = {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store"
+  };
+  if (origin && allowOrigin.indexOf(origin) !== -1) {
+    headers["access-control-allow-origin"] = origin;
+    headers.vary = "Origin";
+  }
+  return new Response(JSON.stringify({ region: region }), { headers });
+}
+
 export async function onRequest(context) {
   const { request, next } = context;
   const url = new URL(request.url);
+
+  /* 排行榜 IP 属地端点：先于云代理短路处理 */
+  if (url.pathname === "/.ip") return ipInfo(request, url);
 
   /* 非云接口请求原样交给静态资源，零影响 */
   if (!isCloudPath(url.pathname)) return next();

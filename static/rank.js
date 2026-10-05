@@ -110,10 +110,13 @@
       var r = slice[i];
       var no = start + i + 1;
       var mine = mineSet && mineSet[r.nickname];
+      /* IP 属地（省级/国家级，来自提交成绩时的边缘判定；老行/取不到时不显示） */
+      var rg = r && r.region ? String(r.region).slice(0, 32) : "";
       html += "<li class='rank-row" + (mine ? " is-me" : "") + "'>" +
         "<b class='rank-no " + (no <= 3 ? "rank-top" + no : "") + "'>" + no + "</b>" +
         avatarHtml(r) +
-        "<span class='rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) + "</span>" +
+        "<span class='rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) +
+          (rg ? " <small class='rank-rg'>IP " + esc(rg) + "</small>" : "") + "</span>" +
         "<span class='rank-score'>" + (Number(r.score) || 0) + "</span>" +
         "<span class='rank-day'>" + esc(fmtDay(r.created_at)) + "</span>" +
         "</li>";

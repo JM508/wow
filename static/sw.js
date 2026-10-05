@@ -66,6 +66,7 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;      // 只管同源
   if (url.pathname.indexOf('/.cloud') === 0) return;    // 云网关直连，绝不缓存
+  if (url.pathname === '/.ip') return;                  // IP 属地端点直连（按访客实时判定，不缓存）
   if (url.pathname === '/server.js') return;            // 镜像自用文件，无意义
 
   /* ① 页面导航：网络优先，失败回退缓存（离线可玩的关键） */

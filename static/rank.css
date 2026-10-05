@@ -204,6 +204,21 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* ── IP 属地小字（昵称右侧；老成绩 / 取不到属地时不渲染） ── */
+.rank-rg {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 16px;
+  vertical-align: 1px;
+  color: var(--secondary, #5b6470);
+  background: rgba(120, 130, 145, 0.14);          /* 老浏览器兜底 */
+  background: color-mix(in srgb, var(--secondary, #5b6470) 14%, transparent);
+}
 .rank-score {
   font-weight: 800;
   color: var(--rank-gold);

@@ -11,7 +11,7 @@
         meta CSP 只约束「其后解析的内容」，放这里才能拦住 head/footer 的内联脚本，
         与 pages.dev 行为一致（内联被拦 → static/theme.js 的 CSP 探测接管）。
      ⚠️ 改动 static/_headers 的 CSP 时，这里必须同步改，否则两端行为漂移。 */}}
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host https://wow-d9s.pages.dev; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 {{- if hugo.IsProduction | or (eq site.Params.env "production") | and (ne .Params.robotsNoIndex true) }}
