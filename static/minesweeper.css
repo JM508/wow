@@ -151,3 +151,59 @@
 }
 .ms-msg.win { color: #2e7d32; }
 .ms-msg.lose { color: #c62828; }
+
+/* ═══ 失败弹窗：踩雷时自动弹出 ═══ */
+.ms-over {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.ms-over.hidden { display: none; }
+.ms-over-box {
+  max-width: min(340px, 100%);
+  padding: 26px 30px 24px;
+  border-radius: 14px;
+  text-align: center;
+  background: var(--theme, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.5);
+  animation: ms-over-in 0.16s ease-out;
+}
+@keyframes ms-over-in {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.ms-over-ico { margin: 0 0 6px; font-size: 34px; line-height: 1; }
+.ms-over-t {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 800;
+  color: #c62828;
+}
+[data-theme="dark"] .ms-over-t { color: #ef7a7a; }
+.ms-over-s {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: var(--secondary, #888888);
+}
+.ms-over-btn {
+  min-width: 132px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: var(--primary, #4f8cff);
+}
+.ms-over-btn:hover { filter: brightness(1.08); }
+.ms-over-btn:focus-visible { outline: 2px solid var(--secondary, #888888); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .ms-over-box { animation: none; }
+}

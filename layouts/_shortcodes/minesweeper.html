@@ -18,4 +18,14 @@
   <div id="ms-board" role="grid" aria-label="雷区"></div>
   <p id="ms-msg" class="ms-msg"></p>
 </div>
+
+<!-- ═══ 失败弹窗：踩雷时自动弹出（用户 2026-10-05 要求） ═══ -->
+<div id="ms-over" class="ms-over hidden" role="alertdialog" aria-modal="true" aria-labelledby="ms-over-t" aria-describedby="ms-over-s">
+  <div class="ms-over-box">
+    <p class="ms-over-ico" aria-hidden="true">💥</p>
+    <p class="ms-over-t" id="ms-over-t">你碰到炸弹了</p>
+    <p class="ms-over-s" id="ms-over-s"></p>
+    <button type="button" id="ms-over-btn" class="ms-over-btn">再来一局</button>
+  </div>
+</div>
 <script src="/minesweeper.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

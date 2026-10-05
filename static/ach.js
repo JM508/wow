@@ -1,7 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
    火柴人快跑 · 成就系统
    ──────────────────────────────────────────────────────────────
-   · 18 个成就，分「入门 / 进阶 / 大师」三档
+   · 19 个成就，分「入门 / 进阶 / 大师」三档，含 1 个隐藏成就
+     （「达成全部成就」：其余全部解锁时自动触发，解锁前在列表里显示为 ???）
    · 数据存本机浏览器（localStorage: runner-ach）；登录云账号后另外记一份在
      云端（runner_achievements），换设备 / 清缓存都能恢复。没接云服务、
      没登录、或页面没引 cloud.js 时，整条云链路自动失效，只存本机。
@@ -145,7 +146,17 @@
       desc: "集齐全部火柴人皮肤",
       live: false,
       test: function (s) { return s.skinsTotal > 0 && s.skins >= s.skinsTotal; },
-      prog: function (s) { return [Math.min(s.skins, s.skinsTotal), s.skinsTotal, "款"]; } }
+      prog: function (s) { return [Math.min(s.skins, s.skinsTotal), s.skinsTotal, "款"]; } },
+
+    /* ─────────── 隐藏成就 ───────────
+       解锁前不进常规判定（test 恒 false），由 evaluate 里的特殊分支触发：
+       其余全部成就都解锁的那一刻自动达成。 */
+    { id: "all_done", tier: "master", icon: "🏆", name: "达成全部成就",
+      desc: "解锁其余全部成就（隐藏成就）",
+      hidden: true,
+      live: false,
+      test: function () { return false; },
+      prog: function () { return null; } }
   ];
 
   function best() {
@@ -452,14 +463,24 @@
     for (i = 0; i < ACHS.length; i++) {
       var a = ACHS[i];
       if (data.got[a.id]) continue;
+      if (a.hidden) continue;                  // 隐藏成就走下面的特殊分支
       if (!all && !a.live) continue;
       var ok = false;
       try { ok = !!a.test(c); } catch (e) { ok = false; }
       if (ok) out.push(a.id);
     }
     for (i = 0; i < out.length; i++) unlock(out[i], true);
+    /* 隐藏成就「达成全部成就」：其余全部解锁的那一刻自动达成 */
+    var gotHidden = false;
+    if (!data.got.all_done && unlockedCount() >= ACHS.length - 1) {
+      unlock("all_done", true);
+      out.push("all_done");
+      gotHidden = true;
+    }
     if (out.length) {
-      if (out.length === 1) {
+      if (gotHidden) {
+        say("🏆 隐藏成就达成：「达成全部成就」！" + (out.length > 1 ? "（另解锁 " + (out.length - 1) + " 个）" : ""));
+      } else if (out.length === 1) {
         var d = def(out[0]);
         say("🏅 成就解锁：「" + d.name + "」");
       } else {
@@ -579,13 +600,12 @@
     return "<p class='ach-cloud'>☁️ 已登录，成就会同步到云端账号</p>";
   }
 
-  /* ═══════════════ 徽章（工具条按钮上的 n/18） ═══════════════ */
+  /* ═══════════════ 徽标（按钮不再显示 n/N，只保留解锁瞬间闪一下） ═══════════════ */
   function refreshBadge() {
     if (!btnOpen) return;
-    var n = unlockedCount();
     var span = btnOpen.querySelector ? btnOpen.querySelector(".ach-count") : null;
-    if (span) span.textContent = n + "/" + ACHS.length;
-    btnOpen.setAttribute("title", "成就：" + n + " / " + ACHS.length + " 已解锁");
+    if (span && span.parentNode) span.parentNode.removeChild(span);   // 兼容旧缓存页面：顺手摘掉角标
+    btnOpen.setAttribute("title", "个人中心");
   }
 
   /* ═══════════════ 渲染面板 ═══════════════ */
@@ -608,7 +628,9 @@
       var t = TIERS[i], got = 0, rows = "";
       for (j = 0; j < ACHS.length; j++) if (ACHS[j].tier === t.id) {
         if (data.got[ACHS[j].id]) got++;
-        rows += rowHtml(ACHS[j], c);
+        rows += (ACHS[j].hidden && !data.got[ACHS[j].id])
+          ? hiddenRowHtml()                              // 隐藏成就：解锁前只显示 ？？？
+          : rowHtml(ACHS[j], c);
       }
       html += "<section class='ach-group ach-" + t.id + "'>" +
         "<h4><span class='ach-tier-ico'>" + t.icon + "</span>" + t.name +
@@ -622,6 +644,13 @@
     var n = 0;
     for (var i = 0; i < ACHS.length; i++) if (ACHS[i].tier === tier) n++;
     return n;
+  }
+
+  /* 隐藏成就行：解锁前只显示 ？？？（不给进度、不给名字） */
+  function hiddenRowHtml() {
+    return "<li class='ach-row ach-hidden'><span class='ach-ico' aria-hidden='true'>🔒</span>" +
+      "<span class='ach-txt'><b>？？？</b><em>隐藏成就：解锁其余全部成就后揭晓</em></span>" +
+      "<span class='ach-todo'>未解锁</span></li>";
   }
 
   function rowHtml(a, c) {

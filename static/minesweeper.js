@@ -22,6 +22,9 @@
   var faceEl  = document.getElementById("ms-face");
   var flagBtn = document.getElementById("ms-flagmode");
   var msgEl   = document.getElementById("ms-msg");
+  var overEl  = document.getElementById("ms-over");          // 失败弹窗
+  var overSubEl = document.getElementById("ms-over-s");
+  var overBtnEl = document.getElementById("ms-over-btn");
 
   var S = null;          // 当前局面状态
   var timerId = null;
@@ -73,6 +76,7 @@
     }
     boardEl.appendChild(frag);
     fitCells();
+    hideOver();
 
     minesEl.textContent = String(S.mines);
     timeEl.textContent = "0";
@@ -201,6 +205,18 @@
     faceEl.textContent = "😵 再来一局";
     msgEl.textContent = "💥 踩到地雷了！坚持了 " + S.seconds + " 秒。";
     msgEl.className = "ms-msg lose";
+    showOver(S.seconds);            // 失败弹窗：自动弹出，只有「再来一局」能关
+  }
+
+  /* ── 失败弹窗 ── */
+  function showOver(seconds) {
+    if (!overEl) return;
+    if (overSubEl) overSubEl.textContent = "坚持了 " + seconds + " 秒";
+    overEl.classList.remove("hidden");
+    if (overBtnEl) overBtnEl.focus();
+  }
+  function hideOver() {
+    if (overEl) overEl.classList.add("hidden");
   }
 
   function checkWin() {
@@ -224,6 +240,7 @@
 
   faceEl.addEventListener("click", newGame);
   levelEl.addEventListener("change", newGame);
+  if (overBtnEl) overBtnEl.addEventListener("click", newGame);
   flagBtn.addEventListener("click", function () {
     var on = flagBtn.getAttribute("aria-pressed") === "true";
     flagBtn.setAttribute("aria-pressed", on ? "false" : "true");

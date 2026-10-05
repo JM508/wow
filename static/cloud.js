@@ -409,8 +409,9 @@
        · 云存储只发短时效签名链接、且只发给登录用户；而排行榜对所有访客开放，读不到；
        · runner_scores 的 avatar 列是公开列，见库即见图，未登录访客也能看到别人的脸。
      图片在客户端就已裁成正方形并压缩（约 2~6KB 的 data URL），不会把库撑肥。
-     换头像要「整张脸一起换」：只改新交上去的那行，榜上会出现新旧混杂，
-     所以统一走服务端函数 set_my_avatar —— SECURITY DEFINER，只动自己的行、只动 avatar 一列。 */
+     换头像只刷最新一条成绩的脸（set_my_avatar 里 ORDER BY created_at DESC LIMIT 1）：
+     历史行定格「提交当时」的头像，不让整张榜跟着换脸；
+     SECURITY DEFINER，只动自己的行、只动 avatar 一列。 */
   function avatarGet() {
     try { return localStorage.getItem(AVATAR_KEY) || ""; } catch (e) { return ""; }
   }

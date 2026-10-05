@@ -63,21 +63,13 @@
     SHIELD_CHANCE: 0.08,    // 每次道具生成时「出护盾」的概率（其余出金币串）
     SHIELD_COOLDOWN: 6500,  // 两次护盾之间的最小距离（px）：防止运气好时连着刷，
                             // 中速约 11 秒，高速约 7 秒；概率已很低，这个只是削掉尾部
-    BOOST_MULT: 1.18,       // 无敌期间速度倍率（冲刺也要留反应余地，不能快到「无敌一过就撞墙」）
+    /* 护盾 = 纯无敌（2026-10-05 起）：不提速、不进金币雨。
+       保留收尾与归零兜底逻辑，防止「无敌一过就撞墙」：
+       无敌最后 BOOST_TAIL 秒不再生成新障碍，把前方跑空。 */
+    BOOST_MULT: 1.0,        // 已停用提速（保留常量与回落逻辑，倍率为 1 = 不加速）
     BOOST_TAIL: 1.10,       // 冲刺收尾期（秒）：这 1.1 秒不再生成新障碍，把前方跑空
     BOOST_CLEAR: 40,        // 归零兜底：只清「几乎已经贴到身上」的障碍（真正的应急，正常不触发）
     END_GRACE: 0.30,        // 归零宽限（秒）：前方还有 <0.3s 就撞上的障碍时，无敌再续这么一小段
-
-    /* 无敌冲刺「金币雨」：冲刺期间贴地成排出金币，随出随扫。
-       ⚠️ 排间距必须按**时间**给（秒 × 当前速度），不能用固定像素：
-       原来固定 460~640px，低速吃护盾时一排要跑 1.2~1.6 秒，3.6 秒窗口里
-       塞不下 3 排（实测 30% 只有 2 排）；高速时 0.5 秒就一排又糊满屏。 */
-    DASH_GAP_T_MIN: 0.80,   // 两排金币的时间间隔下限（秒）
-    DASH_GAP_T_MAX: 1.05,   // 时间间隔上限（秒）
-    DASH_FIRST: 260,        // 吃到护盾后第一排金币最迟出现距离（px）
-    DASH_COINS_MIN: 3,      // 每排最少颗数
-    DASH_COINS_MAX: 5,      // 每排最多颗数
-    DASH_Y: 36,             // 冲刺币中心离地高度（站着跑就能吃到）
 
     AIR_GAP: 44,            // 飞行物底边离地高度（站着会撞、下蹲能钻过）
     AIR_H: 93,              // 飞行物瓶身高 = 站立身高 × 1.5：顶在离地 ≈137，比满跳脚底
@@ -113,17 +105,8 @@
     return Math.max(CFG.GAP_AFTER_MIN, S.speed * AIR_TIME * CFG.GAP_AFTER_RATIO + 120);
   }
 
-  /* ── 无敌冲刺的速度倍率 ──
-     收尾期（boost ≤ BOOST_TAIL）里从 BOOST_MULT 线性回落到 1，
-     避免「一过无敌就急刹车」的顿挫；同时也让障碍生成间隔能跟着实际位移一起收。 */
-  function boostMul() {
-    if (!S || S.boost <= 0) return 1;
-    if (S.boost >= CFG.BOOST_TAIL) return CFG.BOOST_MULT;
-    return 1 + (CFG.BOOST_MULT - 1) * (S.boost / CFG.BOOST_TAIL);
-  }
-
   /* ── 冲刺归零的「安全落地窗口」──
-     冲刺时速度本就偏快，障碍又一直在生成。如果恰好在障碍面前归零，
+     无敌期间障碍一直在生成。如果恰好在障碍面前归零，
      玩家一帧之内根本来不及起跳 —— 这就是「无敌时间一过直接撞死」的原因。
      解法分两层：
        ① 收尾期 BOOST_TAIL 秒内不再生成新障碍，前方自然跑空（主要手段，
@@ -216,8 +199,8 @@
      · vol  音效音量（0~1）—— 「独立音量」，只影响本游戏合成的音效，不动系统音量
      · cb   色盲模式：障碍加深色描边+斜纹（靠形状认危险）、金币加深色外圈、
             地线/轮廓拉到极限对比、危险色换成安全的琥珀黄，界面不再依赖红绿区分
-     · calm 减少闪烁：去掉撞击/冲刺的画面抖动、星星闪烁、24Hz 护盾光环闪烁、
-            冲刺速度线与面板动效，并削减粒子数量
+     · calm 减少闪烁：去掉撞击的画面抖动、星星闪烁、24Hz 护盾光环闪烁、
+            面板动效，并削减粒子数量
      · big  大字模式：HUD / 遮罩 / 各弹层 / 页脚字号放大一档（html.run-bigtext）
      · keys 自定义按键：跳跃 / 下蹲 / 暂停 / 音效开关各自的键位（按 KeyboardEvent.code 存） */
   var KEY_ACTIONS = ["jump", "duck", "pause", "mute"];
@@ -757,7 +740,6 @@
     itemLog.push({
       id: it.id, kind: it.kind, x0: it.x, y: it.y, r: it.r,
       h: CFG.GROUND - it.y,                       // 出生时中心离地高度
-      dash: !!it.dash,                            // 冲刺金币雨标记（不受跑道闸门约束）
       dist: S ? S.dist : 0, speed: S ? S.speed : 0
     });
   }
@@ -782,21 +764,6 @@
     var it = { id: ++itemSeq, kind: "coffee", x: x, y: CFG.GROUND - 74 - rnd(0, 40), r: 14, ph: 0 };
     items.push(it);
     logItem(it);
-  }
-  /* 无敌冲刺专用「金币雨」：贴地一排，冲刺时直接扫进兜里。
-     · 不需要跑道（无敌撞不坏障碍），也不用等障碍让路；
-     · 贴地摆放（y = 地面上方 DASH_Y），站着跑就能吃到，绝不会变成「吃不到的金币」；
-     · 放在障碍出生区（W+40~140）之外，不干扰障碍生成；
-     · dash 标记：外部测试区分「冲刺币」与常规金币（常规币受跑道闸门约束）。 */
-  function addDashLine(x) {
-    var ph = rnd(0, 6.28);
-    var n = CFG.DASH_COINS_MIN + Math.floor(random() * (CFG.DASH_COINS_MAX - CFG.DASH_COINS_MIN + 1));
-    for (var i = 0; i < n; i++) {
-      var it = { id: ++itemSeq, kind: "coin", x: x + i * 42, r: 11, ph: ph, y: CFG.GROUND - CFG.DASH_Y, dash: true };
-      items.push(it);
-      logItem(it);
-    }
-    return n * 42;
   }
   /* [x0, x1] 区间是否没有障碍（生成道具用） */
   function areaClear(x0, x1) {
@@ -1002,16 +969,11 @@
 
   /* 帮助文本里的键位跟着自定义按键走，改完键这里立刻同步 */
   function helpHtml() {
-    return "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳得更高；<br>" +
-      "按 <b>" + keyHint("duck") + "</b> 下蹲，空中按下蹲可加速下落；<br>" +
-      "地面的障碍要 <b>跳过</b>；天上的悬浮雪碧瓶 <b>跳过去</b> 或 <b>蹲下去</b> 都行" +
+    return "地面的障碍要 <b>跳过</b>；天上的悬浮雪碧瓶 <b>跳过去</b> 或 <b>蹲下去</b> 都行" +
       "（瓶子只有 1.5 倍身高，提前起跳能整个越过去；蹲着能从下面钻过，站着跑会撞上）；<br>" +
-      "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌冲刺：撞坏障碍额外加分，一路还有贴地金币雨扫进兜里。<br>" +
+      "金币 +10 分并存入钱包，<em>护盾</em> 让你 3.6 秒无敌：无敌期间可以直接撞碎障碍，额外加分。<br>" +
       "钱包里的金币可以到商店兑换火柴人皮肤和金币皮肤。<br>" +
-      "速度会越来越快，坚持越久分数越高。<br>" +
-      "手机：点屏幕起跳，向下滑动或按「下蹲」躲飞行物；电脑：也可以直接用键盘。" +
-      "键位不舒服？在 <b>⚙ 设置 → 自定义按键</b> 里改；色盲模式 / 减少闪烁 / 大字模式在 " +
-      "<b>⚙ 设置 → 无障碍选项</b> 里。";
+      "速度会越来越快，坚持越久分数越高。";
   }
 
   function showOverlay(kind) {
@@ -1023,10 +985,8 @@
     if (kind === "ready") {
       elOvTitle.textContent = "火柴人快跑";
       elOvText.innerHTML = "按 <b>" + keyHint("jump") + "</b> 起跳，长按跳更高；<b>" +
-        keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶。<br>" +
-        "收集金币存进钱包，<em>护盾</em> 可短暂无敌冲刺，冲刺期间出金币雨。<br>" +
-        "钱包余额 <b>" + Skins.getWallet() + "</b> 💰 · " + SHOP_LINK;
-      elOvBtn.textContent = "开始奔跑";
+        keyHint("duck") + "</b> 下蹲钻过天上的悬浮雪碧瓶。";
+      elOvBtn.textContent = "开始游戏";
       renderRecords();
     } else if (kind === "paused") {
       elOvTitle.textContent = "已暂停";
@@ -1369,13 +1329,12 @@
     }
 
     var boosting = S.boost > 0;
-    var mul = boostMul();                          // 冲刺倍率（收尾期平滑回落）
     S.time += dt;
     S.speed = Math.min(CFG.SPEED_MAX, CFG.SPEED0 + CFG.SPEED_ACC * S.time);
-    var move = S.speed * mul * dt;
+    var move = S.speed * dt;
 
     S.dist += move;
-    S.score += move * CFG.SCORE_PER_PX * (boosting ? 1.35 : 1);
+    S.score += move * CFG.SCORE_PER_PX;
     if (boosting) {
       S.boost = Math.max(0, S.boost - dt);
       if (S.boost <= 0) endBoost();                // 归零：清掉贴脸障碍、重置出障碍节奏
@@ -1403,57 +1362,47 @@
        · itemPending：金币已经「到点该生成」但跑道还没空出来时，障碍先让路，
          否则障碍比跑道还密的话，金币会被无限期挤掉（永远等不到空档）；
        · itemsClear：出生点附近有道具时先避让，防止道具卡进障碍里。 */
-    var boostTail = boosting && S.boost <= CFG.BOOST_TAIL;   // 冲刺收尾：只收尾、不出新障碍
+    var boostTail = boosting && S.boost <= CFG.BOOST_TAIL;   // 无敌收尾：只收尾、不出新障碍
     S.spawnGap -= move;
     if (S.spawnGap <= 0) {
       if (!boostTail && !S.itemPending && S.dist >= S.waveHold && itemsClear(CFG.W + 40, CFG.W + 140)) {
         spawnWave();
-        /* 间距按「实际位移倍率」换算：冲刺时人跑得快，若还按 S.speed 算间隔，
-           障碍在时间上会密 1.18 倍 —— 那正是「冲太快」的一部分 */
-        S.spawnGap = S.speed * mul * rnd(CFG.GAP_MIN, CFG.GAP_MAX);
+        S.spawnGap = S.speed * rnd(CFG.GAP_MIN, CFG.GAP_MAX);
       } else {
         S.spawnGap = 140;                        // 被挡：往前挪一点再试，不整波吞掉
       }
     }
 
     /* ── 生成道具 ──
-       无敌冲刺期间走「金币雨」：贴地成排、间隔短、不等跑道（无敌撞不坏障碍）；
-       平时走常规金币/护盾生成（itemHold + areaClear 跑道闸门）。 */
+       护盾已改为纯无敌：不再有「无敌冲刺金币雨」，无敌期间照常出
+       金币串与护盾（itemHold + areaClear 跑道闸门）。 */
     S.itemGap -= move;
     if (S.itemGap <= 0) {
-      if (boosting) {
-        /* 无敌 = 金币雨：冲刺的 3.6 秒里金币不断，随出随扫进兜里 */
-        addDashLine(CFG.W + 260);
-        /* 按时间给间隔：换算成当前冲刺速度下的像素，低速/高速出币节奏一致 */
-        S.itemGap = S.speed * mul * rnd(CFG.DASH_GAP_T_MIN, CFG.DASH_GAP_T_MAX);
-        S.groups++;
-      } else {
-        /* 金币落点的两个前提：
+      /* 金币落点的两个前提：
            ① 距上一波障碍已过去 itemRunway()（够玩家落地、再从容起跳）；
            ② 出生点前方 itemRunway() 内没有障碍 —— 否则玩家会「刚跳过障碍、还在半空」
               眼看着金币从脚下溜走，这就是之前「有些金币根本吃不到」的原因。 */
-        var runway = itemRunway();
-        S.itemPending = true;                    // 先占位：让障碍暂停生成，把跑道空出来
-        if (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380)) {
-          var w;
-          /* 护盾比金币「贵」：概率低（SHIELD_CHANCE）且带冷却（SHIELD_COOLDOWN）。
-             原来 18% 且无冷却，实测每分钟能吃到 4 个，一局大半个时间都在无敌冲刺里，
-             难度和乐趣都被削平；现在压到约每分钟 1.5 个。
-             roll 先取出来，保证每次生成消耗的随机数个数与旧版一致。 */
-          var roll = random();
-          if (S.dist >= S.shieldHold && roll < CFG.SHIELD_CHANCE) {
-            addCoffee(CFG.W + 60); w = 28;
-            S.shieldHold = S.dist + CFG.SHIELD_COOLDOWN;
-          } else {
-            w = addFishArc(CFG.W + 60, 3 + Math.floor(random() * 3));
-          }
-          S.itemGap = rnd(900, 1700) + S.speed;
-          S.waveHold = S.dist + w + waveRunway();
-          S.groups++;
-          S.itemPending = false;
+      var runway = itemRunway();
+      S.itemPending = true;                    // 先占位：让障碍暂停生成，把跑道空出来
+      if (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380)) {
+        var w;
+        /* 护盾比金币「贵」：概率低（SHIELD_CHANCE）且带冷却（SHIELD_COOLDOWN）。
+           原来 18% 且无冷却，实测每分钟能吃到 4 个，一局大半个时间都在无敌冲刺里，
+           难度和乐趣都被削平；现在压到约每分钟 1.5 个。
+           roll 先取出来，保证每次生成消耗的随机数个数与旧版一致。 */
+        var roll = random();
+        if (S.dist >= S.shieldHold && roll < CFG.SHIELD_CHANCE) {
+          addCoffee(CFG.W + 60); w = 28;
+          S.shieldHold = S.dist + CFG.SHIELD_COOLDOWN;
         } else {
-          S.itemGap = 120;
+          w = addFishArc(CFG.W + 60, 3 + Math.floor(random() * 3));
         }
+        S.itemGap = rnd(900, 1700) + S.speed;
+        S.waveHold = S.dist + w + waveRunway();
+        S.groups++;
+        S.itemPending = false;
+      } else {
+        S.itemGap = 120;
       }
     }
 
@@ -1507,11 +1456,7 @@
           S.boost = CFG.SHIELD_TIME;
           S.shields++;                             // 成就：单局吃到的护盾数
           sparkle(it.x, it.y, 18, "#8ab4ff"); Sfx.boost();
-          toast("🛡 护盾开启！无敌冲刺 · 金币雨");
-          /* 开场先在玩家前方撒一排（屏幕中段，半秒内就到），别让冲刺开头空手；
-             后续的排由出币计时器按 DASH_FIRST/DASH_GAP 接力 */
-          addDashLine(CFG.PX + 320);
-          S.itemGap = Math.min(S.itemGap, CFG.DASH_FIRST);
+          toast("🛡 护盾开启！无敌 " + CFG.SHIELD_TIME + " 秒");
         }
         items.splice(j, 1);
       }
@@ -1736,7 +1681,6 @@
     drawDebris();
     drawPlayer(pal);
     drawParticles();
-    drawBoostFx();
     ctx.restore();
   }
 
@@ -2122,19 +2066,6 @@
       var a = clamp(p.life / p.max, 0, 1);
       ctx.fillStyle = rgba(p.c, a * 0.85);
       ctx.beginPath(); ctx.arc(p.x, p.y, p.r * a, 0, 6.2832); ctx.fill();
-    }
-  }
-
-  function drawBoostFx() {
-    /* 冲刺速度线是高速横向流动的亮线，是整个画面里最「闪」的元素之一 */
-    if (!S || S.boost <= 0 || calmOn()) return;
-    ctx.strokeStyle = "rgba(138,180,255,0.5)";
-    ctx.lineWidth = 2;
-    for (var i = 0; i < 7; i++) {
-      var y = 60 + i * 34 + Math.sin(S.time * 8 + i) * 6;
-      var len = 60 + ((i * 37) % 90);
-      var x = ((S.time * 1400 + i * 220) % (CFG.W + 300)) - 150;
-      ctx.beginPath(); ctx.moveTo(CFG.W - x, y); ctx.lineTo(CFG.W - x + len, y); ctx.stroke();
     }
   }
 
@@ -2531,7 +2462,7 @@
         if (helpVisible) return;                       // 玩法说明开着：触摸也不穿透
         if (e.target && e.target.closest && e.target.closest("[data-open-shop],[data-open-set],[data-open-me]")) return;  // 同上
         if (state === "paused") { e.preventDefault(); togglePause(); return; }
-        /* 手机端：开始 / 重开只能点「开始奔跑 / 再来一局」按钮（或按键盘）。
+        /* 手机端：开始 / 重开只能点「开始游戏 / 再来一局」按钮（或按键盘）。
            这里直接放行——不 preventDefault、也不 startGame，让触摸照常派发到按钮的 click；
            点画面空白则完全没反应，避免误触直接开局 / 跳过结算界面。
            （鼠标端仍保留「点画面开局」的便利，见上面的 mousedown） */

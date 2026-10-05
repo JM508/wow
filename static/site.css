@@ -51,9 +51,12 @@
 .games-card-head {
   display: flex;
   align-items: center;
+  justify-content: center;   /* 「游戏合集」标题居中 */
   gap: 10px;
   margin-bottom: 14px;
 }
+
+.games-card-head .games-sub { margin-left: 0; }   /* 不再被推到最右 */
 
 .games-ico {
   display: inline-flex;

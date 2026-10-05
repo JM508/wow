@@ -216,12 +216,7 @@
   color: var(--secondary, #6b7280);
 }
 
-/* ── 工具条里的「个人中心」按钮（商店/成就共用）：成就进度角标就挂在这里 ── */
-.run-tools button.run-shop-btn .ach-count {
-  margin-left: 5px;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.8;
-}
+/* ── 工具条里的「个人中心」按钮（商店/成就共用）：不再显示成就数量角标 ── */
 /* 刚解锁时闪一下，提示「有新的」 */
 .run-tools button.run-shop-btn.is-new { animation: ach-btn-flash 0.5s ease 2; }
 @keyframes ach-btn-flash {

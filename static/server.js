@@ -17,6 +17,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const ROOT = __dirname;
 const PORT = parseInt(process.env.PORT, 10) || 3000;
@@ -123,6 +124,11 @@ const IMMUTABLE_EXT = new Set(['.js', '.css', '.webp', '.png', '.svg', '.ico', '
 const HOUR_EXT = new Set(['.xml', '.txt', '.webmanifest']);
 
 function cacheControlFor(safePath, ext) {
+  /* Service Worker 本体必须协商缓存：immutable 会让浏览器一年不检查更新
+     （线上实际靠注册 URL 的 ?v= 换版本，这里再兜底一层） */
+  if (safePath === 'sw.js' || safePath === 'sw-reg.js') {
+    return 'public, max-age=0, must-revalidate';
+  }
   if (ext === '.html' || safePath === '' || safePath.endsWith('/')) {
     return 'public, max-age=0, must-revalidate';
   }
@@ -138,9 +144,44 @@ function cacheControlFor(safePath, ext) {
   return 'public, max-age=0, must-revalidate';
 }
 
+/* ── Brotli / Gzip 动态压缩（镜像域；Cloudflare 边缘会自动压缩 pages.dev） ──
+   只压文本类；压缩结果按「路径+mtime」缓存在内存里（上限 300 条，LRU 淘汰），
+   同一文件只压一次。图片/字体本身就是压缩格式，不重复压。 */
+const COMPRESSIBLE = new Set(['.html', '.htm', '.js', '.css', '.json', '.xml', '.svg', '.txt', '.md', '.webmanifest']);
+const BR_QUALITY = 5;
+const COMPRESS_CACHE_MAX = 300;
+const compressCache = new Map();          // key: "enc|fullPath|mtimeMs" → Buffer
+
+function acceptsEncoding(req, enc) {
+  const ae = req.headers['accept-encoding'] || '';
+  return ae.toLowerCase().indexOf(enc) !== -1;
+}
+
+function compressedBuffer(fullPath, stat, enc) {
+  const key = enc + '|' + fullPath + '|' + stat.mtimeMs;
+  const hit = compressCache.get(key);
+  if (hit) {
+    /* 简易 LRU：命中就挪到最新 */
+    compressCache.delete(key);
+    compressCache.set(key, hit);
+    return hit;
+  }
+  const raw = fs.readFileSync(fullPath);
+  const buf = enc === 'br'
+    ? zlib.brotliCompressSync(raw, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: BR_QUALITY } })
+    : zlib.gzipSync(raw, { level: 6 });
+  compressCache.set(key, buf);
+  if (compressCache.size > COMPRESS_CACHE_MAX) {
+    compressCache.delete(compressCache.keys().next().value);   // 淘汰最旧
+  }
+  return buf;
+}
+
 function send(res, status, fullPath, ext, extra) {
   const headers = Object.assign({}, SECURITY_HEADERS, extra || {});
   headers['Content-Type'] = MIME[ext] || 'application/octet-stream';
+  const acceptEnc = headers.__ae || '';
+  delete headers.__ae;
   if (fullPath) {
     let stat;
     try {
@@ -149,27 +190,43 @@ function send(res, status, fullPath, ext, extra) {
       stat = null;
     }
     if (stat) {
-      headers['Content-Length'] = stat.size;
       headers['Last-Modified'] = stat.mtime.toUTCString();
-      delete headers.__safePath;
       /* If-Modified-Since 协商缓存：文件未变回 304 */
       const ims = headers.__ims;
       delete headers.__ims;
+      delete headers.__safePath;
       if (ims && stat.mtime <= new Date(ims)) {
         delete headers['Content-Length'];
         res.writeHead(304, headers);
         res.end();
         return;
       }
+      /* Brotli / Gzip：客户端支持且内容可压时才压（304 与二进制不走这里） */
+      let body = null;
+      const enc = acceptsEncodingRaw(acceptEnc, 'br') && COMPRESSIBLE.has(ext) ? 'br'
+        : (acceptsEncodingRaw(acceptEnc, 'gzip') && COMPRESSIBLE.has(ext) ? 'gzip' : null);
+      if (status === 200 && enc) {
+        try {
+          body = compressedBuffer(fullPath, stat, enc);
+          headers['Content-Encoding'] = enc;
+          headers['Vary'] = 'Accept-Encoding';
+        } catch (e) { body = null; }            // 压缩失败降级为原文
+      }
+      headers['Content-Length'] = body ? body.length : stat.size;
       res.writeHead(status, headers);
-      fs.createReadStream(fullPath).pipe(res);
+      if (body) { res.end(body); }
+      else { fs.createReadStream(fullPath).pipe(res); }
       return;
     }
   }
-  delete headers.__safePath;
   delete headers.__ims;
+  delete headers.__safePath;
   res.writeHead(status, headers);
   res.end(status === 404 ? '404 Not Found' : '');
+}
+
+function acceptsEncodingRaw(ae, enc) {
+  return (ae || '').toLowerCase().indexOf(enc) !== -1;
 }
 
 const server = http.createServer(function (req, res) {
@@ -186,7 +243,7 @@ const server = http.createServer(function (req, res) {
   }
 
   const ims = req.headers['if-modified-since'];
-  const common = { __ims: ims };
+  const common = { __ims: ims, __ae: req.headers['accept-encoding'] || '' };
 
   let safePath = path.normalize(urlPath).replace(/^([/\\])+/, '');
   let fullPath = path.join(ROOT, safePath);
@@ -236,7 +293,8 @@ const server = http.createServer(function (req, res) {
 
   const extra = {
     'Cache-Control': cacheControlFor(safePath, ext),
-    __safePath: safePath
+    __safePath: safePath,
+    __ae: req.headers['accept-encoding'] || ''
   };
   if (ims) extra.__ims = ims;
   send(res, 200, fullPath, ext, extra);

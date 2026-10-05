@@ -25,7 +25,7 @@
   var built = false;
   var rafId = 0;
 
-  var HINT_DEFAULT = "在《火柴人快跑》里收集金币，攒够了就来这里兑换皮肤；买下后自动换上，回游戏就能看到。";
+  var HINT_DEFAULT = "";   /* 默认不显示说明文字（elHint 保留用于「金币不足」等提示） */
 
   /* ── 小工具：建元素 ── */
   function mk(tag, cls, parent, text) {

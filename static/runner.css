@@ -295,31 +295,8 @@
   border-radius: 5px;
 }
 
-/* 钱包余额 + 商店入口那一行 */
-.run-wallet-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.run-wallet-bar #run-wallet {
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--primary, #1f1f1f);
-}
-.run-wallet-bar a { color: #4f7cff; font-weight: 700; text-decoration: none; }
-.run-wallet-bar a:hover { text-decoration: underline; }
-
-/* 正文里的商店入口：长得像链接，其实是开弹层的按钮 */
-.run-link-btn {
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
-  font-weight: 700;
-  color: #4f7cff;
-  background: none;
-  border: 0;
-  text-decoration: none;
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-}
-.run-link-btn:hover { text-decoration: underline; }
+/* 页脚「游戏开源仓库」一行：居中 */
+.run-foot-repo { text-align: center; }
 
 /* 工具条主按钮（个人中心）：沿用 .run-shop-btn 的彩色样式 */
 .run-tools button.run-shop-btn { font-weight: 700; }
@@ -930,7 +907,6 @@ html.run-bigtext .set-clear-tip { font-size: 15px; }
 
 /* ── 色盲模式：界面里靠红/绿对比的地方换成对红绿色盲友好的蓝 / 琥珀 ── */
 html.run-cb #run-root { --run-accent: #1f6feb; --run-accent2: #0b7fa8; }
-html.run-cb .run-link-btn { color: #1f6feb; }
 html.run-cb .set-vol > span { color: #b06a00; }
 html.run-cb .set-vol input[type="range"] { accent-color: #b06a00; }
 html.run-cb .set-switch.is-on {
