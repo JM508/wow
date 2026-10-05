@@ -252,6 +252,12 @@ const server = http.createServer(function (req, res) {
     return;
   }
 
+  /* 自隐藏：服务器源码与 CF 配置文件不允许被当静态资源下载（渗透测试 2026-10-05 发现） */
+  if (/^(server\.js|_headers|_routes\.json)$/i.test(safePath)) {
+    send(res, 404, null, '', common);
+    return;
+  }
+
   let stat = null;
   try {
     stat = fs.statSync(fullPath);
