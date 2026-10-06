@@ -176,6 +176,12 @@
   var elMeAvaPh  = document.getElementById("me-ava-ph");
   var elMeNick   = document.getElementById("me-nick");
   var elMeSub    = document.getElementById("me-sub");
+  var elMeRegion = document.getElementById("me-region");
+  /* 「排行榜昵称」改名卡（2026-10-06 起取名入口从排行榜弹层挪进个人中心） */
+  var elNickInput = document.getElementById("me-nick-input");
+  var btnNickSave = document.getElementById("me-nick-save");
+  var elNickRow   = document.getElementById("me-nick-row");
+  var elNickHint  = document.getElementById("me-nick-hint");
   var btnMePick  = document.getElementById("me-ava-pick");
   var btnMeClear = document.getElementById("me-ava-clear");
   var elMeFile   = document.getElementById("me-ava-file");
@@ -298,9 +304,58 @@
 
   var SET = loadSet();
 
+  /* ── 设置云端同步（2026-10-06：登录后自动上云 / 拉回） ──
+     · saveSet() 每次都会 queueSettingsPush()：登录态下防抖 1.5s 推一份 SET 快照上云
+     · 登录 / 启动时 pullSettings()：云端有存档则以云端为准覆盖本地（再走一遍归一化），
+       云端没有则把本地这份推上去 —— 两台设备互相拉齐，以最后保存的为准 */
+  var SET_PUSH_DELAY = 1500;
+  var setPushTimer = null;
+  var setPushMute = false;      // 拉取落盘时抑制「再推回去」的回环
+
+  function queueSettingsPush() {
+    if (setPushMute) return;
+    if (!CLOUD || !CLOUD.settings || !CLOUD.settings.push) return;
+    if (!(CLOUD.user && CLOUD.user())) return;          // 未登录：只存本机
+    if (setPushTimer) clearTimeout(setPushTimer);
+    setPushTimer = setTimeout(function () {
+      setPushTimer = null;
+      var snap;
+      try { snap = JSON.stringify(SET); } catch (e) { return; }
+      CLOUD.settings.push(snap)["catch"](function () {});   // 静默：同步失败不打扰玩家
+    }, SET_PUSH_DELAY);
+  }
+
+  function applyRemoteSettings(text) {
+    var raw = null;
+    try { raw = JSON.parse(text); } catch (e) { return false; }
+    if (!raw || typeof raw !== "object") return false;
+    setPushMute = true;
+    try {
+      try { store(KEY_SET, JSON.stringify(raw)); } catch (e) { return false; }
+      SET = loadSet();          // loadSet 会做字段归一化 / 键位去重 / 补默认
+      saveSet();
+    } finally { setPushMute = false; }
+    applyA11y();
+    syncSetUi();
+    return true;
+  }
+
+  function pullSettings() {
+    if (!CLOUD || !CLOUD.settings || !CLOUD.settings.pull) return;
+    if (!(CLOUD.user && CLOUD.user())) return;
+    CLOUD.settings.pull().then(function (r) {
+      if (r && r.error) return;                        // 拉不到就当没有，用本地这份
+      if (r.data && r.data.settings) {
+        if (applyRemoteSettings(r.data.settings)) return;   // 云端有：以云端为准
+      }
+      queueSettingsPush();                             // 云端没有：把本地这份推上去
+    })["catch"](function () {});
+  }
+
   function saveSet() {
     store(KEY_SET, JSON.stringify(SET));
     store(KEY_MUTE, SET.sfx ? "0" : "1");     // 老版本代码 / 旧缓存只认这个键，保持同步
+    queueSettingsPush();
   }
   function opt(name) { return !!SET[name]; }
   function cbOn() { return !!SET.cb; }
@@ -894,28 +949,32 @@
       lastBest = score;
       store(KEY_BEST, String(score));
       Sfx.best();
-      toast("🎉 新纪录！");
+      toast("新纪录！");
     }
     saveRecord(score);
     S.earned = bankCoins();                      // 本局金币进钱包（S.banked 保证只入账一次）
+    /* 2026-10-06 起：成绩不再自动上传 —— 结算卡片里放一个「上传成绩」按钮，
+       用户点了才把 run:over 派发给 rank.js（未登录走访客模式自动上榜）。 */
+    S.lastOver = {
+      score: score,
+      coins: S.coins,
+      distance: Math.floor(S.dist / 100),
+      durationMs: Math.round(S.time * 1000)
+    };
+    S.uploaded = false;
     showOverlay("over");
     updateHud();
-    /* 交给云端排行榜：未登录时 rank.js 不会发任何请求。
-       durationMs 是本局的**游戏内用时**（S.time 只在 playing 时累加，暂停不算），
-       服务端靠它校验成绩的物理可行性：位置推进 = Σ 速度×dt、用时 = Σ dt，
-       有效速度恒在 [330, 1038] px/s，所以「距离 ↔ 用时」会互相锁死。 */
-    try {
-      document.dispatchEvent(new CustomEvent("run:over", {
-        detail: {
-          score: score,
-          coins: S.coins,
-          distance: Math.floor(S.dist / 100),
-          durationMs: Math.round(S.time * 1000)
-        }
-      }));
-    } catch (e) {}
     /* 成就结算：这一局没实时解锁的（分数 / 里程 / 无伤 / 累计类）在这里统一补判 */
     achFinish();
+  }
+
+  /* 结算卡片上的「上传成绩」按钮：点一次才算数，重复点击按住最后一局的分数 */
+  function uploadLastRun() {
+    if (!S || S.uploaded || !S.lastOver) return;
+    S.uploaded = true;
+    try {
+      document.dispatchEvent(new CustomEvent("run:over", { detail: S.lastOver }));
+    } catch (e) {}
   }
 
   /* ═══════════ 本机记录（localStorage，最多 5 条） ═══════════ */
@@ -948,7 +1007,7 @@
   }
 
   /* ═══════════ 遮罩层 ═══════════ */
-  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-me>皮肤商店</button>";
+  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-me>皮肤</button>";
 
   /* ── 玩法说明 ──
      第一次打开游戏时自动弹一次，本机记下「已读」（runner-help-seen），之后再来就不打扰；
@@ -994,10 +1053,13 @@
       elOvBtn.textContent = "继续";
       elRecords.innerHTML = "";
     } else if (kind === "over") {
-      elOvTitle.textContent = S.isBest ? "🎉 新纪录！" : "本轮结束";
+      elOvTitle.textContent = S.isBest ? "新纪录！" : "本轮结束";
       elOvText.innerHTML = "<span class='run-big'>" + Math.floor(S.score) + "</span>" +
         "最高分 <b>" + Math.floor(S.best) + "</b> ｜ 跑了 <b>" + Math.floor(S.dist / 100) + "</b> 米<br>" +
-        "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b> 💰<br>" + SHOP_LINK;
+        "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b><br>" +
+        (S.uploaded || !S.lastOver ? "" :
+          "<button type='button' class='run-upload-btn' data-upload-run>上传成绩到排行榜</button>") +
+        SHOP_LINK;
       elOvBtn.textContent = "再来一局";
       renderRecords();
     } else if (kind === "help") {
@@ -1241,16 +1303,65 @@
     }
   }
 
-  function renderMe() {
-    if (elMeNick) elMeNick.textContent = CLOUD ? CLOUD.nickOrDefault() : "无名火柴人";
+  /* 访客昵称只读会话缓存（rank.js / cloud.js 写入的 sessionStorage），不发起异步请求 */
+  function guestNameNow() {
+    try { return sessionStorage.getItem("rank-guest-name") || ""; } catch (e) { return ""; }
+  }
+
+  function renderNick() {
     var logged = !!(CLOUD && CLOUD.user && CLOUD.user());
+    if (elMeNick) {
+      elMeNick.textContent = logged
+        ? (CLOUD.nickOrDefault ? CLOUD.nickOrDefault() : "玩家")
+        : (guestNameNow() || "未登录");
+    }
     if (elMeSub) {
       elMeSub.textContent = logged
-        ? "已登录 · 头像与成就跟账号走，换设备也在"
-        : "未登录 · 头像只存在本机，登录后才会出现在排行榜";
+        ? "已登录 · 头像、昵称与成就跟账号走，换设备也在"
+        : "未登录 · 头像只存在本机，成绩以「访客 N」自动上传";
     }
+    /* 改名只对登录用户开放；访客走自动编号 */
+    if (elNickRow) elNickRow.classList.toggle("hidden", !logged);
+    if (elNickHint) {
+      elNickHint.textContent = logged
+        ? "改名后会显示在排行榜上（不允许重名），改名立刻生效。"
+        : "未登录时成绩以「访客 N」自动上榜；登录后可以在这里自己取名。";
+    }
+    if (logged && elNickInput && document.activeElement !== elNickInput) {
+      elNickInput.value = CLOUD.nick ? CLOUD.nick() : "";
+    }
+  }
+
+  function renderRegion() {
+    if (!elMeRegion) return;
+    var rg = (CLOUD && CLOUD.scores && CLOUD.scores.region) ? CLOUD.scores.region() : "";
+    if (rg) {
+      elMeRegion.textContent = "IP " + String(rg).slice(0, 32);
+      elMeRegion.classList.remove("hidden");
+    } else {
+      elMeRegion.textContent = "";
+      elMeRegion.classList.add("hidden");
+    }
+  }
+
+  /* ── 改名（与 me.js 同一套：先查榜上重名，再 setNick，通知排行榜刷新） ── */
+  function saveNick() {
+    if (!CLOUD || !CLOUD.setNick) return;
+    var v = CLOUD.setNick(elNickInput ? elNickInput.value : "");
+    if (!v) { toast("昵称不能为空"); return; }
+    CLOUD.scores.nameTaken(v).then(function (r) {
+      if (r && r.data) { toast("「" + v + "」已在排行榜上被使用，请换一个名字"); return; }
+      toast("昵称已保存：" + v);
+      document.dispatchEvent(new CustomEvent("rank:nick-changed"));
+      renderNick();
+    });
+  }
+
+  function renderMe() {
+    renderNick();
+    renderRegion();
     if (elMeHint) {
-      elMeHint.textContent = logged
+      elMeHint.textContent = (CLOUD && CLOUD.user && CLOUD.user())
         ? "头像会公开显示在云端排行榜上。建议用正方形图片，会自动裁成圆形并压缩。"
         : "头像公开显示在云端排行榜上，需要先登录；未登录时只在本机可见。";
     }
@@ -1444,7 +1555,7 @@
           S.boost = CFG.SHIELD_TIME;
           S.shields++;                             // 成就：单局吃到的护盾数
           sparkle(it.x, it.y, 18, "#8ab4ff"); Sfx.boost();
-          toast("🛡 护盾开启！无敌 " + CFG.SHIELD_TIME + " 秒");
+          toast("护盾开启！无敌 " + CFG.SHIELD_TIME + " 秒");
         }
         items.splice(j, 1);
       }
@@ -2218,8 +2329,8 @@
     }
     if (btnSetBack) btnSetBack.classList.toggle("hidden", name === "main");
     if (elSetTitle) {
-      elSetTitle.textContent = name === "a11y" ? "♿ 无障碍选项"
-        : (name === "keys" ? "⌨ 自定义按键" : "⚙ 设置");
+      elSetTitle.textContent = name === "a11y" ? "无障碍选项"
+        : (name === "keys" ? "自定义按键" : "设置");
     }
     cancelCapture();
   }
@@ -2310,7 +2421,7 @@
       var muted = Sfx.isMuted();
       btnMute.setAttribute("aria-pressed", muted ? "true" : "false");
       btnMute.classList.toggle("is-on", !muted);
-      btnMute.textContent = muted ? "🔇 已静音" : "🔊 音效开";
+      btnMute.textContent = muted ? "已静音" : "音效开";
     }
     /* 工具条上的「⚙ 设置」显示一个静音小标记 */
     if (btnSetOpen) {
@@ -2396,6 +2507,7 @@
           if (n.hasAttribute("data-open-me")) { e.preventDefault(); openMe("me"); return; }
           if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openMe("shop"); return; }
           if (n.hasAttribute("data-open-set")) { e.preventDefault(); openSet(); return; }
+          if (n.hasAttribute("data-upload-run")) { e.preventDefault(); uploadLastRun(); showOverlay("over"); return; }
         }
         n = n.parentNode;
       }
@@ -2420,6 +2532,11 @@
     if (btnMePick) btnMePick.addEventListener("click", pickAvatar);
     if (btnMeClear) btnMeClear.addEventListener("click", function () { saveAvatar(""); });
     if (elMeFile) elMeFile.addEventListener("change", onAvatarFile);
+    /* 改名卡（登录用户）：保存按钮 + 回车提交 */
+    if (btnNickSave) btnNickSave.addEventListener("click", saveNick);
+    if (elNickInput) elNickInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") { e.preventDefault(); saveNick(); }
+    });
 
     if (elOvBtn) elOvBtn.addEventListener("click", function () {
       if (elOvBtn.dataset.mode === "help") { closeHelp(); return; }
@@ -2547,7 +2664,7 @@
     clearDone = true;
     var res = clearLocalCache();
     hideClearConfirm();
-    toast("🧹 已清理本机缓存" + (res.removed.length ? "（" + res.removed.length + " 项）" : "") +
+    toast("已清理本机缓存" + (res.removed.length ? "（" + res.removed.length + " 项）" : "") +
           (res.kept.length ? "，音效与按键设置已保留" : ""));
     reloadSoon(logged);
   }
@@ -2576,10 +2693,10 @@
     Promise.all(jobs).then(function (rs) {
       clearTimeout(timer);
       var a = rs[0], wal = rs[1];
-      if (a && a.ok) finish("☁️ 已从云端恢复成就 " + a.unlocked + "/" + a.total);
-      else if (wal && wal.ok) finish("☁️ 已从云端恢复钱包（" + wal.coins + " 金币）");
-      else finish("✅ 已清理，正在刷新…");
-    }, function () { clearTimeout(timer); finish("✅ 已清理，正在刷新…"); });
+      if (a && a.ok) finish("已从云端恢复成就 " + a.unlocked + "/" + a.total);
+      else if (wal && wal.ok) finish("已从云端恢复钱包（" + wal.coins + " 金币）");
+      else finish("已清理，正在刷新…");
+    }, function () { clearTimeout(timer); finish("已清理，正在刷新…"); });
   }
 
   /* 设置面板的控件绑定（标记在页面里，这里只挂行为，缺元素自动跳过） */
@@ -2670,6 +2787,14 @@
   bind();
   syncSetUi();                    // 把设置里的值刷到面板控件上（音效开关 / 音量 / 各开关 / 键位）
   render();
+  /* 设置云同步：启动时已是登录态就拉一次；之后每次登录（含换账号）再拉一次 */
+  pullSettings();
+  if (CLOUD && CLOUD.onAuthChange) {
+    CLOUD.onAuthChange(function () {
+      pullSettings();
+      if (meOpen()) renderMe();
+    });
+  }
   /* 头像：先把本机缓存的那张画到个人页上；登录 / 换设备时由 cloud.js 自动对齐云端那份 */
   renderAvatar();
   if (CLOUD && CLOUD.avatar && CLOUD.avatar.bind) CLOUD.avatar.bind();

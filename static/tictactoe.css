@@ -122,3 +122,137 @@
   #ttt-root { padding: 14px 12px 10px; }
   .ttt-score { gap: 6px; font-size: 12px; }
 }
+
+/* ── 上榜提示（settle 追加在消息后的小字） ── */
+.ttt-msg .ttt-msg-tip {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--secondary, #888888);
+}
+
+/* ══ 设置面板（谁先起手 / 清空战绩）══ */
+.ttt-set {
+  position: fixed;
+  inset: 0;
+  z-index: 190;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.ttt-set.hidden { display: none; }
+.ttt-set-box {
+  width: min(380px, 100%);
+  padding: 18px 18px 16px;
+  border-radius: 14px;
+  background: var(--theme, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.5);
+  animation: ttt-set-in 0.16s ease-out;
+}
+@keyframes ttt-set-in {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.ttt-set-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.ttt-set-head strong { font-size: 16px; }
+.ttt-set-x {
+  width: 30px; height: 30px;
+  font-size: 15px;
+  color: var(--secondary, #888888);
+  background: transparent;
+  border: 1px solid var(--border, #dcdcdc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ttt-set-x:hover { background: rgba(0, 0, 0, 0.05); }
+
+.ttt-set-sec { margin-top: 16px; }
+.ttt-set-lab {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  margin-bottom: 8px;
+}
+.ttt-set-opts { display: flex; gap: 8px; }
+.ttt-first-btn {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--border, #cfcfcf);
+  background: var(--theme, #1d1e20);
+  color: var(--secondary, #888888);
+  cursor: pointer;
+}
+.ttt-first-btn.is-on {
+  color: #fff;
+  background: #4f8cff;
+  border-color: #4f8cff;
+}
+.ttt-set-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--secondary, #888888);
+}
+
+.ttt-clear-btn {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid #e3b341;
+  background: transparent;
+  color: #b26a00;
+  cursor: pointer;
+}
+.ttt-clear-btn:hover { background: rgba(227, 179, 65, 0.12); }
+
+.ttt-confirm {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(198, 40, 40, 0.08);
+  border: 1px solid rgba(198, 40, 40, 0.35);
+}
+.ttt-confirm.hidden { display: none; }
+.ttt-confirm p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--primary, #1f1f1f);
+}
+.ttt-confirm b { color: #c62828; }
+.ttt-confirm-btns { display: flex; gap: 8px; }
+.ttt-confirm-yes,
+.ttt-confirm-no {
+  flex: 1;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+.ttt-confirm-yes { color: #fff; background: #c62828; }
+.ttt-confirm-yes:hover { filter: brightness(1.1); }
+.ttt-confirm-no {
+  color: var(--secondary, #888888);
+  background: transparent;
+  border: 1px solid var(--border, #cfcfcf);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ttt-set-box { animation: none; }
+}

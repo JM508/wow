@@ -14,6 +14,7 @@
   var KEY_OWNED  = "runner-owned";    // 已购皮肤 id 列表（JSON 数组）
   var KEY_SKIN   = "runner-skin";     // 当前装备的火柴人皮肤 id
   var KEY_COIN   = "runner-coin";     // 当前装备的金币皮肤 id
+  var KEY_FLAG   = "runner-flag";     // 当前装备的旗子皮肤 id（扫雷插旗颜色）
 
   function lsGet(k) {
     try { return localStorage.getItem(k); } catch (e) { return null; }
@@ -191,8 +192,42 @@
     }
   ];
 
+  /* ═══════════════ 旗子皮肤（扫雷插旗颜色，全部免费，2026-10-06） ═══════════════
+     color : 旗面主色（扫雷格子里的旗与失败弹窗里的旗都用它渲染）
+     用户在皮肤页选哪面旗，扫雷里的旗子就变成什么颜色 —— 这就是「可改颜色」的实现方式 */
+  var FLAGS = [
+    {
+      id: "red", name: "经典红旗", price: 0, tag: "默认", color: "#ff4d4f",
+      desc: "扫雷插旗的经典红色，一眼就认得。"
+    },
+    {
+      id: "blue", name: "晴空蓝旗", price: 0, tag: "免费", color: "#3b82f6",
+      desc: "像晴天一样的蓝色旗面。"
+    },
+    {
+      id: "green", name: "草原绿旗", price: 0, tag: "免费", color: "#22c55e",
+      desc: "清新的绿色，插在雷区里不扎眼。"
+    },
+    {
+      id: "amber", name: "琥珀黄旗", price: 0, tag: "免费", color: "#f59e0b",
+      desc: "醒目的琥珀黄，远处也能看见。"
+    },
+    {
+      id: "purple", name: "葡萄紫旗", price: 0, tag: "免费", color: "#a855f7",
+      desc: "稳重的紫色，适合低调的扫雷手。"
+    },
+    {
+      id: "cyan", name: "薄荷青旗", price: 0, tag: "免费", color: "#06b6d4",
+      desc: "清凉的薄荷青，夏天的颜色。"
+    }
+  ];
+
   /* ═══════════════ 查询 / 钱包 / 拥有 / 装备 ═══════════════ */
-  function list(kind) { return kind === "coin" ? COINS : PLAYERS; }
+  function list(kind) {
+    if (kind === "coin") return COINS;
+    if (kind === "flag") return FLAGS;
+    return PLAYERS;
+  }
 
   function get(kind, id) {
     var arr = list(kind);
@@ -201,6 +236,12 @@
   }
   function getPlayer(id) { return get("player", id) || PLAYERS[0]; }
   function getCoin(id) { return get("coin", id) || COINS[0]; }
+  function getFlag(id) { return get("flag", id) || FLAGS[0]; }
+  /* 旗子皮肤只贡献颜色：把当前装备的旗色取出来（没加载 skins.js 时回落红色） */
+  function flagColor() {
+    var f = getFlag(equipped("flag"));
+    return (f && f.color) || "#ff4d4f";
+  }
 
   function getWallet() {
     var n = parseInt(lsGet(KEY_WALLET), 10);
@@ -220,7 +261,9 @@
     try { document.dispatchEvent(new Event("wallet:change")); } catch (e) {}
   }
 
-  function ownedKey(kind, id) { return (kind === "coin" ? "c:" : "p:") + id; }
+  function ownedKey(kind, id) {
+    return (kind === "coin" ? "c:" : kind === "flag" ? "f:" : "p:") + id;
+  }
   function getOwned() {
     var raw = lsGet(KEY_OWNED), arr = null;
     try { arr = JSON.parse(raw); } catch (e) { arr = null; }
@@ -256,7 +299,7 @@
 
   function equip(kind, id) {
     if (!isOwned(kind, id)) return false;
-    lsSet(kind === "coin" ? KEY_COIN : KEY_SKIN, id);
+    lsSet(kind === "coin" ? KEY_COIN : kind === "flag" ? KEY_FLAG : KEY_SKIN, id);
     notifyWallet();
     return true;
   }
@@ -275,7 +318,7 @@
 
   /* 当前装备（若存档里的 id 失效则回落到默认款） */
   function equipped(kind) {
-    var id = lsGet(kind === "coin" ? KEY_COIN : KEY_SKIN);
+    var id = lsGet(kind === "coin" ? KEY_COIN : kind === "flag" ? KEY_FLAG : KEY_SKIN);
     if (id && isOwned(kind, id)) return id;
     return list(kind)[0].id;
   }
@@ -669,15 +712,48 @@
   }
 
   /* ═══════════════ 对外接口 ═══════════════ */
+  /* 旗子预览（商店卡用）：旗杆 + 随风轻摆的三角旗，颜色取自皮肤定义 */
+  function drawFlag(g, item, opts) {
+    opts = opts || {};
+    var t = opts.t || 0, sc = opts.scale || 3;
+    var color = (item && item.color) || "#ff4d4f";
+    g.save();
+    var cx = opts.x || (g.canvas.width / 2);
+    var baseY = opts.y || (g.canvas.height - 40);
+    g.strokeStyle = "#8a6a45";
+    g.lineWidth = Math.max(2, 1.15 * sc);
+    g.lineCap = "round";
+    g.beginPath(); g.moveTo(cx, baseY); g.lineTo(cx, baseY - 14.5 * sc); g.stroke();
+    g.fillStyle = "rgba(0,0,0,0.16)";
+    g.beginPath(); g.ellipse(cx, baseY + 1.2 * sc, 3.4 * sc, 1.1 * sc, 0, 0, 6.2832); g.fill();
+    var sway = Math.sin(t * 2.4 + (opts.ph || 0)) * 0.9 * sc;
+    g.fillStyle = color;
+    g.beginPath();
+    g.moveTo(cx, baseY - 14.5 * sc);
+    g.quadraticCurveTo(cx + 4.5 * sc, baseY - 13.2 * sc + sway, cx + 9 * sc, baseY - 12.4 * sc + sway);
+    g.lineTo(cx, baseY - 7.4 * sc);
+    g.closePath(); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.28)";
+    g.beginPath();
+    g.moveTo(cx, baseY - 14.5 * sc);
+    g.quadraticCurveTo(cx + 3.4 * sc, baseY - 13.6 * sc + sway * 0.6, cx + 6.2 * sc, baseY - 13 * sc + sway * 0.6);
+    g.lineTo(cx, baseY - 10.4 * sc);
+    g.closePath(); g.fill();
+    g.restore();
+  }
+
   global.RunnerSkins = {
-    KEYS: { wallet: KEY_WALLET, owned: KEY_OWNED, skin: KEY_SKIN, coin: KEY_COIN },
+    KEYS: { wallet: KEY_WALLET, owned: KEY_OWNED, skin: KEY_SKIN, coin: KEY_COIN, flag: KEY_FLAG },
     imgBase: IMG_BASE,                     // 素材目录（runner.js 的障碍贴图也用它，见 runner.js OB_IMG）
     PLAYERS: PLAYERS,
     COINS: COINS,
+    FLAGS: FLAGS,
     list: list,
     get: get,
     getPlayer: getPlayer,
     getCoin: getCoin,
+    getFlag: getFlag,
+    flagColor: flagColor,
     getWallet: getWallet,
     setWallet: setWallet,
     addWallet: addWallet,
@@ -688,6 +764,7 @@
     equip: equip,
     equipped: equipped,
     drawStick: drawStick,
-    drawCoin: drawCoin
+    drawCoin: drawCoin,
+    drawFlag: drawFlag
   };
 })(window);

@@ -1,5 +1,9 @@
 <!-- 扫雷小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
 <link rel="stylesheet" href="/minesweeper.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<!-- 个人中心（皮肤 / 成就 / 个人三页签）与云端排行榜共用 runner.css 里的面板样式 -->
+<link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="ms-root" aria-label="扫雷">
   <div class="ms-bar">
     <select id="ms-level" aria-label="难度">
@@ -9,27 +13,27 @@
     </select>
     <div class="ms-stat" title="剩余雷数（总雷数 − 已插旗）">💣 <span id="ms-mines">10</span></div>
     <div class="ms-stat" title="用时（秒）">⏱ <span id="ms-time">0</span></div>
+    <button type="button" id="ms-me-open" class="ms-rank-btn" data-open-me title="个人中心：皮肤、成就、昵称与头像">个人中心</button>
     <button type="button" id="ms-rank-open" class="ms-rank-btn" title="排行榜：各难度的最快通关用时">排行榜</button>
   </div>
   <div class="ms-bar ms-bar-sub">
-    <button type="button" id="ms-flagmode" aria-pressed="false" title="开启后左键点击即插旗（适合手机）">🚩 插旗模式：关</button>
+    <button type="button" id="ms-flagmode" aria-pressed="false" title="开启后左键点击即插旗（适合手机）">插旗模式：关</button>
     <span class="ms-hint">手机长按也可插旗</span>
   </div>
   <div id="ms-board" role="grid" aria-label="雷区"></div>
   <p id="ms-msg" class="ms-msg"></p>
 </div>
 
-<!-- ═══ 失败弹窗：踩雷时自动弹出（用户 2026-10-05 要求） ═══ -->
+<!-- ═══ 失败弹窗：踩雷时自动弹出（用户 2026-10-05 要求；2026-10-06 去掉表情图标） ═══ -->
 <div id="ms-over" class="ms-over hidden" role="alertdialog" aria-modal="true" aria-labelledby="ms-over-t" aria-describedby="ms-over-s">
   <div class="ms-over-box">
-    <p class="ms-over-ico" aria-hidden="true">💥</p>
     <p class="ms-over-t" id="ms-over-t">你碰到炸弹了</p>
     <p class="ms-over-s" id="ms-over-s"></p>
     <button type="button" id="ms-over-btn" class="ms-over-btn">再来一局</button>
   </div>
 </div>
 
-<!-- ═══ 云端排行榜弹层：初级 / 中级 / 高级 三份榜（用时越短越靠前） ═══ -->
+<!-- ═══ 云端排行榜弹层：初级 / 中级 / 高级 三份榜（用时越短越靠前，整榜可滑动） ═══ -->
 <div id="ms-rank" class="ms-rank hidden" role="dialog" aria-modal="true" aria-labelledby="ms-rank-title">
   <div class="ms-rank-box">
     <div class="ms-rank-head">
@@ -42,19 +46,25 @@
       <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="hard">高级 30×16</button>
     </div>
     <div class="ms-rank-status" id="ms-rank-status" role="status" aria-live="polite"></div>
-    <ol class="ms-rank-list" id="ms-rank-list" aria-label="排行榜前 100 名，每页 10 名"></ol>
-    <nav class="ms-rank-pager" id="ms-rank-pager" aria-label="排行榜分页"></nav>
+    <ol class="ms-rank-list ms-rank-list-scroll" id="ms-rank-list" aria-label="排行榜前 100 名"></ol>
     <div class="ms-rank-mine" id="ms-rank-mine"></div>
     <p class="ms-rank-foot">
       榜上只收<b>通关</b>的成绩，按用时从快到慢排（同名只留最快的一条）；
-      未登录也能上榜，昵称是<b>访客 N</b>；登录后可以用自己的昵称，并且成绩跟着账号走。
+      未登录也能上榜，昵称是<b>访客 N</b>；登录后可以在个人中心用自己的昵称，成绩跟着账号走。
     </p>
   </div>
 </div>
+
+<!-- ═══ 个人中心（三游戏共用 DOM）：跑酷页由 runner.js 驱动，这里由 me.js 驱动 ═══ -->
+{{ partial "me-center.html" . }}
 
 <script src="/minesweeper.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 {{/* 云 SDK 必须在 cloud.js 之前：cloud.js 的 build() 依赖 window.WorkBuddyCloud，
      缺了它 msrank.js 会判定「云服务不可用」而拒绝加载榜单（2026-10-05 用户报障） */}}
 <script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

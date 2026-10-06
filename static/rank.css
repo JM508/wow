@@ -154,6 +154,13 @@
   list-style: none;
   border-top: 1px solid var(--border, #e0e0e0);
 }
+/* 2026-10-06 排行榜去分页改整榜滑动 */
+.rank-list.rank-list-scroll {
+  max-height: min(46vh, 430px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
 .rank-row {
   display: grid;
   grid-template-columns: 34px 30px 1fr auto 48px;

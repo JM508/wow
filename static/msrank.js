@@ -12,7 +12,6 @@
   "use strict";
 
   var TABLE = "ms_scores";
-  var PAGE = 10;                     // 每页 10 名
   var LIMIT = 100;                   // 取前 100 条记录（去重后 ≤100 人）
   var GUEST_RE = /^访客 [0-9]{1,3}$/;
   var MODES = [
@@ -26,13 +25,13 @@
   var btnClose = document.getElementById("ms-rank-close");
   var statusEl = document.getElementById("ms-rank-status");
   var listEl = document.getElementById("ms-rank-list");
-  var pagerEl = document.getElementById("ms-rank-pager");
   var mineEl = document.getElementById("ms-rank-mine");
   var tabsEl = document.getElementById("ms-rank-tabs");
 
   if (!panel || !listEl) return;      // 页面没这块 DOM 就整体不启用
 
-  var cur = { mode: "easy", page: 1, rows: [], loading: false, err: null };
+  /* 滑动式榜单：一次取 100 条、一次性渲染全部，容器自身滚动（2026-10-06 去分页） */
+  var cur = { mode: "easy", rows: [], loading: false, err: null };
 
   function cloud() { return global.WowCloud || null; }
   function ready() { var c = cloud(); return !!(c && c.available && c.available() && c.database && c.database()); }
@@ -92,7 +91,7 @@
     return out;
   }
 
-  function load(mode, page) {
+  function load(mode) {
     if (!ready()) {
       cur.err = "unavailable";
       /* 两种「不可用」要分开说：真断网 vs 云 SDK 没就绪（引入漏了 / 加载失败）。
@@ -105,7 +104,7 @@
       render(); return;
     }
     cur.errMsg = null;
-    cur.loading = true; cur.err = null; cur.mode = mode || cur.mode; cur.page = page || 1;
+    cur.loading = true; cur.err = null; cur.mode = mode || cur.mode;
     render();
     top(cur.mode).then(function (r) {
       cur.loading = false;
@@ -133,7 +132,7 @@
       });
   }
 
-  /* ═══════════ 渲染 ═══════════ */
+  /* ═══════════ 渲染（全量渲染，容器自身滚动） ═══════════ */
   function render() {
     if (statusEl) {
       if (cur.err === "unavailable") statusEl.textContent = cur.errMsg || "离线或云服务不可用，暂时看不到排行榜（离线也能照常玩）。";
@@ -142,13 +141,13 @@
       statusEl.className = "ms-rank-status" + (cur.err ? " is-err" : "");
     }
 
-    var i, rows = cur.rows || [], start = (cur.page - 1) * PAGE, slice = rows.slice(start, start + PAGE);
+    var i, rows = cur.rows || [];
     if (!rows.length && !cur.loading && !cur.err) {
       listEl.innerHTML = "<li class='ms-rank-empty'>还没有人通关这个难度，去拿下第一名吧。</li>";
     } else {
       var html = "";
-      for (i = 0; i < slice.length; i++) {
-        var r = slice[i], no = start + i + 1;
+      for (i = 0; i < rows.length; i++) {
+        var r = rows[i], no = i + 1;
         html += "<li class='ms-rank-row'>" +
           "<b class='ms-rank-no" + (no <= 3 ? " is-top" : "") + "'>" + no + "</b>" +
           "<span class='ms-rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) +
@@ -158,19 +157,6 @@
           "</li>";
       }
       listEl.innerHTML = html || "<li class='ms-rank-empty'>加载中…</li>";
-    }
-
-    if (pagerEl) {
-      var pages = Math.max(1, Math.ceil(rows.length / PAGE));
-      if (pages <= 1) { pagerEl.innerHTML = ""; }
-      else {
-        var p = "";
-        for (i = 1; i <= pages; i++) {
-          p += "<button type='button' class='ms-rank-pg" + (i === cur.page ? " is-on" : "") +
-            "' data-page='" + i + "'" + (i === cur.page ? " aria-current='page'" : "") + ">" + i + "</button>";
-        }
-        pagerEl.innerHTML = p;
-      }
     }
     paintTabs();
   }
@@ -213,7 +199,7 @@
         if (r && r.skipped) return r;
         if (!r || r.error) return r || { data: null, error: { kind: "error" } };
         /* 提交成功：如果面板开着且正是这个难度，刷新一下 */
-        if (isOpen() && cur.mode === mode) load(mode, 1);
+        if (isOpen() && cur.mode === mode) load(mode);
         return r;
       });
   }
@@ -223,7 +209,7 @@
   function open(mode) {
     if (!panel) return;
     panel.classList.remove("hidden");
-    load(mode || cur.mode, 1);
+    load(mode || cur.mode);
     if (btnClose) btnClose.focus();
   }
   function close() { if (panel) panel.classList.add("hidden"); }
@@ -238,16 +224,7 @@
     tabsEl.addEventListener("click", function (e) {
       var b = e.target && e.target.closest ? e.target.closest(".ms-rtab") : null;
       if (!b) return;
-      load(b.getAttribute("data-mode"), 1);
-    });
-  }
-  if (pagerEl) {
-    pagerEl.addEventListener("click", function (e) {
-      var b = e.target && e.target.closest ? e.target.closest(".ms-rank-pg") : null;
-      if (!b) return;
-      cur.page = Number(b.getAttribute("data-page")) || 1;
-      render();
-      listEl.scrollTop = 0;
+      load(b.getAttribute("data-mode"));
     });
   }
 
@@ -256,7 +233,7 @@
     submit: submit,
     open: open,
     close: close,
-    reload: function () { load(cur.mode, cur.page); },
+    reload: function () { load(cur.mode); },
     mode: function () { return cur.mode; },
     modeLabel: modeLabel,
     _state: cur                                                    /* 测试用只读快照 */

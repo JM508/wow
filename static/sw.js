@@ -25,11 +25,12 @@ function ver(p) {
   return /\.(js|css)$/.test(p) ? p + '?v=' + VER : p;
 }
 
-/* 预缓存核心清单：两个小游戏离线可玩所需的最小集合 */
+/* 预缓存核心清单：几个小游戏离线可玩所需的最小集合 */
 var PRECACHE = [
-  '/', '/games/', '/minesweeper/', '/runner/', '/account/', '/tictactoe/',
+  '/', '/games/', '/minesweeper/', '/runner/', '/account/', '/tictactoe/', '/snake/',
   '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css', '/msrank.js',
   '/tictactoe.js', '/tictactoe.css',
+  '/snake.js', '/snake.css', '/grank.js', '/grank.css', '/me.js',
   '/runner.js', '/runner.css', '/skins.js', '/shop.js', '/shop.css',
   '/ach.js', '/ach.css', '/rank.js', '/rank.css', '/cloud.js',
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
