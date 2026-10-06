@@ -1,0 +1,157 @@
+/* ══ 贪吃蛇（/snake/）══
+   跟站点同一套观感：卡片圆角 + PaperMod 主题变量（暗色自动跟随）。 */
+
+#snake-root {
+  max-width: 460px;
+  margin: 1.2rem auto 0;
+  padding: 18px 18px 14px;
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 18px;
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── 工具条 ── */
+.snake-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.snake-bar select {
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #cfcfcf);
+  background: var(--theme, #1d1e20);
+  color: var(--primary, #1f1f1f);
+  font-size: 14px;
+  font-weight: 600;
+}
+.snake-stat {
+  font-size: 13px;
+  color: var(--secondary, #888888);
+  font-variant-numeric: tabular-nums;
+}
+.snake-stat b { color: var(--primary, #1f1f1f); font-size: 15px; }
+.snake-stat-first { margin-left: auto; }
+
+.snake-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #cfcfcf);
+  background: var(--theme, #1d1e20);
+  color: var(--secondary, #888888);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.snake-btn:hover { color: var(--primary, #1f1f1f); border-color: var(--secondary, #9a9a9a); }
+.snake-btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #37a352, #22c55e);
+  border-color: transparent;
+  font-weight: 700;
+}
+.snake-btn-primary:hover { color: #fff; filter: brightness(1.08); }
+
+/* ── 画布 ── */
+#snake-canvas {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border, #e0e0e0);
+  touch-action: none;
+}
+
+/* ── 屏幕方向键（手机用；桌面上也能点） ── */
+#snake-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(2, 44px);
+  gap: 6px;
+  justify-content: center;
+  margin-top: 12px;
+}
+#snake-dpad [data-dir] {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: var(--theme, #1d1e20);
+  border: 1px solid var(--border, #cfcfcf);
+  border-radius: 10px;
+  cursor: pointer;
+}
+#snake-dpad [data-dir]:active { transform: scale(0.95); }
+#snake-dpad .snake-dpad-up { grid-column: 2; grid-row: 1; }
+#snake-dpad .snake-dpad-left { grid-column: 1; grid-row: 2; }
+#snake-dpad .snake-dpad-down { grid-column: 2; grid-row: 2; }
+#snake-dpad .snake-dpad-right { grid-column: 3; grid-row: 2; }
+
+/* ── 提示条 ── */
+.snake-msg {
+  margin: 12px auto 2px;
+  text-align: center;
+  font-size: 13px;
+  min-height: 1.4em;
+  color: var(--secondary, #888888);
+}
+
+/* ── 结束弹窗 ── */
+.snake-over {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.45);
+}
+.snake-over.hidden { display: none; }
+.snake-over-box {
+  max-width: min(340px, 100%);
+  padding: 26px 30px 24px;
+  border-radius: 14px;
+  text-align: center;
+  background: var(--theme, #ffffff);
+  border: 1px solid var(--border, #e0e0e0);
+  box-shadow: 0 22px 48px -18px rgba(0, 0, 0, 0.5);
+  animation: snake-over-in 0.16s ease-out;
+}
+@keyframes snake-over-in {
+  from { transform: scale(0.94); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.snake-over-t {
+  margin: 0 0 4px;
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--primary, #1f1f1f);
+}
+.snake-over-s {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  color: var(--secondary, #888888);
+}
+.snake-over-btn {
+  min-width: 132px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: #1f1f1f;
+}
+[data-theme="dark"] .snake-over-btn { background: #e8e8e8; color: #1a1a1a; }
+.snake-over-btn:hover { filter: brightness(1.18); }
+
+@media (max-width: 520px) {
+  #snake-root { padding: 14px 12px 10px; }
+  #snake-dpad { grid-template-columns: repeat(3, 64px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .snake-over-box { animation: none; }
+}

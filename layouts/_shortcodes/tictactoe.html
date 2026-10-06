@@ -1,5 +1,10 @@
 <!-- 井字棋小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
 <link rel="stylesheet" href="/tictactoe.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<!-- 个人中心（皮肤 / 成就 / 个人三页签）与云端排行榜共用 runner.css 里的面板样式 -->
+<link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/grank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="ttt-root" aria-label="井字棋">
   <div class="ttt-bar">
     <select id="ttt-level" aria-label="难度">
@@ -12,12 +17,14 @@
       <span class="ttt-sc ttt-sc-draw">平 <b id="ttt-sc-draw">0</b></span>
       <span class="ttt-sc ttt-sc-lose">负 <b id="ttt-sc-lose">0</b></span>
     </div>
-    <button type="button" id="ttt-reset" class="ttt-btn" title="清空本难度的战绩">清战绩</button>
+    <button type="button" id="ttt-set-open" class="ttt-btn" title="设置：谁先起手、清空战绩">设置</button>
+    <button type="button" id="ttt-me-open" class="ttt-btn" data-open-me title="个人中心：皮肤、成就、昵称与头像">个人中心</button>
+    <button type="button" id="ttt-rank-open" class="ttt-btn" data-grank-open title="排行榜：各难度的最佳分数">排行榜</button>
   </div>
   <div id="ttt-board" role="grid" aria-label="井字棋棋盘，3 行 3 列">
     <button type="button" class="ttt-cell" role="gridcell" data-i="0" aria-label="第 1 格，第 1 行第 1 列"></button>
     <button type="button" class="ttt-cell" role="gridcell" data-i="1" aria-label="第 2 格，第 1 行第 2 列"></button>
-    <button type="button" class="ttt-cell" role="gridcell" data-i="2" aria-label="第 3 格，第 1 行第 3 列"></button>
+    <button type="button" class="ttt-cell" role="gridcell" data-i="2" aria-label="第 3 格，第 1 行第 2 列"></button>
     <button type="button" class="ttt-cell" role="gridcell" data-i="3" aria-label="第 4 格，第 2 行第 1 列"></button>
     <button type="button" class="ttt-cell" role="gridcell" data-i="4" aria-label="第 5 格，第 2 行第 2 列"></button>
     <button type="button" class="ttt-cell" role="gridcell" data-i="5" aria-label="第 6 格，第 2 行第 3 列"></button>
@@ -27,4 +34,68 @@
   </div>
   <p id="ttt-msg" class="ttt-msg" role="status" aria-live="polite">你执 × 先手，点格子落子</p>
 </div>
+
+<!-- ═══ 云端排行榜弹层（GameRank 通用组件，game_scores 表） ═══ -->
+<div id="grank-root" data-game="ttt" data-title="井字棋排行榜" data-unit="分" data-modes="easy:简单,mid:中等,hard:困难"></div>
+<div id="grank-panel" class="grank hidden" role="dialog" aria-modal="true" aria-labelledby="grank-title">
+  <div class="grank-box">
+    <div class="grank-head">
+      <strong id="grank-title">井字棋排行榜</strong>
+      <button type="button" class="grank-x" id="grank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
+    </div>
+    <div class="grank-tabs" id="grank-tabs" role="tablist" aria-label="难度">
+      <button type="button" class="grank-tab is-on" role="tab" aria-selected="true" data-mode="easy">简单</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="mid">中等</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="hard">困难</button>
+    </div>
+    <div class="grank-status" id="grank-status" role="status" aria-live="polite"></div>
+    <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
+    <div class="grank-mine" id="grank-mine"></div>
+    <p class="grank-foot">
+      榜上按<b>最佳分数</b>排名（同名只留最高的一条）；赢一局得分：简单 1 分 / 中等 2 分 / 困难 3 分；
+      未登录以「访客 N」上榜，登录后可在个人中心用自己的昵称，成绩跟着账号走。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 设置面板：谁先起手 / 清空战绩（清空需二次确认） ═══ -->
+<div id="ttt-set" class="ttt-set hidden" role="dialog" aria-modal="true" aria-labelledby="ttt-set-title">
+  <div class="ttt-set-box">
+    <div class="ttt-set-head">
+      <strong id="ttt-set-title">设置</strong>
+      <button type="button" class="ttt-set-x" id="ttt-set-close" title="关闭设置" aria-label="关闭设置">✕</button>
+    </div>
+    <section class="ttt-set-sec">
+      <span class="ttt-set-lab">谁先起手</span>
+      <div class="ttt-set-opts" role="group" aria-label="谁先起手">
+        <button type="button" class="ttt-first-btn is-on" data-first="me" aria-pressed="true">我先（×）</button>
+        <button type="button" class="ttt-first-btn" data-first="ai" aria-pressed="false">电脑先（○）</button>
+      </div>
+      <p class="ttt-set-hint">换先手会立刻开新一局。</p>
+    </section>
+    <section class="ttt-set-sec">
+      <span class="ttt-set-lab">战绩</span>
+      <button type="button" id="ttt-clear" class="ttt-clear-btn">清空全部战绩</button>
+      <div id="ttt-clear-confirm" class="ttt-confirm hidden" role="alertdialog" aria-label="确认清空战绩">
+        <p>确定清空全部战绩吗？<b>排行榜数据也会清除</b>（云端的井字棋成绩一并删除），此操作无法恢复。</p>
+        <div class="ttt-confirm-btns">
+          <button type="button" id="ttt-clear-yes" class="ttt-confirm-yes">确定清除</button>
+          <button type="button" id="ttt-clear-no" class="ttt-confirm-no">取消</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ═══ 个人中心（三游戏共用 DOM）：井字棋页由 me.js 驱动 ═══ -->
+{{ partial "me-center.html" . }}
+
+{{/* 云 SDK 必须在 cloud.js 之前（cloud.js 的 build() 依赖 window.WorkBuddyCloud） */}}
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/grank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/tictactoe.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

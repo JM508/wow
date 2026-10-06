@@ -17,7 +17,7 @@
     <div class="run-tools">
       <button type="button" id="run-rank-btn" title="排行榜：看别人的最好成绩">排行榜</button>
       <button type="button" class="run-shop-btn" id="run-me-btn" data-open-me title="个人中心：皮肤商店与成就">个人中心</button>
-      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键、玩法说明" aria-label="设置">⚙</button>
+      <button type="button" id="run-set-btn" class="run-set-btn" title="设置：音效、无障碍、自定义按键、玩法说明" aria-label="设置">设置</button>
     </div>
   </div>
 
@@ -40,28 +40,16 @@
   </div>
 
   <p class="run-foot">
-    键盘：<kbd>空格</kbd>/<kbd>↑</kbd>/<kbd>W</kbd> 起跳（长按跳更高），<kbd>↓</kbd>/<kbd>S</kbd> 下蹲，
-    <kbd>P</kbd> 暂停，<kbd>M</kbd> 静音。手机：点屏幕起跳，向下滑动或按「下蹲」躲飞行物。
+    键盘：<b>空格 / ↑ / W</b> 起跳（长按跳更高），<b>↓ / S</b> 下蹲，<b>P</b> 暂停，<b>M</b> 静音。<br>
+    手机：<b>点屏幕</b>起跳，<b>向下滑动</b>或按「下蹲」躲飞行物。
   </p>
 </div>
 
-<!-- ═══ 个人中心（商店页）：与成就面板共用「个人中心」外框与页签，商品由 /shop.js 填充 ═══ -->
-<div id="run-shop" class="run-shop hidden" data-shop-panel role="dialog" aria-modal="true" aria-labelledby="run-shop-title">
-  <div class="run-shop-box">
-    <div class="run-shop-head me-head">
-      <strong id="run-shop-title" class="me-title">个人中心</strong>
-      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="true">商店</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
-      </div>
-      <button type="button" class="run-shop-x" id="run-shop-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
-    </div>
-    <div id="shop-root" aria-label="皮肤商店商品"></div>
-  </div>
-</div>
+<!-- ═══ 个人中心（皮肤 / 成就 / 个人三页签）与结构说明：DOM 在 _partials/me-center.html，
+     跑酷页由 /runner.js 驱动；扫雷 / 井字棋 / 贪吃蛇页由 /me.js 驱动同一个 partial。 ═══ -->
+{{ partial "me-center.html" . }}
 
-<!-- ═══ 云端排行榜弹层：数据来自云服务（所有访客可看，登录后自动上传成绩） ═══ -->
+<!-- ═══ 云端排行榜弹层（滑动式长列表，取名入口在个人中心「个人」页） ═══ -->
 <div id="run-rank" class="run-rank hidden" data-rank-panel role="dialog" aria-modal="true" aria-labelledby="run-rank-title">
   <div class="run-rank-box">
     <div class="run-rank-head">
@@ -69,79 +57,8 @@
       <button type="button" class="run-rank-x" id="run-rank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
     </div>
     <div class="rank-status" id="rank-status" role="status" aria-live="polite"></div>
-    <div class="rank-nick-row">
-      <label for="rank-nick">上榜昵称</label>
-      <input id="rank-nick" type="text" maxlength="16" placeholder="跑出好成绩后显示的名字" autocomplete="nickname">
-      <button type="button" id="rank-nick-save">保存</button>
-    </div>
-    <ol class="rank-list" id="rank-list" aria-label="排行榜前 100 名，每页 10 名"></ol>
-    <nav class="rank-pager" id="rank-pager" aria-label="排行榜分页"></nav>
+    <ol class="rank-list rank-list-scroll" id="rank-list" aria-label="排行榜前 100 名"></ol>
     <div class="rank-mine" id="rank-mine"></div>
-    <p class="rank-foot">
-      排行榜展示<b>前 100 名</b>（每页 10 名，共 10 页），对所有访客可见（只显示昵称、头像与分数）；
-      未登录走<b>访客模式</b>：不能自己取名，成绩以「访客 N」自动上传；
-      登录后可用自己的昵称（榜上不允许重名）。
-      登录还会开启<b>云存档</b>：金币与已购皮肤会同步到云端，换设备也不丢。
-    </p>
-  </div>
-</div>
-
-<!-- ═══ 个人中心（成就页）：与商店面板共用外框与页签，内容由 /ach.js 渲染（数据只存本机） ═══ -->
-<div id="run-ach" class="run-ach hidden" data-ach-panel role="dialog" aria-modal="true" aria-labelledby="run-ach-title">
-  <div class="run-ach-box">
-    <div class="run-ach-head me-head">
-      <strong id="run-ach-title" class="me-title">个人中心</strong>
-      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">商店</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="true">成就</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
-      </div>
-      <button type="button" class="run-ach-x" id="run-ach-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
-    </div>
-    <div id="ach-progress" aria-live="polite"></div>
-    <div id="ach-list" aria-label="成就列表"></div>
-  </div>
-</div>
-
-<!-- ═══ 个人中心（个人页）：头像 + 成就进度，逻辑在 /runner.js ═══ -->
-<div id="run-me" class="run-me hidden" data-me-panel role="dialog" aria-modal="true" aria-labelledby="run-me-title">
-  <div class="run-me-box">
-    <div class="run-me-head me-head">
-      <strong id="run-me-title" class="me-title">个人中心</strong>
-      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">商店</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="true">个人</button>
-      </div>
-      <button type="button" class="run-me-x" id="run-me-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
-    </div>
-
-    <section class="me-card">
-      <div class="me-ava">
-        <img class="me-ava-img hidden" id="me-ava-img" alt="我的头像">
-        <span class="me-ava-ph" id="me-ava-ph" aria-hidden="true">＋</span>
-      </div>
-      <div class="me-id">
-        <strong class="me-nick" id="me-nick">无名火柴人</strong>
-        <span class="me-sub" id="me-sub">未登录 · 头像只存在本机</span>
-      </div>
-      <div class="me-ava-act">
-        <button type="button" class="me-btn" id="me-ava-pick">选择图片</button>
-        <button type="button" class="me-btn me-btn-quiet hidden" id="me-ava-clear">移除头像</button>
-      </div>
-      <input type="file" class="me-file" id="me-ava-file" accept="image/png,image/jpeg,image/webp,image/gif">
-      <p class="me-hint" id="me-ava-hint">头像会公开显示在云端排行榜上。建议用正方形图片，会自动裁成圆形并压缩。</p>
-    </section>
-
-    <section class="me-card">
-      <div class="me-ach">
-        <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">19</span></span>
-        <span class="me-ach-lab">成就已解锁</span>
-      </div>
-      <div class="me-bar" id="me-bar" role="progressbar" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" aria-label="成就进度"><i id="me-bar-fill"></i></div>
-    </section>
-
-    <p class="me-foot">头像与成就都跟着账号走：登录后换设备也能看到同一张头像、同一份成就进度。</p>
   </div>
 </div>
 
@@ -150,14 +67,14 @@
   <div class="run-set-box">
     <div class="run-set-head">
       <button type="button" class="run-set-back hidden" id="run-set-back" title="返回设置" aria-label="返回设置">←</button>
-      <strong id="run-set-title">⚙ 设置</strong>
+      <strong id="run-set-title">设置</strong>
       <button type="button" class="run-set-x" id="run-set-close" title="关闭设置" aria-label="关闭设置">✕</button>
     </div>
 
     <!-- 视图 1：设置总览 -->
     <div id="set-view-main" class="set-view">
       <section class="set-sec">
-        <h4 class="set-h">📖 玩法</h4>
+        <h4 class="set-h">玩法</h4>
         <button type="button" class="set-entry" id="set-open-help">
           <span class="set-entry-t">玩法说明</span>
           <span class="set-entry-s">起跳 / 下蹲、金币与护盾、速度与计分规则（首次进入会自动弹一次）</span>
@@ -166,10 +83,10 @@
       </section>
 
       <section class="set-sec">
-        <h4 class="set-h">🔊 音效</h4>
+        <h4 class="set-h">音效</h4>
         <div class="set-row">
           <div class="set-lab"><span>音效开关</span><small>跳跃、金币、撞击等音效（快捷键可在「自定义按键」里改）</small></div>
-          <button type="button" id="run-mute" class="set-switch" aria-pressed="false" title="音效开关">🔊 音效开</button>
+          <button type="button" id="run-mute" class="set-switch" aria-pressed="false" title="音效开关">音效开</button>
         </div>
         <div class="set-row">
           <div class="set-lab"><span>音量</span><small>独立调节本游戏的音效大小，不影响系统音量与其他网页</small></div>
@@ -181,7 +98,7 @@
       </section>
 
       <section class="set-sec">
-        <h4 class="set-h">♿ 无障碍</h4>
+        <h4 class="set-h">无障碍</h4>
         <button type="button" class="set-entry" id="set-open-a11y">
           <span class="set-entry-t">无障碍选项</span>
           <span class="set-entry-s" id="set-a11y-sum">色盲模式 · 减少闪烁 · 独立音量 · 大字模式</span>
@@ -190,7 +107,7 @@
       </section>
 
       <section class="set-sec">
-        <h4 class="set-h">⌨ 操作</h4>
+        <h4 class="set-h">操作</h4>
         <button type="button" class="set-entry" id="set-open-keys">
           <span class="set-entry-t">自定义按键</span>
           <span class="set-entry-s" id="set-keys-sum">跳跃 空格 / ↑ / W · 下蹲 ↓ / S</span>
@@ -199,7 +116,7 @@
       </section>
 
       <section class="set-sec">
-        <h4 class="set-h">🧹 缓存与数据</h4>
+        <h4 class="set-h">缓存与数据</h4>
         <div class="set-row">
           <div class="set-lab"><span>清理本地缓存</span><small>清空本机这一份存档：成就进度、金币与已购皮肤、单机最高分、上榜昵称、玩法「已读」标记（清完再进游戏会重新弹一次玩法说明）。云端账号数据不受影响，已登录时清理后会立刻从云端恢复（成就 + 钱包）；音效、无障碍与按键设置会保留。</small></div>
           <button type="button" id="set-clear" class="set-btn set-danger" title="清理本机存档">清理缓存</button>

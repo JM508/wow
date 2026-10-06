@@ -134,10 +134,26 @@
 [data-theme="dark"] .ms-cell.n7 { color: #d7ccc8; }
 [data-theme="dark"] .ms-cell.n8 { color: #dadada; }
 
-/* 踩雷 / 误标 */
-.ms-cell.boom { background: #ef5350 !important; }
+/* 踩雷 / 误标（2026-10-06：踩中的雷红底闪一下；连锁炸到的雷橙底渐隐） */
+.ms-cell.boom {
+  background: #ef5350 !important;
+  animation: ms-boom-flash 0.5s ease-out;
+}
+.ms-cell.boom-lite { background: #f6a13c !important; animation: ms-boom-pop 0.36s ease-out; }
+@keyframes ms-boom-flash {
+  0% { box-shadow: 0 0 0 0 rgba(239, 83, 80, 0.75); }
+  100% { box-shadow: 0 0 0 12px rgba(239, 83, 80, 0); }
+}
+@keyframes ms-boom-pop {
+  0% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
 .ms-cell.wrongflag { background: #ef9a9a !important; }
 [data-theme="dark"] .ms-cell.wrongflag { background: #8c4a4a !important; }
+
+/* 旗子 / 地雷 SVG：跟格子字号走（fitCells 会按格子大小设 fontSize） */
+.ms-cell .ms-flag,
+.ms-cell .ms-mine { display: block; margin: 0 auto; width: 1em; height: 1em; }
 
 .ms-cell:disabled { cursor: default; }
 
@@ -191,6 +207,7 @@
   font-size: 13.5px;
   color: var(--secondary, #888888);
 }
+/* 再来一局按钮：用户要求灰色改黑（2026-10-06） */
 .ms-over-btn {
   min-width: 132px;
   padding: 10px 22px;
@@ -200,9 +217,10 @@
   font-weight: 700;
   cursor: pointer;
   color: #fff;
-  background: var(--primary, #4f8cff);
+  background: #1f1f1f;
 }
-.ms-over-btn:hover { filter: brightness(1.08); }
+[data-theme="dark"] .ms-over-btn { background: #e8e8e8; color: #1a1a1a; }
+.ms-over-btn:hover { filter: brightness(1.18); }
 .ms-over-btn:focus-visible { outline: 2px solid var(--secondary, #888888); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ms-over-box { animation: none; }
@@ -300,6 +318,13 @@
 .ms-rank-status { min-height: 18px; font-size: 12px; color: var(--secondary, #5b6470); }
 .ms-rank-status.is-err { color: #b42318; }
 .ms-rank-list { list-style: none; margin: 8px 0 0; padding: 0; }
+/* 2026-10-06 排行榜去分页改整榜滑动 */
+.ms-rank-list.ms-rank-list-scroll {
+  max-height: min(46vh, 430px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
 .ms-rank-row {
   display: grid;
   grid-template-columns: 30px 1fr auto auto;
@@ -327,18 +352,6 @@
 .ms-rank-sec { font-weight: 700; font-variant-numeric: tabular-nums; }
 .ms-rank-day { font-size: 12px; color: var(--secondary, #5b6470); }
 .ms-rank-empty { padding: 14px 4px; color: var(--secondary, #5b6470); }
-.ms-rank-pager { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
-.ms-rank-pg {
-  min-width: 30px;
-  padding: 4px 8px;
-  font-size: 13px;
-  color: var(--secondary, #5b6470);
-  background: transparent;
-  border: 1px solid var(--border, #dcdcdc);
-  border-radius: 8px;
-  cursor: pointer;
-}
-.ms-rank-pg.is-on { color: #ffffff; background: #4f8cff; border-color: #4f8cff; }
 .ms-rank-mine { display: flex; gap: 10px; align-items: baseline; margin-top: 8px; font-size: 13px; }
 .ms-rank-mine-t b { font-variant-numeric: tabular-nums; }
 .ms-rank-mine-d { color: var(--secondary, #5b6470); font-size: 12px; }

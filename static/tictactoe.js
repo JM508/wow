@@ -1,11 +1,15 @@
 /* ══════════════════════════════════════════════════════════════
-   井字棋（/tictactoe/）· 纯前端、无云依赖
+   井字棋（/tictactoe/）
    ──────────────────────────────────────────────────────────────
-   · 玩家执 ×，先手；电脑执 ○，按难度决定棋力：
+   · 玩家执 ×，电脑执 ○，按难度决定棋力：
        简单 = 随机落子（偶尔也会撞上赢法）
        中等 = 能赢就赢、要挡就挡，其余随机（会漏，但不好糊弄）
        困难 = minimax 完整搜索，理论上不可战胜（最好结果是平局）
-   · 战绩按难度分别存在本机（localStorage），不联网、不上传。
+   · 战绩按难度分别存在本机（localStorage）。
+   · 云端（2026-10-06）：赢一局得 1 / 2 / 3 分（难度越高分越多），
+     首次在某个难度赢棋就上 game_scores 榜（GameRank 只收比本人更高的分）；
+     「清空战绩」同时删掉云端排行榜里自己的井字棋成绩。
+   · 设置面板：谁先起手（我先 / 电脑先）、清空战绩（带确认弹窗）。
    · 外链脚本、无内联代码（CSP 同源白名单）。
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -20,7 +24,6 @@
   var elWin = document.getElementById("ttt-sc-win");
   var elDraw = document.getElementById("ttt-sc-draw");
   var elLose = document.getElementById("ttt-sc-lose");
-  var btnReset = document.getElementById("ttt-reset");
 
   var ME = 1, AI = 2, EMPTY = 0;
   var LINES = [
@@ -29,6 +32,8 @@
     [0, 4, 8], [2, 4, 6]
   ];
   var KEY = "ttt-score-v1";
+  var KEY_FIRST = "ttt-first-v1";   // 谁先起手："me"（默认）| "ai"
+  var POINTS = { easy: 1, mid: 2, hard: 3 };   // 赢一局的得分（按难度）
   var AI_DELAY = 380;          // 电脑「思考」一下，别像抢答
 
   var cells = [];
@@ -39,8 +44,26 @@
   var lock = false;            // 电脑思考中，禁点
   var mode = elLevel ? elLevel.value : "easy";
   var score = loadScore();
+  var first = loadFirst();
 
   function newBoard() { return [0, 0, 0, 0, 0, 0, 0, 0, 0]; }
+
+  /* ═══════════ 设置：谁先起手 ═══════════ */
+  function loadFirst() {
+    try { return localStorage.getItem(KEY_FIRST) === "ai" ? "ai" : "me"; } catch (e) { return "me"; }
+  }
+  function saveFirst(v) {
+    first = v === "ai" ? "ai" : "me";
+    try { localStorage.setItem(KEY_FIRST, first); } catch (e) {}
+  }
+  function paintFirstUi() {
+    var btns = document.querySelectorAll(".ttt-first-btn");
+    for (var i = 0; i < btns.length; i++) {
+      var on = btns[i].getAttribute("data-first") === first;
+      btns[i].classList[on ? "add" : "remove"]("is-on");
+      btns[i].setAttribute("aria-pressed", on ? "true" : "false");
+    }
+  }
 
   /* ═══════════ 战绩（本机，按难度分开） ═══════════ */
   function loadScore() {
@@ -172,7 +195,17 @@
     lock = false;
     clearWinHighlight();
     paintAll();
-    say("你执 × 先手，点格子落子" + levelLabel());
+    if (first === "ai") {
+      say("电脑执 ○ 先手" + levelLabel() + "，电脑思考中…");
+      lock = true;
+      paintAll();
+      setTimeout(function () {
+        if (over) { lock = false; return; }
+        aiTurn();
+      }, AI_DELAY);
+    } else {
+      say("你执 × 先手，点格子落子" + levelLabel());
+    }
     paintScore();
   }
   function levelLabel() {
@@ -181,7 +214,7 @@
 
   function settle(w) {
     over = true;
-    if (w.p === ME) { score[mode].win++; saveScore(); }
+    if (w.p === ME) { score[mode].win++; saveScore(); submitScore(); }
     else if (w.p === AI) { score[mode].lose++; saveScore(); }
     else { score[mode].draw++; saveScore(); }
     paintScore();
@@ -191,6 +224,22 @@
     say("<span>" + txt + "</span><button type='button' class='ttt-again' id='ttt-again'>再来一局</button>", true);
     var again = document.getElementById("ttt-again");
     if (again) again.addEventListener("click", reset);
+  }
+
+  /* ═══════════ 云端成绩（2026-10-06） ═══════════
+     赢一局得上榜分（简单 1 / 中等 2 / 困难 3）。GameRank 内部只收比本人
+     榜上更高的分，所以每个难度实际只记「头一次赢」（分数相同的赢局不重复写库）。 */
+  function submitScore() {
+    if (!window.GameRank) return;
+    window.GameRank.submit(mode, POINTS[mode] || 1).then(function (r) {
+      if (r && r.error) return;
+      var tip = document.createElement("span");
+      tip.className = "ttt-msg-tip";
+      tip.textContent = r && r.skipped
+        ? "（排行榜已有同难度成绩，" + (POINTS[mode] || 1) + " 分）"
+        : "（已上榜：" + (POINTS[mode] || 1) + " 分）";
+      if (elMsg) elMsg.appendChild(tip);
+    }).catch(function () {});
   }
 
   function aiTurn() {
@@ -234,13 +283,67 @@
       reset();
     });
   }
-  if (btnReset) {
-    btnReset.addEventListener("click", function () {
-      score[mode] = { win: 0, draw: 0, lose: 0 };
-      saveScore();
-      paintScore();
-      reset();
-    });
+
+  /* ═══════════ 设置面板（谁先起手 / 清空战绩） ═══════════ */
+  var elSet = document.getElementById("ttt-set");
+  var btnSetOpen = document.getElementById("ttt-set-open");
+  var btnSetClose = document.getElementById("ttt-set-close");
+  var elConfirm = document.getElementById("ttt-clear-confirm");
+
+  function setPanelOpen() { return !!elSet && !elSet.classList.contains("hidden"); }
+  function openSet() {
+    if (!elSet) return;
+    elSet.classList.remove("hidden");
+    if (elConfirm) elConfirm.classList.add("hidden");
+    paintFirstUi();
+    if (btnSetClose) btnSetClose.focus();
+  }
+  function closeSet() { if (elSet) elSet.classList.add("hidden"); }
+
+  if (btnSetOpen) btnSetOpen.addEventListener("click", openSet);
+  if (btnSetClose) btnSetClose.addEventListener("click", closeSet);
+  if (elSet) elSet.addEventListener("click", function (e) { if (e.target === elSet) closeSet(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && setPanelOpen()) { e.preventDefault(); closeSet(); }
+  });
+  document.addEventListener("click", function (e) {
+    var b = e.target && e.target.closest ? e.target.closest(".ttt-first-btn") : null;
+    if (!b) return;
+    saveFirst(b.getAttribute("data-first"));
+    paintFirstUi();
+    reset();                                   // 换先手立刻开新一局
+  });
+
+  /* 清空战绩：两段确认 —— 第二段里明说「排行榜数据也会清除」 */
+  var btnClear = document.getElementById("ttt-clear");
+  if (btnClear) btnClear.addEventListener("click", function () {
+    if (elConfirm) elConfirm.classList.remove("hidden");
+  });
+  var btnClearNo = document.getElementById("ttt-clear-no");
+  if (btnClearNo) btnClearNo.addEventListener("click", function () {
+    if (elConfirm) elConfirm.classList.add("hidden");
+  });
+  var btnClearYes = document.getElementById("ttt-clear-yes");
+  if (btnClearYes) btnClearYes.addEventListener("click", function () {
+    score = { easy: { win: 0, draw: 0, lose: 0 }, mid: { win: 0, draw: 0, lose: 0 }, hard: { win: 0, draw: 0, lose: 0 } };
+    saveScore();
+    paintScore();
+    if (elConfirm) elConfirm.classList.add("hidden");
+    clearCloudScores();
+    reset();
+  });
+
+  /* 云端清除：cloud.js 的 RPC（登录按账号删，访客按设备删）。
+     云服务不可用时静默跳过 —— 本机战绩已经清了，下次连上云再由用户手动重试。 */
+  function clearCloudScores() {
+    try {
+      if (window.WowCloud && window.WowCloud.games && window.WowCloud.games.clearMy) {
+        window.WowCloud.games.clearMy("ttt").then(function (r) {
+          if (r && r.error) return;
+          if (window.GameRank) window.GameRank.reload();
+        }).catch(function () {});
+      }
+    } catch (e) {}
   }
 
   reset();

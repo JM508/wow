@@ -19,7 +19,7 @@
      没有外壳时（直接嵌在正文里）当作常显区块。 */
   var panel = root.closest ? root.closest("[data-shop-panel]") : null;
 
-  var elWalletNum = null, elHint = null, gridPlayers = null, gridCoins = null;
+  var elWalletNum = null, elHint = null, gridPlayers = null, gridCoins = null, gridFlags = null;
   var previews = [];                       // { canvas, ctx, kind, item, ph }
   var hintTimer = null;
   var built = false;
@@ -73,7 +73,6 @@
     var strong = mk("strong", "shop-wallet-num", left);
     elWalletNum = mk("span", null, strong, "0");
     elWalletNum.id = "shop-coins";
-    strong.appendChild(document.createTextNode(" 💰"));
 
     if (panel) {                                   // 弹层里给一个「关掉继续玩」的出口
       var back = mk("button", "shop-go", bar, "继续奔跑");
@@ -81,7 +80,7 @@
       back.id = "shop-close";
       back.addEventListener("click", function () { close(); });
     } else {                                       // 独立商店页：给个去游戏的入口
-      var go = mk("a", "shop-go", bar, "🏃 去赚金币");
+      var go = mk("a", "shop-go", bar, "去赚金币");
       go.href = "/runner/";
     }
 
@@ -97,6 +96,13 @@
     mk("h2", "shop-sec-title", sec2, "金币皮肤");
     gridCoins = mk("div", "shop-grid", sec2);
     gridCoins.id = "shop-coins-grid";
+
+    /* 旗子皮肤（2026-10-06）：免费换色，扫雷里插的旗跟着变 */
+    var sec3 = mk("section", "shop-sec", root);
+    mk("h2", "shop-sec-title", sec3, "旗子皮肤");
+    mk("p", "shop-sec-note", sec3, "扫雷里插的旗用这里的颜色，全部免费。");
+    gridFlags = mk("div", "shop-grid", sec3);
+    gridFlags.id = "shop-flags";
 
     mk("p", "shop-foot", root,
       "皮肤与金币余额保存在本机浏览器；登录账号后自动同步到云端，换设备也不会丢。清除浏览数据会清掉本地记录。");
@@ -170,11 +176,15 @@
     }
     var players = byShopOrder(Skins.PLAYERS);
     var coins = byShopOrder(Skins.COINS);
+    var flags = byShopOrder(Skins.FLAGS || []);
     for (i = 0; i < players.length; i++) {
       gridPlayers.appendChild(buildCard("player", players[i]));
     }
     for (i = 0; i < coins.length; i++) {
       gridCoins.appendChild(buildCard("coin", coins[i]));
+    }
+    for (i = 0; i < flags.length; i++) {
+      gridFlags.appendChild(buildCard("flag", flags[i]));
     }
   }
 
@@ -206,14 +216,14 @@
       card.classList.toggle("is-using", using);
 
       if (using) {
-        btn.textContent = "✓ 使用中";
+        btn.textContent = "使用中";
         btn.classList.add("is-on");
         btn.disabled = true;
       } else if (owned) {
         btn.textContent = "装备";
         btn.classList.add("is-own");
       } else {
-        btn.textContent = "💰 " + def.price;
+        btn.textContent = def.price + " 金币";
         if (wallet < def.price) btn.classList.add("is-poor");
       }
     }
@@ -240,7 +250,7 @@
     } else {
       var r = Skins.buy(kind, id);
       if (r.ok) {
-        say("🎉 买下了「" + def.name + "」并自动换上，钱包还剩 " + r.left + " 💰。");
+        say("买下了「" + def.name + "」并自动换上，钱包还剩 " + r.left + " 金币。");
       } else if (r.reason === "poor") {
         say("金币不够，还差 " + r.need + " 枚 —— 再去跑几局吧！", true);
       }
@@ -274,6 +284,8 @@
         pose: "run", t: t, run: t * 8.5, night: night, scale: scale
       });
       g.restore();
+    } else if (p.kind === "flag") {
+      Skins.drawFlag(g, p.item, { t: t, ph: p.ph, scale: 9.5, x: W / 2, y: H - 52 });
     } else {
       Skins.drawCoin(g, p.item, {
         x: W / 2, y: H / 2, t: t, ph: p.ph, scale: 4.2

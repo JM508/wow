@@ -1,0 +1,77 @@
+<!-- 贪吃蛇小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
+<link rel="stylesheet" href="/snake.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<!-- 个人中心（皮肤 / 成就 / 个人三页签）与云端排行榜共用 runner.css 里的面板样式 -->
+<link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<link rel="stylesheet" href="/grank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
+<div id="snake-root" aria-label="贪吃蛇">
+  <div class="snake-bar">
+    <select id="snake-level" aria-label="难度">
+      <option value="easy" selected>简单</option>
+      <option value="mid">中等</option>
+      <option value="hard">困难</option>
+    </select>
+    <span class="snake-stat snake-stat-first">得分 <b id="snake-score">0</b></span>
+    <span class="snake-stat">最高 <b id="snake-best">0</b></span>
+    <button type="button" id="snake-pause" class="snake-btn">暂停</button>
+    <button type="button" id="snake-start" class="snake-btn snake-btn-primary">开始</button>
+  </div>
+  <div class="snake-bar">
+    <button type="button" id="snake-me-open" class="snake-btn" data-open-me title="个人中心：皮肤、成就、昵称与头像">个人中心</button>
+    <button type="button" id="snake-rank-open" class="snake-btn" data-grank-open title="排行榜：各难度的最佳分数">排行榜</button>
+  </div>
+  <canvas id="snake-canvas" width="420" height="420" role="img" aria-label="贪吃蛇棋盘"></canvas>
+  <div id="snake-dpad" aria-label="方向按钮">
+    <button type="button" class="snake-dpad-up" data-dir="up" aria-label="向上">↑</button>
+    <button type="button" class="snake-dpad-left" data-dir="left" aria-label="向左">←</button>
+    <button type="button" class="snake-dpad-down" data-dir="down" aria-label="向下">↓</button>
+    <button type="button" class="snake-dpad-right" data-dir="right" aria-label="向右">→</button>
+  </div>
+  <p id="snake-msg" class="snake-msg" role="status" aria-live="polite"></p>
+</div>
+
+<!-- ═══ 云端排行榜弹层（GameRank 通用组件，game_scores 表） ═══ -->
+<div id="grank-root" data-game="snake" data-title="贪吃蛇排行榜" data-unit="分" data-modes="easy:简单,mid:中等,hard:困难"></div>
+<div id="grank-panel" class="grank hidden" role="dialog" aria-modal="true" aria-labelledby="grank-title">
+  <div class="grank-box">
+    <div class="grank-head">
+      <strong id="grank-title">贪吃蛇排行榜</strong>
+      <button type="button" class="grank-x" id="grank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
+    </div>
+    <div class="grank-tabs" id="grank-tabs" role="tablist" aria-label="难度">
+      <button type="button" class="grank-tab is-on" role="tab" aria-selected="true" data-mode="easy">简单</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="mid">中等</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="hard">困难</button>
+    </div>
+    <div class="grank-status" id="grank-status" role="status" aria-live="polite"></div>
+    <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
+    <div class="grank-mine" id="grank-mine"></div>
+    <p class="grank-foot">
+      榜上按<b>最佳分数</b>排名（同名只留最高的一条，每吃一个苹果 +10 分）；
+      未登录以「访客 N」上榜，登录后可在个人中心用自己的昵称，成绩跟着账号走。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 结束弹窗 ═══ -->
+<div id="snake-over" class="snake-over hidden" role="alertdialog" aria-modal="true" aria-labelledby="snake-over-t" aria-describedby="snake-over-s">
+  <div class="snake-over-box">
+    <p class="snake-over-t" id="snake-over-t">游戏结束</p>
+    <p class="snake-over-s" id="snake-over-s"></p>
+    <button type="button" id="snake-over-btn" class="snake-over-btn">再来一局</button>
+  </div>
+</div>
+
+<!-- ═══ 个人中心（三游戏共用 DOM）：贪吃蛇页由 me.js 驱动 ═══ -->
+{{ partial "me-center.html" . }}
+
+{{/* 云 SDK 必须在 cloud.js 之前（cloud.js 的 build() 依赖 window.WorkBuddyCloud） */}}
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/grank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/snake.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

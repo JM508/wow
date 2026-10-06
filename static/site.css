@@ -4,7 +4,15 @@
 
 /* ══ 首页正文区的「玩游戏」入口按钮 ══
    入口来自 hugo.toml 的 homeInfoParams.Content 里的原生 HTML（unsafe=true），
-   一个居中大按钮 → 跳转 /games/ 游戏合集页（两个游戏都收在合集页里）。 */
+   一个居中大按钮 → 跳转 /games/ 游戏合集页（两个游戏都收在合集页里）。
+   ⚠️ 主题 .md-content a:not(.anchor) 会给正文链接加下划线，特异性 (0,2,1)
+   正好压过下面的单类选择器 —— 必须用同样特异性把下划线收回来，
+   否则「玩游戏」按钮与合集页游戏名/更新时间都会带一条线（用户 2026-10-06 报的横线）。 */
+.md-content a.games-entry-btn,
+.md-content a.games-row,
+.md-content .games-row a,
+.md-content .games-entry a { text-decoration: none; }
+
 .games-entry {
   text-align: center;
   margin: 1.8rem 0 0.6rem;
@@ -222,3 +230,4 @@ html[data-theme="dark"][data-ag-bg] .footer-repo a {
 
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
 .games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }
+.games-snake:hover { background: linear-gradient(135deg, #37a352, #7bc043); box-shadow: 0 12px 26px -12px rgba(55, 163, 82, 0.9); }

@@ -28,6 +28,70 @@
   var S = null;          // 当前局面状态
   var timerId = null;
 
+  /* ═══════════ 旗子皮肤（2026-10-06）：旗子颜色跟皮肤走 ═══════════
+     皮肤页（个人中心 → 皮肤 → 旗子皮肤）里选哪面旗，这里的旗就渲染成那个颜色；
+     skins.js 没加载（离线老缓存）时回落经典红。 */
+  function flagColor() {
+    try {
+      if (window.RunnerSkins && window.RunnerSkins.flagColor) return window.RunnerSkins.flagColor();
+    } catch (e) {}
+    return "#ff4d4f";
+  }
+  function flagSvg() {
+    return '<svg class="ms-flag" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">' +
+      '<rect x="4.5" y="2.5" width="2" height="19" rx="1" fill="#8a6a45"/>' +
+      '<path d="M6.5 3.5 L20 8 L6.5 12.5 Z" fill="' + flagColor() + '"/>' +
+      '</svg>';
+  }
+  function mineSvg() {
+    return '<svg class="ms-mine" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">' +
+      '<line x1="12" y1="2" x2="12" y2="22" stroke="#3a3f4a" stroke-width="1.6"/>' +
+      '<line x1="2" y1="12" x2="22" y2="12" stroke="#3a3f4a" stroke-width="1.6"/>' +
+      '<line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="#3a3f4a" stroke-width="1.6"/>' +
+      '<line x1="19.1" y1="4.9" x2="4.9" y2="19.1" stroke="#3a3f4a" stroke-width="1.6"/>' +
+      '<circle cx="12" cy="12" r="6.4" fill="#3a3f4a"/>' +
+      '<circle cx="9.8" cy="9.8" r="1.7" fill="#8d95a5"/>' +
+      '</svg>';
+  }
+
+  /* ═══════════ 爆炸音效（WebAudio 合成，无外部音频文件） ═══════════
+     低频正弦下坠 + 白噪声爆裂。逐雷爆炸时每颗都响一声（音量/音高略随机，像连环雷）。 */
+  var audioCtx = null;
+  function ac() {
+    if (!audioCtx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { audioCtx = new AC(); } catch (e) { return null; }
+    }
+    if (audioCtx.state === "suspended") { try { audioCtx.resume(); } catch (e) {} }
+    return audioCtx;
+  }
+  function boomSound(vol, rate) {
+    var ctx = ac();
+    if (!ctx) return;
+    vol = vol === undefined ? 1 : vol;
+    rate = rate || 1;
+    try {
+      var t0 = ctx.currentTime;
+      var osc = ctx.createOscillator(), og = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(150 * rate, t0);
+      osc.frequency.exponentialRampToValueAtTime(28, t0 + 0.38);
+      og.gain.setValueAtTime(0.42 * vol, t0);
+      og.gain.exponentialRampToValueAtTime(0.001, t0 + 0.42);
+      osc.connect(og); og.connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + 0.45);
+      var len = Math.max(1, Math.floor(ctx.sampleRate * 0.28));
+      var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+      var src = ctx.createBufferSource(); src.buffer = buf;
+      var ng = ctx.createGain(); ng.gain.value = 0.3 * vol;
+      src.connect(ng); ng.connect(ctx.destination);
+      src.start(t0);
+    } catch (e) {}
+  }
+
   function newGame() {
     stopTimer();
     var lv = LEVELS[levelEl.value] || LEVELS.easy;
@@ -156,7 +220,7 @@
       if (cell.open) return;
       cell.flag = !cell.flag;
       cell.flag ? S.flags++ : S.flags--;
-      cell.el.textContent = cell.flag ? "🚩" : "";
+      cell.el.innerHTML = cell.flag ? flagSvg() : "";
       cell.el.setAttribute("aria-label", cell.flag ? "已插旗" : "未翻开");
       updateMineCounter();
       return;
@@ -184,25 +248,52 @@
     }
   }
 
+  /* ── 失败：连环爆炸（2026-10-06） ──
+     踩中的雷立刻炸（带音效），其余未插旗的地雷按离踩雷点的距离由近到远逐个引爆，
+     每颗一声爆炸音（音量随距离衰减、音高略随机）。全部炸完后弹「你碰到炸弹了」弹窗。
+     插了旗的雷不爆（算玩家排掉的），误标仍打叉提示。 */
   function lose(boomCell) {
     S.over = true;
     stopTimer();
+    S.cells.forEach(function (cell) { cell.el.disabled = true; });
+
+    var br = boomCell.r, bc = boomCell.c;
+    var others = S.cells.filter(function (cell) {
+      return cell.mine && cell !== boomCell && !cell.flag;
+    }).sort(function (a, b) {
+      var da = (a.r - br) * (a.r - br) + (a.c - bc) * (a.c - bc);
+      var db = (b.r - br) * (b.r - br) + (b.c - bc) * (b.c - bc);
+      return da - db;
+    });
+
+    /* 逐雷间隔自适应：雷多时炸得密一些，整体控制在 ~2 秒内 */
+    var step = Math.max(24, Math.min(110, Math.round(1800 / Math.max(1, others.length))));
+
     boomCell.el.classList.add("boom");
-    boomCell.el.textContent = "💥";
+    boomCell.el.innerHTML = mineSvg();
+    boomSound(1, 1);
+
+    others.forEach(function (cell, i) {
+      setTimeout(function () {
+        cell.el.classList.add("boom-lite");
+        cell.el.innerHTML = mineSvg();
+        boomSound(Math.max(0.25, 1 - i * 0.04), 0.85 + Math.random() * 0.4);
+      }, step * (i + 1));
+    });
+
     S.cells.forEach(function (cell) {
-      cell.el.disabled = true;
-      if (cell.mine && cell !== boomCell && !cell.flag) {
-        cell.el.textContent = "💣";
-        cell.el.classList.add("open");
-      }
       if (!cell.mine && cell.flag) {                    // 误标
-        cell.el.textContent = "❌";
+        cell.el.textContent = "✕";
         cell.el.classList.add("wrongflag");
       }
     });
-    msgEl.textContent = "💥 踩到地雷了！坚持了 " + S.seconds + " 秒。";
-    msgEl.className = "ms-msg lose";
-    showOver(S.seconds);            // 失败弹窗：自动弹出，只有「再来一局」能关
+
+    var total = step * others.length + 420;             // 等最后一颗炸完再弹窗
+    setTimeout(function () {
+      msgEl.textContent = "踩到地雷了！坚持了 " + S.seconds + " 秒。";
+      msgEl.className = "ms-msg lose";
+      showOver(S.seconds);            // 失败弹窗：自动弹出，只有「再来一局」能关
+    }, total);
   }
 
   /* ── 失败弹窗 ── */
@@ -224,12 +315,12 @@
         cell.el.disabled = true;
         if (cell.mine) {
           cell.flag = true;
-          cell.el.textContent = "🚩";
+          cell.el.innerHTML = flagSvg();
         }
       });
       S.flags = S.mines;      // 胜利时剩余雷全部自动插旗，计数同步归零
       updateMineCounter();
-      msgEl.textContent = "🎉 扫雷成功！用时 " + S.seconds + " 秒。";
+      msgEl.textContent = "扫雷成功！用时 " + S.seconds + " 秒。";
       msgEl.className = "ms-msg win";
       /* 通关成绩上云榜：只有通关才提交（用时越短越靠前）。
          MsRank 尚未加载（离线 / 老缓存页面）时静默跳过，不影响单机玩法。 */
@@ -258,10 +349,18 @@
   flagBtn.addEventListener("click", function () {
     var on = flagBtn.getAttribute("aria-pressed") === "true";
     flagBtn.setAttribute("aria-pressed", on ? "false" : "true");
-    flagBtn.textContent = on ? "🚩 插旗模式：关" : "🚩 插旗模式：开";
+    flagBtn.textContent = on ? "插旗模式：关" : "插旗模式：开";
   });
   // 阻止雷区上的浏览器默认右键菜单
   boardEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  /* 在皮肤页换了旗子皮肤 → 棋盘上已插的旗立刻换色（skins.js 的 equip 会广播 wallet:change） */
+  document.addEventListener("wallet:change", function () {
+    if (!S) return;
+    S.cells.forEach(function (cell) {
+      if (cell.flag && !cell.open) cell.el.innerHTML = flagSvg();
+    });
+  });
 
   newGame();
 })();

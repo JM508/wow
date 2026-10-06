@@ -135,7 +135,13 @@
     }
     if (code === "42P01") return "云端数据表尚未就绪，请稍后再试";
     if (code === "23505") return "已经存在同名记录，换一个昵称试试";
-    if (code === "42501") return "没有权限执行该操作，请重新登录";
+    /* 网关会把 SQLSTATE 前缀成 DATABASE_42501（不是裸 "42501"），此前匹配不上
+       就把英文原文「permission denied for table …」直接甩给用户了（2026-10-06 修）。
+       这是读权限问题：对访客说「请重新登录」没用（本来就没登录），
+       统一给一句可操作的中性提示。 */
+    if (/42501$/.test(String(code)) || /permission denied/i.test(String(err.message || ""))) {
+      return "这一步没有权限，可能是登录状态过期，请刷新页面或重新登录试试";
+    }
     if (kind === "unauthenticated") return "登录状态已过期，请重新登录";
     if (kind === "permission-denied") {
       /* 网关层的 403 多半是「当前域名没绑定到这个应用」 */
@@ -587,21 +593,24 @@
 
   /* ── 访客编号分配 ──
      扫一遍榜上已有的「访客 N」，取最小的空号（0 起）。
-     结果记在 sessionStorage：同一会话固定一个编号，避免每局都变。 */
+     结果记在 sessionStorage：同一会话固定一个编号，避免每局都变。
+     查询失败不能让 promise 悬空：编号分配挂了成绩就上传不了（2026-10-06 补 catch），
+     失败时退回缓存的编号或「访客 0」——撞号无害（RLS 只校验格式，同名多行合法）。 */
   function guestName() {
+    var fallback = "访客 0";
     try {
       var cached = sessionStorage.getItem("rank-guest-name");
       if (cached && GUEST_RE.test(cached)) return Promise.resolve(cached);
     } catch (e) {}
     var d = db();
-    if (!d) return Promise.resolve("访客 0");
+    if (!d) return Promise.resolve(fallback);
     return d.from(TABLE_SCORES)
       .select("nickname")
       .like("nickname", "访客 %")
       .limit(500)
       .then(function (r) {
         var used = {};
-        if (r.data) {
+        if (r && r.data) {
           for (var i = 0; i < r.data.length; i++) {
             var m = GUEST_RE.exec(String(r.data[i].nickname || ""));
             if (m) used[parseInt(m[1], 10)] = true;
@@ -612,7 +621,8 @@
         var name = "访客 " + (n > 999 ? 999 : n);
         try { global.sessionStorage.setItem("rank-guest-name", name); } catch (e) {}
         return name;
-      });
+      })
+      .catch(function () { return fallback; });
   }
 
   /* ═══════════ 本地钱包 ⇄ 云存档 合并 ═══════════
@@ -762,6 +772,80 @@
     });
   }
 
+  /* ═══════════ game_scores：井字棋 / 贪吃蛇 共用成绩表 ═══════════
+     榜单读取由 grank.js 直接走 database()（与 msrank.js 同一套路），
+     这里只提供「清我的战绩」——需要按登录身份或设备号删行，匿名没有 DELETE 列权，
+     必须走 SECURITY DEFINER 的 RPC，且只允许删自己的（owner 匹配 / 设备号匹配）。 */
+  function clearMyGameScores(game) {
+    var c = build();
+    if (!c) return Promise.resolve({ data: 0, error: envUnavailable() });
+    var call = function (tok) {
+      return fetch(API + "/.cloud/database/rest/rpc/clear_my_game_scores", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wb-webapp-access-key": PUBLIC_CONFIG.publishableKey,
+          "Authorization": tok ? "Bearer " + tok : ""
+        },
+        body: JSON.stringify({ p_game: game, p_device_id: deviceId() })
+      }).then(function (r) {
+        if (!r.ok) {
+          return { data: 0, error: { kind: "unknown", message: "云端战绩清理失败（HTTP " + r.status + "）", status: r.status } };
+        }
+        return r.json().then(function (v) { return { data: typeof v === "number" ? v : 0, error: null }; });
+      }).catch(function (e) {
+        return { data: 0, error: { kind: "network", message: "网络异常，稍后重试", status: 0, cause: e } };
+      });
+    };
+    var u = user();
+    if (!u) return call(null);                       // 访客：按设备号清
+    return c.auth.getAccessToken().then(function (tok) {
+      if (!tok) return { data: 0, error: { kind: "unauthenticated", message: "登录态已失效，请重新登录", status: 0 } };
+      return call(tok);
+    });
+  }
+
+  /* ═══════════ user_settings：设置云端同步（仅登录用户） ═══════════ */
+  function settingsPull() {
+    var c = build();
+    if (!c) return Promise.resolve({ data: null, error: envUnavailable() });
+    if (!user()) return Promise.resolve({ data: null, error: null, notLoggedIn: true });
+    return db().from("user_settings").select("settings, updated_at").limit(1)
+      .then(function (r) {
+        if (r && r.error) return { data: null, error: r.error };
+        var row = r && r.data && r.data[0];
+        return { data: row ? { settings: row.settings, updatedAt: row.updated_at } : null, error: null };
+      });
+  }
+  function settingsPush(text) {
+    var c = build();
+    if (!c) return Promise.resolve({ data: null, error: envUnavailable() });
+    if (!user()) return Promise.resolve({ data: null, error: null, notLoggedIn: true });
+    var body = String(text || "");
+    if (body.length < 2 || body.length > 8192) {
+      return Promise.resolve({ data: null, error: { kind: "invalid-request", message: "设置内容超出同步范围", status: 0 } });
+    }
+    return c.auth.getAccessToken().then(function (tok) {
+      if (!tok) return { data: null, error: { kind: "unauthenticated", message: "登录状态已失效，请重新登录", status: 0 } };
+      return fetch(API + "/.cloud/database/rest/rpc/save_my_settings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wb-webapp-access-key": PUBLIC_CONFIG.publishableKey,
+          "Authorization": "Bearer " + tok
+        },
+        body: JSON.stringify({ p_settings: body })
+      }).then(function (r) {
+        if (!r.ok) {
+          return { data: null, error: { kind: "unknown", message: "设置没能同步到云端（HTTP " + r.status + "）", status: r.status } };
+        }
+        return { data: true, error: null };
+      }).catch(function (e) {
+        return { data: null, error: { kind: "network", message: "网络异常，设置稍后自动重试", status: 0, cause: e } };
+      });
+    });
+  }
+
   /* ═══════════ 对外接口 ═══════════ */
   /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待 */
   try { regionFetch(); } catch (e) {}
@@ -829,6 +913,15 @@
       writeLocal: avatarWriteLocal,
       notify: notifyAvatar,
       MAX: AVATAR_MAX
+    },
+    /* 井字棋 / 贪吃蛇 共用成绩表：这里只有「清我的战绩」，榜单读写由 grank.js 完成 */
+    games: {
+      clearMy: clearMyGameScores
+    },
+    /* 设置云同步（仅登录用户；本地读写仍在各页脚本里） */
+    settings: {
+      pull: settingsPull,
+      push: settingsPush
     }
   };
 })(window);

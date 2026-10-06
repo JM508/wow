@@ -1,0 +1,84 @@
+<!-- ═══ 个人中心（三游戏共用）：皮肤 / 成就 / 个人 三页签 ═══
+     runner 页由 /runner.js 驱动；扫雷 / 井字棋 / 贪吃蛇页由 /me.js 驱动。
+     两边共用同一套 DOM id 与样式，改结构时两处驱动逻辑都要核对。 -->
+<div id="run-shop" class="run-shop hidden" data-shop-panel role="dialog" aria-modal="true" aria-labelledby="run-shop-title">
+  <div class="run-shop-box">
+    <div class="run-shop-head me-head">
+      <strong id="run-shop-title" class="me-title">个人中心</strong>
+      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="true">皮肤</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
+      </div>
+      <button type="button" class="run-shop-x" id="run-shop-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
+    </div>
+    <div id="shop-root" aria-label="皮肤商店商品"></div>
+  </div>
+</div>
+
+<div id="run-ach" class="run-ach hidden" data-ach-panel role="dialog" aria-modal="true" aria-labelledby="run-ach-title">
+  <div class="run-ach-box">
+    <div class="run-ach-head me-head">
+      <strong id="run-ach-title" class="me-title">个人中心</strong>
+      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="true">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
+      </div>
+      <button type="button" class="run-ach-x" id="run-ach-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
+    </div>
+    <div id="ach-progress" aria-live="polite"></div>
+    <div id="ach-list" aria-label="成就列表"></div>
+  </div>
+</div>
+
+<div id="run-me" class="run-me hidden" data-me-panel role="dialog" aria-modal="true" aria-labelledby="run-me-title">
+  <div class="run-me-box">
+    <div class="run-me-head me-head">
+      <strong id="run-me-title" class="me-title">个人中心</strong>
+      <div class="me-tabs" role="tablist" aria-label="个人中心页面">
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="true">个人</button>
+      </div>
+      <button type="button" class="run-me-x" id="run-me-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
+    </div>
+
+    <section class="me-card">
+      <div class="me-ava">
+        <img class="me-ava-img hidden" id="me-ava-img" alt="我的头像">
+        <span class="me-ava-ph" id="me-ava-ph" aria-hidden="true">＋</span>
+      </div>
+      <div class="me-id">
+        <strong class="me-nick" id="me-nick">无名玩家</strong>
+        <span class="me-sub" id="me-sub">未登录 · 头像只存在本机</span>
+        <span class="me-region" id="me-region" title="IP 属地（省级/国家级）"></span>
+      </div>
+      <div class="me-ava-act">
+        <button type="button" class="me-btn" id="me-ava-pick">选择图片</button>
+        <button type="button" class="me-btn me-btn-quiet hidden" id="me-ava-clear">移除头像</button>
+      </div>
+      <input type="file" class="me-file" id="me-ava-file" accept="image/png,image/jpeg,image/webp,image/gif">
+      <p class="me-hint" id="me-ava-hint">头像会公开显示在云端排行榜上。建议用正方形图片，会自动裁成圆形并压缩。</p>
+    </section>
+
+    <section class="me-card">
+      <label class="me-nick-lab" for="me-nick-input">排行榜昵称</label>
+      <div class="me-nick-row" id="me-nick-row">
+        <input id="me-nick-input" type="text" maxlength="16" placeholder="登录后可以自己取名" autocomplete="nickname">
+        <button type="button" id="me-nick-save" class="me-btn">保存</button>
+      </div>
+      <p class="me-hint" id="me-nick-hint">取名后会显示在排行榜上（不允许重名）；未登录时成绩以「访客 N」自动上传。</p>
+    </section>
+
+    <section class="me-card">
+      <div class="me-ach">
+        <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">19</span></span>
+        <span class="me-ach-lab">成就已解锁</span>
+      </div>
+      <div class="me-bar" id="me-bar" role="progressbar" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" aria-label="成就进度"><i id="me-bar-fill"></i></div>
+    </section>
+
+    <p class="me-foot">头像、昵称与成就都跟着账号走：登录后换设备也能看到同一份资料。</p>
+  </div>
+</div>
