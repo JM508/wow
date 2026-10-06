@@ -199,6 +199,34 @@
   appearance: none;
 }
 .run-upload-btn:hover { filter: brightness(1.12); }
+/* 结算卡上的「以后自动上传成绩到排行榜」勾选框（勾上后从下一局起自动上榜） */
+.run-autoup {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--secondary, #5b6470);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.run-autoup input {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  accent-color: #2e7d32;
+  cursor: pointer;
+}
+/* 已自动上传的状态小字 */
+.run-up-done {
+  display: inline-block;
+  margin: 2px 0 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2e7d32;
+}
 .run-ov-text em {
   display: inline-block;
   padding: 1px 7px;
@@ -739,8 +767,13 @@ html.run-bigtext .me-tabs .me-tab { font-size: 15px; padding: 7px 16px; }
   color: var(--primary, #1f1f1f);
   background: var(--theme, #ffffff);
   border: 1px solid var(--border, #e0e0e0);
+  /* 2026-10-06 用户报障「扫雷里的个人中心没有框框」：本站暗色主题下
+     --theme(29,30,32) 与遮罩后的暗背景几乎同色，--border(51,51,51) 又比面板底还暗，
+     于是整个弹层糊在背景里「看不出是个框」。改成中性半透明描边 + 更实的投影，
+     两套主题下框都在。 */
+  border-color: rgba(128, 138, 152, 0.34);
   border-radius: 16px;
-  box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.9);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -780,7 +813,11 @@ html.run-bigtext .me-tabs .me-tab { font-size: 15px; padding: 7px 16px; }
   margin-top: 16px;
   padding: 16px;
   background: var(--tertiary, #f6f7fb);
+  /* 卡片自己的框也要看得见：--border 在暗色下比卡片底色还暗，直接用会「没有框框」，
+     这里换成中性半透明描边 + 一点点投影（两套主题都成立）。 */
   border: 1px solid var(--border, #e0e0e0);
+  border-color: rgba(128, 138, 152, 0.34);
+  box-shadow: 0 1px 2px rgba(8, 14, 24, 0.08);
   border-radius: 14px;
 }
 /* 第一张卡（头像）：左头像、右昵称与按钮，底下一行说明 */

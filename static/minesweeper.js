@@ -43,14 +43,27 @@
       '<path d="M6.5 3.5 L20 8 L6.5 12.5 Z" fill="' + flagColor() + '"/>' +
       '</svg>';
   }
+  /* ═══════════ 地雷皮肤（2026-10-06）：雷体三色跟皮肤走 ═══════════
+     个人中心 → 皮肤 → 雷皮肤里选哪款，这里炸出来的雷就是那个配色；
+     skins.js 没加载（离线老缓存）时回落经典铁雷。 */
+  function mineParts() {
+    try {
+      if (window.RunnerSkins && window.RunnerSkins.mineParts) {
+        var p = window.RunnerSkins.mineParts();
+        if (p && p.body && p.spike && p.shine) return p;
+      }
+    } catch (e) {}
+    return { body: "#3a3f4a", spike: "#3a3f4a", shine: "#8d95a5" };
+  }
   function mineSvg() {
+    var p = mineParts();
     return '<svg class="ms-mine" viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">' +
-      '<line x1="12" y1="2" x2="12" y2="22" stroke="#3a3f4a" stroke-width="1.6"/>' +
-      '<line x1="2" y1="12" x2="22" y2="12" stroke="#3a3f4a" stroke-width="1.6"/>' +
-      '<line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="#3a3f4a" stroke-width="1.6"/>' +
-      '<line x1="19.1" y1="4.9" x2="4.9" y2="19.1" stroke="#3a3f4a" stroke-width="1.6"/>' +
-      '<circle cx="12" cy="12" r="6.4" fill="#3a3f4a"/>' +
-      '<circle cx="9.8" cy="9.8" r="1.7" fill="#8d95a5"/>' +
+      '<line x1="12" y1="2" x2="12" y2="22" stroke="' + p.spike + '" stroke-width="1.6"/>' +
+      '<line x1="2" y1="12" x2="22" y2="12" stroke="' + p.spike + '" stroke-width="1.6"/>' +
+      '<line x1="4.9" y1="4.9" x2="19.1" y2="19.1" stroke="' + p.spike + '" stroke-width="1.6"/>' +
+      '<line x1="19.1" y1="4.9" x2="4.9" y2="19.1" stroke="' + p.spike + '" stroke-width="1.6"/>' +
+      '<circle cx="12" cy="12" r="6.4" fill="' + p.body + '"/>' +
+      '<circle cx="9.8" cy="9.8" r="1.7" fill="' + p.shine + '"/>' +
       '</svg>';
   }
 
@@ -198,6 +211,7 @@
 
   function startTimer() {
     stopTimer();
+    if (modalDepth > 0) return;                 // 面板开着时不计时
     timerId = setInterval(function () {
       S.seconds++;
       timeEl.textContent = String(S.seconds);
@@ -206,6 +220,18 @@
   function stopTimer() {
     if (timerId) { clearInterval(timerId); timerId = null; }
   }
+
+  /* ── 打开个人中心 / 排行榜时停表（2026-10-06 用户要求） ──
+     两个遮罩层可能叠着开，按深度计数；关掉最后一个再接着走。 */
+  var modalDepth = 0;
+  document.addEventListener("panel:open", function () {
+    modalDepth += 1;
+    if (modalDepth === 1 && S && !S.over && S.placed) stopTimer();
+  });
+  document.addEventListener("panel:close", function () {
+    modalDepth = Math.max(0, modalDepth - 1);
+    if (modalDepth === 0 && S && !S.over && S.placed) startTimer();
+  });
 
   function updateMineCounter() {
     /* 超插旗时夹在 0：显示 -5 会让人以为出了 bug（经典扫雷允许负数，但这里宁可收敛） */
@@ -293,6 +319,13 @@
       msgEl.textContent = "踩到地雷了！坚持了 " + S.seconds + " 秒。";
       msgEl.className = "ms-msg lose";
       showOver(S.seconds);            // 失败弹窗：自动弹出，只有「再来一局」能关
+      /* 成就：本局失败（连胜归零，但开局数照记） */
+      if (window.GameAch) {
+        window.GameAch.report({
+          kind: "lose", mode: levelEl.value,
+          opens: S.opened, flags: S.flags
+        });
+      }
     }, total);
   }
 
@@ -311,6 +344,7 @@
     if (S.opened === S.cols * S.rows - S.mines) {
       S.over = true; S.won = true;
       stopTimer();
+      var flagsAtWin = S.flags;     // 先留一份：下面会把剩余雷自动插旗，别污染「不插旗通关」判定
       S.cells.forEach(function (cell) {
         cell.el.disabled = true;
         if (cell.mine) {
@@ -322,6 +356,13 @@
       updateMineCounter();
       msgEl.textContent = "扫雷成功！用时 " + S.seconds + " 秒。";
       msgEl.className = "ms-msg win";
+      /* 成就：本局通关（难度、用时、插旗数、翻开格数） */
+      if (window.GameAch) {
+        window.GameAch.report({
+          kind: "win", mode: levelEl.value, seconds: S.seconds,
+          flags: flagsAtWin, opens: S.opened
+        });
+      }
       /* 通关成绩上云榜：只有通关才提交（用时越短越靠前）。
          MsRank 尚未加载（离线 / 老缓存页面）时静默跳过，不影响单机玩法。 */
       var again = document.createElement("button");
@@ -354,13 +395,17 @@
   // 阻止雷区上的浏览器默认右键菜单
   boardEl.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
-  /* 在皮肤页换了旗子皮肤 → 棋盘上已插的旗立刻换色（skins.js 的 equip 会广播 wallet:change） */
-  document.addEventListener("wallet:change", function () {
+  /* 在皮肤页换了皮肤 → 棋盘上已插的旗、已炸出来的雷立刻换色
+     （skins.js 的 equip 广播 wallet:change，shop.js 另外广播 shop:change） */
+  function repaintSkins() {
     if (!S) return;
     S.cells.forEach(function (cell) {
-      if (cell.flag && !cell.open) cell.el.innerHTML = flagSvg();
+      if (cell.open && cell.mine) cell.el.innerHTML = mineSvg();            // 已经炸出来的雷
+      else if (cell.flag && !cell.open) cell.el.innerHTML = flagSvg();      // 还没翻开的旗
     });
-  });
+  }
+  document.addEventListener("wallet:change", repaintSkins);
+  document.addEventListener("shop:change", repaintSkins);
 
   newGame();
 })();

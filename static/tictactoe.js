@@ -6,10 +6,14 @@
        中等 = 能赢就赢、要挡就挡，其余随机（会漏，但不好糊弄）
        困难 = minimax 完整搜索，理论上不可战胜（最好结果是平局）
    · 战绩按难度分别存在本机（localStorage）。
-   · 云端（2026-10-06）：赢一局得 1 / 2 / 3 分（难度越高分越多），
-     首次在某个难度赢棋就上 game_scores 榜（GameRank 只收比本人更高的分）；
+   · 积分（2026-10-06 用户要求）：胜 +难度分、负 −难度分、平不动（简单 1 / 中等 2 / 困难 3）。
+     每个难度各算各的，排行榜上排的就是这个积分。
+   · 云端：把当前难度的积分提交到 game_scores（GameRank 只收比本人更高的分，
+     所以输棋掉分那一次不会覆盖榜上的最好成绩）。
      「清空战绩」同时删掉云端排行榜里自己的井字棋成绩。
+   · 成就：本游戏专属一套，走 GameAch（gameach.js）；每局结束报胜/负/平。
    · 设置面板：谁先起手（我先 / 电脑先）、清空战绩（带确认弹窗）。
+   · 打开个人中心 / 排行榜时不再对局（这不是实时游戏，只把电脑的「思考」压住）。
    · 外链脚本、无内联代码（CSP 同源白名单）。
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -85,6 +89,12 @@
     if (elWin) elWin.textContent = s.win;
     if (elDraw) elDraw.textContent = s.draw;
     if (elLose) elLose.textContent = s.lose;
+  }
+
+  /* 本难度积分：胜 +难度分、负 −难度分、平 0（2026-10-06 用户要求） */
+  function points(m) {
+    var s = score[m] || { win: 0, lose: 0 };
+    return ((s.win | 0) - (s.lose | 0)) * (POINTS[m] || 1);
   }
 
   /* ═══════════ 规则 ═══════════ */
@@ -214,30 +224,41 @@
 
   function settle(w) {
     over = true;
-    if (w.p === ME) { score[mode].win++; saveScore(); submitScore(); }
+    if (w.p === ME) { score[mode].win++; saveScore(); }
     else if (w.p === AI) { score[mode].lose++; saveScore(); }
     else { score[mode].draw++; saveScore(); }
     paintScore();
     markWin(w.line);
     paintAll();
+    /* 成就：本游戏专属（胜负平 + 连胜 + 累计对局） */
+    if (window.GameAch) {
+      window.GameAch.report({ kind: w.p === ME ? "win" : (w.p === AI ? "lose" : "draw"), mode: mode });
+    }
+    var pts = points(mode), pd = POINTS[mode] || 1;
     var txt = w.p === ME ? "你赢了！" : (w.p === AI ? "电脑赢了" : "平局");
-    say("<span>" + txt + "</span><button type='button' class='ttt-again' id='ttt-again'>再来一局</button>", true);
+    var tipTxt = w.p === ME ? "本局 +" + pd + " 分"
+      : (w.p === AI ? "本局 −" + pd + " 分" : "平局不加不减");
+    say("<span>" + txt + "（" + tipTxt + "，本难度积分 " + pts + " 分）</span>" +
+      "<button type='button' class='ttt-again' id='ttt-again'>再来一局</button>", true);
     var again = document.getElementById("ttt-again");
     if (again) again.addEventListener("click", reset);
+    submitScore();
   }
 
-  /* ═══════════ 云端成绩（2026-10-06） ═══════════
-     赢一局得上榜分（简单 1 / 中等 2 / 困难 3）。GameRank 内部只收比本人
-     榜上更高的分，所以每个难度实际只记「头一次赢」（分数相同的赢局不重复写库）。 */
+  /* ═══════════ 云端成绩（2026-10-06 改为积分制） ═══════════
+     提交的是「本难度的累计积分」，不是单局得分。GameRank 内部只收比本人榜上
+     更高的分，所以输棋掉分的那一次会被挡下，榜上留的是这个难度赚到过的最高积分。 */
   function submitScore() {
     if (!window.GameRank) return;
-    window.GameRank.submit(mode, POINTS[mode] || 1).then(function (r) {
+    var pts = points(mode);
+    if (pts <= 0) return;
+    window.GameRank.submit(mode, pts).then(function (r) {
       if (r && r.error) return;
       var tip = document.createElement("span");
       tip.className = "ttt-msg-tip";
       tip.textContent = r && r.skipped
-        ? "（排行榜已有同难度成绩，" + (POINTS[mode] || 1) + " 分）"
-        : "（已上榜：" + (POINTS[mode] || 1) + " 分）";
+        ? "（排行榜保留更高的积分，这次不覆盖）"
+        : "（已上榜：积分 " + pts + " 分）";
       if (elMsg) elMsg.appendChild(tip);
     }).catch(function () {});
   }

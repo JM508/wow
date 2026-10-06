@@ -10,11 +10,26 @@
   "use strict";
 
   /* ═══════════ 本地存储键 ═══════════ */
-  var KEY_WALLET = "runner-coins";    // 金币余额
+  var KEY_WALLET = "runner-coins";    // 金币余额（跑酷专属）
   var KEY_OWNED  = "runner-owned";    // 已购皮肤 id 列表（JSON 数组）
   var KEY_SKIN   = "runner-skin";     // 当前装备的火柴人皮肤 id
   var KEY_COIN   = "runner-coin";     // 当前装备的金币皮肤 id
   var KEY_FLAG   = "runner-flag";     // 当前装备的旗子皮肤 id（扫雷插旗颜色）
+  var KEY_MINE   = "ms-mine";         // 当前装备的雷皮肤 id（扫雷，2026-10-06）
+  var KEY_SNAKE  = "snake-skin";      // 当前装备的蛇皮肤 id（贪吃蛇，2026-10-06）
+
+  /* ── 游戏作用域 ──
+     同一份 skins.js 服务四个游戏页：跑酷（火柴人/金币皮肤，有钱包）、
+     扫雷（旗子/雷皮肤）、贪吃蛇（蛇皮肤）、井字棋（无皮肤）。
+     每个游戏页都有自己的根元素 id，据此判断当前是哪个游戏 ——
+     商店只展示本游戏的皮肤（用户 2026-10-06 要求），存档键也互不干扰。 */
+  var SCOPE = (function () {
+    var map = { "run-root": "runner", "ms-root": "ms", "snake-root": "snake", "ttt-root": "ttt" };
+    for (var id in map) {
+      if (Object.prototype.hasOwnProperty.call(map, id) && document.getElementById(id)) return map[id];
+    }
+    return "runner";                 // 独立站等识别不了的场景按跑酷处理
+  })();
 
   function lsGet(k) {
     try { return localStorage.getItem(k); } catch (e) { return null; }
@@ -222,10 +237,89 @@
     }
   ];
 
+  /* ═══════════════ 雷皮肤（扫雷专属，2026-10-06，全部免费） ═══════════════
+     踩雷时炸出来的地雷长相：body 主体 / spike 引线与尖刺 / shine 高光。
+     扫雷页没有钱包，商店里按「装备」直接换。 */
+  var MINES = [
+    {
+      id: "classic", name: "经典铁雷", price: 0, tag: "默认",
+      desc: "黑铁色的老式地雷，八根引线一根不少。",
+      body: "#3a3f4a", spike: "#3a3f4a", shine: "#8d95a5"
+    },
+    {
+      id: "ink", name: "墨玉雷", price: 0, tag: "免费",
+      desc: "深墨色的圆雷，哑光不反光，低调得很。",
+      body: "#232733", spike: "#232733", shine: "#59637d"
+    },
+    {
+      id: "cherry", name: "樱桃雷", price: 0, tag: "免费",
+      desc: "红得像颗大樱桃，脾气却一点就炸。",
+      body: "#c2334d", spike: "#9c2740", shine: "#ff96a8"
+    },
+    {
+      id: "ocean", name: "深海雷", price: 0, tag: "免费",
+      desc: "深蓝雷体配浅蓝高光，像沉在海底的水雷。",
+      body: "#1e5f8a", spike: "#174a6e", shine: "#84c7ee"
+    },
+    {
+      id: "toxic", name: "荧光雷", price: 0, tag: "发光",
+      desc: "带一点荧光绿的辐射感，晚上特别显眼。",
+      body: "#4c8a1f", spike: "#3d6e18", shine: "#c2f489"
+    },
+    {
+      id: "gold", name: "黄金雷", price: 0, tag: "发光",
+      desc: "纯金铸造的雷，炸之前先闪一道光。",
+      body: "#c9992a", spike: "#a97f1c", shine: "#ffe08a"
+    }
+  ];
+
+  /* ═══════════════ 蛇皮肤（贪吃蛇专属，2026-10-06，全部免费） ═══════════════
+     head / body：蛇头与蛇身主色；headNight / bodyNight：夜间主题下的替代色
+     （不填则沿用日间色）。贪吃蛇页没有钱包，商店里按「装备」直接换。 */
+  var SNAKES = [
+    {
+      id: "classic", name: "经典青蛇", price: 0, tag: "默认",
+      desc: "最初的绿色小蛇，头深身浅，明暗分明。",
+      head: "#1d8a40", body: "#37a352", headNight: "#3ddc68", bodyNight: "#2fae54"
+    },
+    {
+      id: "lime", name: "青柠", price: 0, tag: "免费",
+      desc: "青柠配色的亮绿小蛇，看着就很酸爽。",
+      head: "#5f9e1a", body: "#8ed13f", headNight: "#a8e05f", bodyNight: "#7cc32f"
+    },
+    {
+      id: "ocean", name: "深海蓝", price: 0, tag: "免费",
+      desc: "蓝色系小蛇，游起来像一串浪花。",
+      head: "#1f5fd0", body: "#3b8ff0", headNight: "#5f9bff", bodyNight: "#3b82d8"
+    },
+    {
+      id: "sakura", name: "樱花", price: 0, tag: "免费",
+      desc: "粉嫩配色，吃苹果的样子都温柔了几分。",
+      head: "#c2447e", body: "#ef86b6", headNight: "#ff9ec9", bodyNight: "#e072a5"
+    },
+    {
+      id: "violet", name: "暗夜紫", price: 0, tag: "免费",
+      desc: "深紫蛇身配亮紫蛇头，夜间格外精神。",
+      head: "#6d3bd4", body: "#8f5cf0", headNight: "#a985ff", bodyNight: "#8a5cf0"
+    },
+    {
+      id: "amber", name: "琥珀", price: 0, tag: "免费",
+      desc: "琥珀金的小蛇，爬过的地方都在发光。",
+      head: "#b06f10", body: "#dd9a2f", headNight: "#ffc257", bodyNight: "#e0a63c"
+    },
+    {
+      id: "ghost", name: "幽灵", price: 0, tag: "免费",
+      desc: "半透明的灰白小蛇，安安静静地飘。",
+      head: "#7d8ea6", body: "#a8b8cc", headNight: "#b7c6da", bodyNight: "#93a5bd"
+    }
+  ];
+
   /* ═══════════════ 查询 / 钱包 / 拥有 / 装备 ═══════════════ */
   function list(kind) {
     if (kind === "coin") return COINS;
     if (kind === "flag") return FLAGS;
+    if (kind === "mine") return MINES;
+    if (kind === "snake") return SNAKES;
     return PLAYERS;
   }
 
@@ -237,10 +331,25 @@
   function getPlayer(id) { return get("player", id) || PLAYERS[0]; }
   function getCoin(id) { return get("coin", id) || COINS[0]; }
   function getFlag(id) { return get("flag", id) || FLAGS[0]; }
+  function getMine(id) { return get("mine", id) || MINES[0]; }
+  function getSnake(id) { return get("snake", id) || SNAKES[0]; }
   /* 旗子皮肤只贡献颜色：把当前装备的旗色取出来（没加载 skins.js 时回落红色） */
   function flagColor() {
     var f = getFlag(equipped("flag"));
     return (f && f.color) || "#ff4d4f";
+  }
+  /* 雷皮肤三色（扫雷页 mineSvg 用）；skins.js 未加载时回落经典铁雷 */
+  function mineParts() {
+    var m = getMine(equipped("mine"));
+    return { body: m.body, spike: m.spike, shine: m.shine };
+  }
+  /* 蛇皮肤（贪吃蛇页 draw 用）；dark = 夜间主题 */
+  function snakeColors(dark) {
+    var s = getSnake(equipped("snake"));
+    return {
+      head: (dark && s.headNight) ? s.headNight : s.head,
+      body: (dark && s.bodyNight) ? s.bodyNight : s.body
+    };
   }
 
   function getWallet() {
@@ -299,7 +408,12 @@
 
   function equip(kind, id) {
     if (!isOwned(kind, id)) return false;
-    lsSet(kind === "coin" ? KEY_COIN : kind === "flag" ? KEY_FLAG : KEY_SKIN, id);
+    var key = kind === "coin" ? KEY_COIN
+      : kind === "flag" ? KEY_FLAG
+      : kind === "mine" ? KEY_MINE
+      : kind === "snake" ? KEY_SNAKE
+      : KEY_SKIN;
+    lsSet(key, id);
     notifyWallet();
     return true;
   }
@@ -318,7 +432,11 @@
 
   /* 当前装备（若存档里的 id 失效则回落到默认款） */
   function equipped(kind) {
-    var id = lsGet(kind === "coin" ? KEY_COIN : kind === "flag" ? KEY_FLAG : KEY_SKIN);
+    var id = lsGet(kind === "coin" ? KEY_COIN
+      : kind === "flag" ? KEY_FLAG
+      : kind === "mine" ? KEY_MINE
+      : kind === "snake" ? KEY_SNAKE
+      : KEY_SKIN);
     if (id && isOwned(kind, id)) return id;
     return list(kind)[0].id;
   }
@@ -742,18 +860,92 @@
     g.restore();
   }
 
+  /* 雷皮肤预览（商店卡用）：一颗圆雷 + 八根尖刺 + 高光，颜色取自皮肤定义 */
+  function drawMine(g, item, opts) {
+    opts = opts || {};
+    var t = opts.t || 0, sc = opts.scale || 3;
+    var cx = opts.x || (g.canvas.width / 2);
+    var cy = opts.y || (g.canvas.height / 2);
+    var body = (item && item.body) || "#3a3f4a";
+    var spike = (item && item.spike) || "#3a3f4a";
+    var shine = (item && item.shine) || "#8d95a5";
+    var R = 11 * sc;
+    g.save();
+    g.translate(cx, cy);
+    g.rotate(Math.sin(t * 1.2) * 0.06);
+    for (var i = 0; i < 8; i++) {                    // 八根尖刺
+      var a = i / 8 * 6.2832;
+      g.strokeStyle = spike;
+      g.lineWidth = 2.1 * sc;
+      g.lineCap = "round";
+      g.beginPath();
+      g.moveTo(Math.cos(a) * R * 0.55, Math.sin(a) * R * 0.55);
+      g.lineTo(Math.cos(a) * (R + 5.5 * sc), Math.sin(a) * (R + 5.5 * sc));
+      g.stroke();
+    }
+    g.fillStyle = body;                              // 雷体
+    g.beginPath(); g.arc(0, 0, R, 0, 6.2832); g.fill();
+    g.strokeStyle = spike; g.lineWidth = 1.6 * sc; g.stroke();
+    g.fillStyle = shine;                             // 高光
+    g.beginPath(); g.arc(-R * 0.34, -R * 0.36, R * 0.2, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(R * 0.18, -R * 0.1, R * 0.09, 0, 6.2832); g.fill();
+    g.restore();
+  }
+
+  /* 蛇皮肤预览（商店卡用）：一段弯曲的蛇身 + 蛇头，颜色取自皮肤定义 */
+  function drawSnake(g, item, opts) {
+    opts = opts || {};
+    var t = opts.t || 0, sc = opts.scale || 3;
+    var cx = opts.x || (g.canvas.width / 2);
+    var cy = opts.y || (g.canvas.height / 2);
+    var head = (item && item.head) || "#1d8a40";
+    var body = (item && item.body) || "#37a352";
+    var w = 9 * sc;                                  // 蛇身宽度
+    g.save();
+    g.translate(cx, cy);
+    /* 蛇身：沿正弦波摆 6 节，从尾到头一节比一节宽 */
+    for (var i = 6; i >= 1; i--) {
+      var px = (i - 3.5) * 7.2 * sc;
+      var py = Math.sin(t * 3 + i * 0.9) * 5 * sc;
+      var k = w * (0.5 + 0.5 * (7 - i) / 6);
+      g.fillStyle = body;
+      g.beginPath();
+      g.arc(px, py, k / 2, 0, 6.2832);
+      g.fill();
+    }
+    /* 蛇头（略大，靠前，随波轻摆） */
+    var hx = 3.7 * 7.2 * sc * 0 + (2.5) * 7.2 * sc;  // 头在蛇身最前端
+    var hy = Math.sin(t * 3 + 0.9) * 5 * sc;
+    g.fillStyle = head;
+    g.beginPath();
+    if (g.ellipse) g.ellipse(hx + w * 0.2, hy, w * 0.72, w * 0.58, 0, 0, 6.2832);
+    else g.arc(hx, hy, w * 0.62, 0, 6.2832);
+    g.fill();
+    g.fillStyle = "#ffffff";                         // 眼睛
+    g.beginPath(); g.arc(hx + w * 0.34, hy - w * 0.2, w * 0.13, 0, 6.2832); g.fill();
+    g.beginPath(); g.arc(hx + w * 0.1, hy - w * 0.26, w * 0.1, 0, 6.2832); g.fill();
+    g.restore();
+  }
+
   global.RunnerSkins = {
-    KEYS: { wallet: KEY_WALLET, owned: KEY_OWNED, skin: KEY_SKIN, coin: KEY_COIN, flag: KEY_FLAG },
+    KEYS: { wallet: KEY_WALLET, owned: KEY_OWNED, skin: KEY_SKIN, coin: KEY_COIN, flag: KEY_FLAG, mine: KEY_MINE, snake: KEY_SNAKE },
     imgBase: IMG_BASE,                     // 素材目录（runner.js 的障碍贴图也用它，见 runner.js OB_IMG）
+    SCOPE: SCOPE,
     PLAYERS: PLAYERS,
     COINS: COINS,
     FLAGS: FLAGS,
+    MINES: MINES,
+    SNAKES: SNAKES,
     list: list,
     get: get,
     getPlayer: getPlayer,
     getCoin: getCoin,
     getFlag: getFlag,
+    getMine: getMine,
+    getSnake: getSnake,
     flagColor: flagColor,
+    mineParts: mineParts,
+    snakeColors: snakeColors,
     getWallet: getWallet,
     setWallet: setWallet,
     addWallet: addWallet,
@@ -765,6 +957,8 @@
     equipped: equipped,
     drawStick: drawStick,
     drawCoin: drawCoin,
-    drawFlag: drawFlag
+    drawFlag: drawFlag,
+    drawMine: drawMine,
+    drawSnake: drawSnake
   };
 })(window);

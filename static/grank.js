@@ -17,6 +17,7 @@
   var TABLE = "game_scores";
   var LIMIT = 100;
   var GUEST_RE = /^访客 [0-9]{1,3}$/;
+  var AVA_MAX = 20000;                       // 头像 data URL 展示上限（库里按 16384 收）
 
   var rootEl = document.getElementById("grank-root");
   if (!rootEl) return;                       // 页面没这块 DOM 就整体不启用
@@ -70,6 +71,32 @@
     for (var i = 0; i < MODES.length; i++) if (MODES[i].id === id) return MODES[i].label;
     return id;
   }
+  /* 榜上头像：有自定义头像就是那张图（已裁圆），没有就按昵称哈希出一个底色 + 首字。
+     底色不能用内联 style 属性写进 innerHTML（CSP 是 style-src 'self'，会被拦），
+     所以先落一个空壳 + data-h，插完 DOM 再用 JS 属性赋值上色（CSSOM 不受 CSP 限制）。 */
+  function avaHash(s) {
+    var n = String(s || ""), h = 0;
+    for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 360;
+    return h;
+  }
+  function avatarHtml(r) {
+    var av = (r && r.avatar) ? String(r.avatar) : "";
+    if (av && av.length <= AVA_MAX && av.indexOf("data:image/") === 0) {
+      return "<img class='grank-ava' src='" + esc(av) + "' alt='' loading='lazy' decoding='async'>";
+    }
+    var name = String((r && r.nickname) || "");
+    var ch = name ? name.slice(0, 1) : "?";
+    return "<span class='grank-ava grank-ava-ph' data-ava-h='" + avaHash(name) + "' aria-hidden='true'>" +
+      esc(ch) + "</span>";
+  }
+  function paintAvas(scope) {
+    if (!scope || !scope.querySelectorAll) return;
+    var nodes = scope.querySelectorAll(".grank-ava-ph[data-ava-h]");
+    for (var i = 0; i < nodes.length; i++) {
+      var h = parseInt(nodes[i].getAttribute("data-ava-h"), 10) || 0;
+      nodes[i].style.background = "hsl(" + h + ",52%,46%)";
+    }
+  }
 
   if (titleEl) titleEl.textContent = rootEl.getAttribute("data-title") || "排行榜";
 
@@ -86,7 +113,7 @@
   function top(mode) {
     var d = cloud().database();
     return d.from(TABLE)
-      .select("nickname, score, region, created_at")
+      .select("nickname, score, region, avatar, created_at")
       .eq("game", GAME)
       .eq("mode", mode)
       .order("score", { ascending: false })
@@ -163,6 +190,7 @@
         var r = rows[i], no = i + 1;
         html += "<li class='grank-row'>" +
           "<b class='grank-no" + (no <= 3 ? " is-top" : "") + "'>" + no + "</b>" +
+          avatarHtml(r) +
           "<span class='grank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) +
             (r.region ? "<small class='grank-rg'>IP " + esc(r.region) + "</small>" : "") + "</span>" +
           "<span class='grank-score'>" + (Number(r.score) || 0) + " " + UNIT + "</span>" +
@@ -170,6 +198,7 @@
           "</li>";
       }
       listEl.innerHTML = html || "<li class='grank-empty'>加载中…</li>";
+      paintAvas(listEl);
     }
     paintTabs();
   }
@@ -185,12 +214,14 @@
   }
 
   /* ═══════════ 提交成绩（得分时调用） ═══════════
-     只提交比本人榜上更高的分数：分数没超过就不写库（井字棋同难度每次赢的分一样，
-     等于每个难度只记头一次赢；贪吃蛇是真正意义上的刷新纪录）。 */
+     只提交比本人榜上更高的分数：分数没超过就不写库（榜单上每个人只留最高的一条）。
+     井字棋是累计积分制，输一局分数会往下掉 —— 掉下去的那次正好被这条规则挡下，
+     榜上留的永远是这个难度赚到过的最高分。 */
   function submit(mode, score) {
     if (!ready()) return Promise.resolve({ data: null, error: { kind: "unavailable" } });
-    var who = me(), sc = Math.round(Number(score) || 0);
-    if (!who.name || sc <= 0) return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
+    var who = me(), sc = Math.round(Number(score));
+    if (!isFinite(sc)) sc = 0;
+    if (!who.name) return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
     if (who.guest && !GUEST_RE.test(who.name)) {
       return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
     }
@@ -203,6 +234,11 @@
     if (who.guest) row.device_id = c.scores.deviceId();
     var rg = c.scores.region ? c.scores.region() : null;
     if (rg) row.region = rg;
+    /* 头像快照：登录玩家带上个人中心里那张，榜上这一行才有脸（访客没有账号，也就没有头像） */
+    if (!who.guest) {
+      var av = (c.avatar && c.avatar.get) ? c.avatar.get() : "";
+      if (av && av.length <= 16384 && av.indexOf("data:image/") === 0) row.avatar = av;
+    }
 
     return d.from(TABLE).select("score")
       .eq("game", GAME).eq("mode", mode).eq("nickname", who.name)
@@ -223,13 +259,26 @@
 
   /* ═══════════ 面板开关 ═══════════ */
   function isOpen() { return panel && !panel.classList.contains("hidden"); }
+  /* 开合时广播 panel:open / panel:close —— 贪吃蛇 / 井字棋据此把局面暂停 */
+  function notify(openNow) {
+    try {
+      document.dispatchEvent(new CustomEvent(openNow ? "panel:open" : "panel:close",
+        { detail: { name: "grank" } }));
+    } catch (e) {}
+  }
   function open(mode) {
     if (!panel) return;
+    var was = isOpen();
     panel.classList.remove("hidden");
     load(mode || cur.mode);
     if (btnClose) btnClose.focus();
+    if (!was) notify(true);
   }
-  function close() { if (panel) panel.classList.add("hidden"); }
+  function close() {
+    if (!panel || !isOpen()) return;
+    panel.classList.add("hidden");
+    notify(false);
+  }
 
   if (btnClose) btnClose.addEventListener("click", close);
   panel.addEventListener("click", function (e) { if (e.target === panel) close(); });

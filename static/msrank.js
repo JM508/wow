@@ -58,6 +58,32 @@
     for (var i = 0; i < MODES.length; i++) if (MODES[i].id === id) return MODES[i].label;
     return id;
   }
+  /* 榜上头像：有自定义头像就是那张图（已裁圆），没有就按昵称哈希底色 + 首字。
+     底色不能写成内联 style 属性再塞进 innerHTML（CSP style-src 'self' 会拦），
+     所以先落空壳 + data-h，插完 DOM 再用 JS 属性赋值（CSSOM 不受 CSP 限制）。 */
+  function avaHash(s) {
+    var n = String(s || ""), h = 0;
+    for (var i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 360;
+    return h;
+  }
+  function avatarHtml(r) {
+    var av = (r && r.avatar) ? String(r.avatar) : "";
+    if (av && av.length <= 20000 && av.indexOf("data:image/") === 0) {
+      return "<img class='ms-rank-ava' src='" + esc(av) + "' alt='' loading='lazy' decoding='async'>";
+    }
+    var name = String((r && r.nickname) || "");
+    var ch = name ? name.slice(0, 1) : "?";
+    return "<span class='ms-rank-ava ms-rank-ava-ph' data-ava-h='" + avaHash(name) + "' aria-hidden='true'>" +
+      esc(ch) + "</span>";
+  }
+  function paintAvas(scope) {
+    if (!scope || !scope.querySelectorAll) return;
+    var nodes = scope.querySelectorAll(".ms-rank-ava-ph[data-ava-h]");
+    for (var i = 0; i < nodes.length; i++) {
+      var h = parseInt(nodes[i].getAttribute("data-ava-h"), 10) || 0;
+      nodes[i].style.background = "hsl(" + h + ",52%,46%)";
+    }
+  }
 
   /* ── 我的身份与昵称（与跑酷榜同一套规则） ── */
   function me() {
@@ -72,7 +98,7 @@
   function top(mode) {
     var d = cloud().database();
     return d.from(TABLE)
-      .select("nickname, seconds, region, created_at")
+      .select("nickname, seconds, region, avatar, created_at")
       .eq("mode", mode)
       .order("seconds", { ascending: true })
       .order("created_at", { ascending: true })
@@ -150,6 +176,7 @@
         var r = rows[i], no = i + 1;
         html += "<li class='ms-rank-row'>" +
           "<b class='ms-rank-no" + (no <= 3 ? " is-top" : "") + "'>" + no + "</b>" +
+          avatarHtml(r) +
           "<span class='ms-rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) +
             (r.region ? "<small class='ms-rank-rg'>IP " + esc(r.region) + "</small>" : "") + "</span>" +
           "<span class='ms-rank-sec'>" + fmtSec(r.seconds) + "</span>" +
@@ -157,6 +184,7 @@
           "</li>";
       }
       listEl.innerHTML = html || "<li class='ms-rank-empty'>加载中…</li>";
+      paintAvas(listEl);
     }
     paintTabs();
   }
@@ -184,6 +212,11 @@
     if (who.guest) row.device_id = c.scores.deviceId();
     var rg = c.scores.region ? c.scores.region() : null;
     if (rg) row.region = rg;
+    /* 头像快照：登录玩家带上个人中心里那张，榜上这一行才有脸（访客没有账号，也就没有头像） */
+    if (!who.guest) {
+      var av = (c.avatar && c.avatar.get) ? c.avatar.get() : "";
+      if (av && av.length <= 16384 && av.indexOf("data:image/") === 0) row.avatar = av;
+    }
 
     /* 先看自己的最好成绩：不比它快就不写库（少一堆没意义的行） */
     return d.from(TABLE).select("seconds")
@@ -206,13 +239,26 @@
 
   /* ═══════════ 面板开关 ═══════════ */
   function isOpen() { return panel && !panel.classList.contains("hidden"); }
+  /* 开合时广播 panel:open / panel:close —— 扫雷据此把计时与局面暂停 */
+  function notify(openNow) {
+    try {
+      document.dispatchEvent(new CustomEvent(openNow ? "panel:open" : "panel:close",
+        { detail: { name: "ms-rank" } }));
+    } catch (e) {}
+  }
   function open(mode) {
     if (!panel) return;
+    var was = isOpen();
     panel.classList.remove("hidden");
     load(mode || cur.mode);
     if (btnClose) btnClose.focus();
+    if (!was) notify(true);
   }
-  function close() { if (panel) panel.classList.add("hidden"); }
+  function close() {
+    if (!panel || !isOpen()) return;
+    panel.classList.add("hidden");
+    notify(false);
+  }
 
   if (btnOpen) btnOpen.addEventListener("click", function () { open(cur.mode); });
   if (btnClose) btnClose.addEventListener("click", close);

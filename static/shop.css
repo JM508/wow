@@ -43,6 +43,13 @@
   line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
+/* 没有钱包的页面（扫雷 / 贪吃蛇）：顶栏只有右侧的「返回游戏」，
+   单个子元素在 space-between 下会贴左，这里手动推到右边 */
+.shop-wallet-right {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1 1 auto;
+}
 .shop-go {
   padding: 9px 20px;
   font-size: 14px;
@@ -243,8 +250,10 @@
   padding: 0 20px 22px;   /* 顶部内边距交给吸顶头部 */
   background: var(--theme, #ffffff);
   border: 1px solid var(--border, #e0e0e0);
+  /* 暗色主题下 --border 比面板底还暗，框会糊在背景里 —— 统一换中性半透明描边（同个人中心） */
+  border-color: rgba(128, 138, 152, 0.34);
   border-radius: 16px;
-  box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.9);
   -webkit-overflow-scrolling: touch;
 }
 

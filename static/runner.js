@@ -231,7 +231,7 @@
     BracketRight: "]", Minus: "-", Equal: "=", Backquote: "`"
   };
   var SET_DEF = {
-    sfx: 1, vol: 0.7, cb: 0, calm: 0, big: 0,
+    sfx: 1, vol: 0.7, cb: 0, calm: 0, big: 0, autoUp: 0,
     keys: {
       jump: ["Space", "ArrowUp", "KeyW"],
       duck: ["ArrowDown", "KeyS"],
@@ -262,7 +262,7 @@
   function loadSet() {
     var raw = null;
     try { raw = JSON.parse(store(KEY_SET) || "null"); } catch (e) { raw = null; }
-    var o = { sfx: SET_DEF.sfx, vol: SET_DEF.vol, cb: 0, calm: 0, big: 0, keys: {} };
+    var o = { sfx: SET_DEF.sfx, vol: SET_DEF.vol, cb: 0, calm: 0, big: 0, autoUp: 0, keys: {} };
     var a;
     if (raw && typeof raw === "object") {
       o.sfx = (raw.sfx === 0 || raw.sfx === false) ? 0 : 1;
@@ -271,6 +271,7 @@
       o.cb = raw.cb ? 1 : 0;
       o.calm = raw.calm ? 1 : 0;
       o.big = raw.big ? 1 : 0;
+      o.autoUp = raw.autoUp ? 1 : 0;
       for (a = 0; a < KEY_ACTIONS.length; a++) {
         var act = KEY_ACTIONS[a], src = raw.keys && raw.keys[act], out = [];
         if (Object.prototype.toString.call(src) === "[object Array]") {
@@ -374,7 +375,7 @@
     if (name === "vol") {
       var v = Number(val);
       SET.vol = isFinite(v) ? clamp(v, 0, 1) : SET.vol;
-    } else if (name === "sfx" || name === "cb" || name === "calm" || name === "big") {
+    } else if (name === "sfx" || name === "cb" || name === "calm" || name === "big" || name === "autoUp") {
       SET[name] = val ? 1 : 0;
     } else {
       return null;                            // 未知选项：不改、不存
@@ -953,8 +954,9 @@
     }
     saveRecord(score);
     S.earned = bankCoins();                      // 本局金币进钱包（S.banked 保证只入账一次）
-    /* 2026-10-06 起：成绩不再自动上传 —— 结算卡片里放一个「上传成绩」按钮，
-       用户点了才把 run:over 派发给 rank.js（未登录走访客模式自动上榜）。 */
+    /* 成绩上传（2026-10-06 改）：
+       · 默认手动 —— 结算卡片里放一个「上传成绩」按钮，点了才把 run:over 派发给 rank.js
+       · 设置里开了「自动上传成绩」（或在结算卡上勾选过）就每局自动上榜，不再显示按钮 */
     S.lastOver = {
       score: score,
       coins: S.coins,
@@ -962,6 +964,8 @@
       durationMs: Math.round(S.time * 1000)
     };
     S.uploaded = false;
+    S.upAuto = false;                            // 这一次是不是「自动」传的（只影响结算卡文案）
+    if (SET.autoUp) { S.upAuto = true; uploadLastRun(); }
     showOverlay("over");
     updateHud();
     /* 成就结算：这一局没实时解锁的（分数 / 里程 / 无伤 / 累计类）在这里统一补判 */
@@ -1006,8 +1010,8 @@
     elRecords.innerHTML = html;
   }
 
-  /* ═══════════ 遮罩层 ═══════════ */
-  var SHOP_LINK = "<button type='button' class='run-shop-link' data-open-me>皮肤</button>";
+  /* ═══════════ 遮罩层 ═══════════
+     结算卡不再放「皮肤」入口（2026-10-06 用户要求）：换皮肤去工具条「个人中心 → 皮肤」。 */
 
   /* ── 玩法说明 ──
      第一次打开游戏时自动弹一次，本机记下「已读」（runner-help-seen），之后再来就不打扰；
@@ -1057,9 +1061,13 @@
       elOvText.innerHTML = "<span class='run-big'>" + Math.floor(S.score) + "</span>" +
         "最高分 <b>" + Math.floor(S.best) + "</b> ｜ 跑了 <b>" + Math.floor(S.dist / 100) + "</b> 米<br>" +
         "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b><br>" +
-        (S.uploaded || !S.lastOver ? "" :
-          "<button type='button' class='run-upload-btn' data-upload-run>上传成绩到排行榜</button>") +
-        SHOP_LINK;
+        (S.uploaded
+          ? "<span class='run-up-done'>" + (S.upAuto ? "成绩已自动上传到排行榜" : "成绩已上传到排行榜") + "</span>"
+          : (S.lastOver
+            ? "<button type='button' class='run-upload-btn' data-upload-run>上传成绩到排行榜</button>" +
+              "<label class='run-autoup'><input type='checkbox' id='run-autoup-check'>" +
+              "以后自动上传成绩到排行榜（设置里可以取消）</label>"
+            : ""));
       elOvBtn.textContent = "再来一局";
       renderRecords();
     } else if (kind === "help") {
@@ -1114,7 +1122,7 @@
 
   /* 个人中心：商店 / 成就 / 个人 三个页面共用一个入口（工具条「个人中心」按钮 / 页脚链接 / 面板页签）。
      已经在该页面时什么都不做；从另一个页面切过来时不走定格/恢复（见 meSwitching）。 */
-  var ME_TABS = ["shop", "ach", "me"];
+  var ME_TABS = ["me", "ach", "shop"];   /* 页签顺序（2026-10-06 用户要求）：个人最前 */
 
   function meTabOpen(t) {
     if (t === "shop") return shopOpen();
@@ -2285,7 +2293,7 @@
      所有控件状态由 syncSetUi() 单点同步：任何设置变化（含键盘改键）都调它一次。 */
   var setPrev = null;
   var captureAct = null, captureAdd = false;      // 正在等待新键的动作
-  var elSetViews = {}, elSetCb = {}, elSetCalm = {}, elSetBig = {};
+  var elSetViews = {}, elSetCb = {}, elSetCalm = {}, elSetBig = {}, elSetAuto = {};
   var elSetVol = [], elSetVolVal = [];
   var elKeysList = null, elKeysSum = null, elA11ySum = null;
   var elSetHint = null;
@@ -2309,6 +2317,10 @@
     elSetBig = {
       el: document.getElementById("set-big"),
       set: function (on) { setOpt("big", on); }
+    };
+    elSetAuto = {
+      el: document.getElementById("set-autoup"),
+      set: function (on) { setOpt("autoUp", on); }
     };
     elSetVol = [document.getElementById("run-vol"), document.getElementById("run-vol-a11y")];
     elSetVolVal = [document.getElementById("run-vol-val"), document.getElementById("run-vol-a11y-val")];
@@ -2431,6 +2443,7 @@
     paintSwitch(elSetCb.el, SET.cb, "已开启 · 色盲友好", "已关闭");
     paintSwitch(elSetCalm.el, SET.calm, "已开启 · 少抖动", "已关闭");
     paintSwitch(elSetBig.el, SET.big, "已开启 · 大字", "已关闭");
+    paintSwitch(elSetAuto.el, SET.autoUp, "已开启 · 自动上榜", "已关闭");
     var pct = Math.round(SET.vol * 100) + "%";
     for (i = 0; i < elSetVol.length; i++) {
       if (elSetVol[i]) elSetVol[i].value = String(Math.round(SET.vol * 100));
@@ -2508,8 +2521,21 @@
           if (n.hasAttribute("data-open-shop")) { e.preventDefault(); openMe("shop"); return; }
           if (n.hasAttribute("data-open-set")) { e.preventDefault(); openSet(); return; }
           if (n.hasAttribute("data-upload-run")) { e.preventDefault(); uploadLastRun(); showOverlay("over"); return; }
+          if (n.id === "run-autoup-check") return;   // 勾选框走 change 事件（下面单独绑）
         }
         n = n.parentNode;
+      }
+    });
+    /* 结算卡上的「以后自动上传成绩到排行榜」勾选框：
+       勾上 → 存进设置（并随云同步），从下一局起自动上榜；这一局也顺手传上去。
+       取消要到设置面板（设置 → 玩法 → 自动上传成绩）。 */
+    if (elOverlay) elOverlay.addEventListener("change", function (e) {
+      if (!e.target || e.target.id !== "run-autoup-check") return;
+      setOpt("autoUp", e.target.checked);
+      if (e.target.checked) {
+        toast("已开启自动上传：以后每局结束自动上榜（设置里可取消）");
+        uploadLastRun();
+        showOverlay("over");
       }
     });
     /* 个人中心面板里的「商店 / 成就」页签：面板在 #run-root 之外，单独在 document 上监听 */
@@ -2724,15 +2750,17 @@
       openHelp();
     });
 
-    var toggles = [elSetCb, elSetCalm, elSetBig];
+    var toggles = [elSetCb, elSetCalm, elSetBig, elSetAuto];
     for (var t = 0; t < toggles.length; t++) {
       (function (entry, name) {
         if (!entry.el) return;
         entry.el.addEventListener("click", function () {
           entry.set(entry.el.getAttribute("aria-pressed") !== "true");   // 取反
           if (name === "cb" || name === "calm") refreshCanvasStyle();
+          if (name === "autoUp") toast(entry.el.getAttribute("aria-pressed") === "true"
+            ? "已开启自动上传：以后每局结束自动上榜" : "已关闭自动上传：结算时手动点「上传成绩」");
         });
-      })(toggles[t], ["cb", "calm", "big"][t]);
+      })(toggles[t], ["cb", "calm", "big", "autoUp"][t]);
     }
 
     var vols = [elSetVol[0], elSetVol[1]];
