@@ -40,8 +40,10 @@
   color: var(--primary, #1f1f1f);
   background: var(--theme, #ffffff);
   border: 1px solid var(--border, #e0e0e0);
+  /* 暗色主题下 --border 比面板底还暗，框会糊在背景里 —— 统一换中性半透明描边（同个人中心） */
+  border-color: rgba(128, 138, 152, 0.34);
   border-radius: 16px;
-  box-shadow: 0 26px 60px -24px rgba(0, 0, 0, 0.72);
+  box-shadow: 0 30px 70px -26px rgba(0, 0, 0, 0.9);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -199,4 +201,35 @@
   .run-ach-head { margin: 0 -14px; padding: 13px 14px 9px; }
   .ach-todo { min-width: 70px; }
   .ach-mini { width: 70px; }
+}
+
+/* ══════════ 游戏页的轻量 toast（gameach.js 自建，2026-10-06） ══════════
+   扫雷 / 井字棋 / 贪吃蛇没有跑酷那套 .run-toast，解锁成就时用这个从顶部飘一条。
+   放在 ach.css 里：这三个页面都引了它。 */
+.game-toast {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 120;
+  max-width: min(88vw, 520px);
+  padding: 8px 18px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  color: #fff;
+  background: rgba(20, 26, 40, 0.9);
+  border-radius: 999px;
+  box-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.game-toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) {
+  .game-toast { transition: opacity 0.25s ease; }
+  .game-toast.show { transform: translate(-50%, 0); }
 }

@@ -244,19 +244,31 @@
   /* ── IP 属地 ──
      排行榜展示「IP 属地」用：CF 边缘根据来源 IP 判到省级（国内）/ 国家（海外），
      客户端拿不到 IP 本身，也没有任何 IP 出库。取不到（超时/被拦/离线）就静默跳过，
-     成绩照常提交、榜上少一个属地小字而已。sessionStorage 会话级缓存：
-     同一访客同一会话固定属地，与「访客 N」编号同生命周期。 */
+     成绩照常提交、榜上少一个属地小字而已。
+     实时检测（2026-10-06）：属地缓存上记着「是哪台设备、什么时候取的」——
+     · 换了设备（device_id 变了）→ 立刻重取并覆盖；
+     · 页面切回前台且距上次成功刷新超过 5 分钟 → 再取一次；
+     · 取到的属地和缓存不同 → 广播 cloud:region，界面上的属地立即跟着变。 */
+  var REGION_DEV_KEY = "runner-region-dev";
+  var REGION_RECHECK_MS = 5 * 60 * 1000;     // 回到前台时至少隔 5 分钟才再发请求
+
   function regionGet() {
     try { return sessionStorage.getItem(REGION_KEY) || ""; } catch (e) { return ""; }
   }
   function regionStore(v) {
     var s = String(v || "").slice(0, REGION_MAX);
-    if (s) { try { sessionStorage.setItem(REGION_KEY, s); } catch (e) {} }
+    if (s) {
+      try { sessionStorage.setItem(REGION_KEY, s); } catch (e) {}
+      try { sessionStorage.setItem(REGION_DEV_KEY, deviceId() || ""); } catch (e) {}
+    }
     return s;
   }
-  function regionFetch() {
+  function regionDevice() {
+    try { return sessionStorage.getItem(REGION_DEV_KEY) || ""; } catch (e) { return ""; }
+  }
+  function regionFetch(force) {
     var hit = regionGet();
-    if (hit) return Promise.resolve({ data: hit, error: null });
+    if (hit && !force) return Promise.resolve({ data: hit, error: null });
     if (typeof global.fetch !== "function") return Promise.resolve({ data: null, error: null });
     return fetch(REGION_SRC).then(function (r) {
       if (!r.ok) return { data: null, error: null };
@@ -264,6 +276,40 @@
         return { data: regionStore(v && v.region), error: null };
       });
     }).catch(function () { return { data: null, error: null }; });
+  }
+  /* 实时刷新：只在取到的属地真的变了时广播（界面重画 + 提交口径更新） */
+  var regionLastFetchAt = 0;
+  function regionRefresh() {
+    if (typeof global.fetch !== "function") return Promise.resolve(null);
+    var before = regionGet();
+    return fetch(REGION_SRC).then(function (r) {
+      if (!r.ok) return null;
+      return r.json().then(function (v) {
+        var val = String((v && v.region) || "").slice(0, REGION_MAX);
+        regionLastFetchAt = Date.now();
+        if (val && val !== before) {
+          regionStore(val);
+          try { global.document.dispatchEvent(new CustomEvent("cloud:region", { detail: { region: val } })); } catch (e) {}
+          return val;
+        }
+        return null;
+      });
+    }).catch(function () { return null; });
+  }
+  function regionLive() {
+    try {
+      var hit = regionGet();
+      var dev = regionDevice();
+      var devNow = deviceId() || "";
+      if (!hit || (dev && dev !== devNow)) { regionRefresh(); }
+    } catch (e) {}
+    if (global.document && global.document.addEventListener) {
+      global.document.addEventListener("visibilitychange", function () {
+        if (global.document.visibilityState !== "visible") return;
+        if (Date.now() - regionLastFetchAt < REGION_RECHECK_MS) return;
+        regionRefresh();
+      });
+    }
   }
 
   /* ═══════════ 排行榜 ═══════════ */
@@ -369,8 +415,20 @@
     } else {
       setNick(row.nickname);
     }
-    return d.from(TABLE_SCORES).insert(row)
-      .select("nickname, score, coins, distance, created_at")
+    /* 只保留最高记录（2026-10-06 用户要求）：先查这个昵称在榜上的最好成绩，
+       新分没超过就不写库 —— 榜上与库里都只留每个人的最好一条（扫雷榜同款规则）。 */
+    return d.from(TABLE_SCORES).select("score")
+      .eq("nickname", row.nickname)
+      .order("score", { ascending: false })
+      .limit(1)
+      .then(function (r) {
+        var best = r && r.data && r.data[0];
+        if (best && Number(best.score) >= row.score) {
+          return { data: null, error: null, skipped: true };
+        }
+        return d.from(TABLE_SCORES).insert(row)
+          .select("nickname, score, coins, distance, created_at");
+      })
       .then(function (r) {
         if (r && r.error && isScoreReject(r.error)) r.error.permanent = true;
         return r;
@@ -847,8 +905,10 @@
   }
 
   /* ═══════════ 对外接口 ═══════════ */
-  /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待 */
+  /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待。
+     regionLive() 再补上实时检测：换设备立刻重取、回到前台定期复查、变了就广播。 */
   try { regionFetch(); } catch (e) {}
+  try { regionLive(); } catch (e) {}
 
   global.WowCloud = {
     PUBLIC_CONFIG: PUBLIC_CONFIG,

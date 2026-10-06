@@ -3,9 +3,12 @@
    ──────────────────────────────────────────────────────────────
    · 与跑酷页的同一套面板 DOM 共存（layouts/_partials/me-center.html）；
      跑酷页由 runner.js 驱动，其余游戏页由本文件驱动，两边不共存。
-   · 三页签：皮肤（shop.js）/ 成就（ach.js）/ 个人（本文件渲染）。
+   · 三页签（2026-10-06 起顺序为 个人 / 成就 / 皮肤，全游戏一致）：
+       个人（本文件渲染）/ 成就（GameAch，本游戏专属）/ 皮肤（shop.js）。
+     井字棋没有皮肤，页签只剩 个人 / 成就 两个，且 #run-shop 永不打开。
    · 「个人」页：头像（本地 + 云端）、排行榜昵称（登录后可改名）、IP 属地、
-     成就进度。皮肤与成就是全游戏共用的本地存档，任何页面打开都是同一份。
+     本游戏成就进度。
+   · 打开 / 关闭任一页签会广播 panel:open / panel:close（游戏页据此暂停）。
    · 云服务不可用时优雅降级：本地能看的照常看，云端相关显示降级文案。
    · 纯外链脚本、无内联代码（CSP 同源白名单）。对外暴露 window.MeCenter
    ══════════════════════════════════════════════════════════════ */
@@ -13,10 +16,24 @@
   "use strict";
 
   var CLOUD = global.WowCloud || null;
+  /* 成就引擎：游戏页用 GameAch（本游戏专属成就），兜底 RunnerAch（跑酷） */
+  var ENGINE = global.GameAch || global.RunnerAch || null;
   var elShop = document.getElementById("run-shop");
   var elAch  = document.getElementById("run-ach");
   var elMe   = document.getElementById("run-me");
   if (!elShop || !elAch || !elMe) return;
+
+  /* 游戏作用域：井字棋没有皮肤，皮肤页签整个藏掉。
+     跑酷页（run-root）由 runner.js 驱动，本文件不接管 —— 万一被误引入也不抢面板。 */
+  var SCOPE = document.getElementById("ms-root") ? "ms"
+    : document.getElementById("snake-root") ? "snake"
+    : document.getElementById("ttt-root") ? "ttt"
+    : document.getElementById("run-root") ? "runner" : "ms";
+  if (SCOPE === "runner") return;
+  var HAS_SHOP = SCOPE !== "ttt";
+
+  /* 页签顺序（2026-10-06 用户要求）：个人最前，其余游戏一致 */
+  var ME_TABS = HAS_SHOP ? ["me", "ach", "shop"] : ["me", "ach"];
 
   var btnShopX = document.getElementById("run-shop-close");
   var btnAchX  = document.getElementById("run-ach-close");
@@ -40,8 +57,6 @@
   var elMeBar  = document.getElementById("me-bar");
   var elMeBarFill = document.getElementById("me-bar-fill");
 
-  var ME_TABS = ["shop", "ach", "me"];
-
   /* ═══════════ 面板开关与页签 ═══════════ */
   function shopOpen() { return !!elShop && !elShop.classList.contains("hidden"); }
   function achOpen()  { return !!elAch  && !elAch.classList.contains("hidden"); }
@@ -50,6 +65,17 @@
     if (t === "shop") return shopOpen();
     if (t === "ach") return achOpen();
     return meOpen();
+  }
+  /* 页签高亮：aria-selected 只落在当前打开的那一页上（之前没人管它，
+     导致游戏页上「皮肤」永远高亮 —— 顺手修掉） */
+  function paintTabs() {
+    var btns = document.querySelectorAll(".me-tabs .me-tab");
+    var cur = anyTabOpen();
+    for (var i = 0; i < btns.length; i++) {
+      var on = !!cur && btns[i].getAttribute("data-me-tab") === cur;
+      btns[i].classList[on ? "add" : "remove"]("is-on");
+      btns[i].setAttribute("aria-selected", on ? "true" : "false");
+    }
   }
   function openTab(t) {
     if (t === "shop") {
@@ -61,7 +87,7 @@
       elShop.classList.add("hidden");
       elMe.classList.add("hidden");
       elAch.classList.remove("hidden");
-      if (global.Ach && global.Ach.open) global.Ach.open();
+      if (ENGINE && ENGINE.open) ENGINE.open();
     } else {
       elShop.classList.add("hidden");
       elAch.classList.add("hidden");
@@ -70,6 +96,8 @@
       document.dispatchEvent(new CustomEvent("me:open"));
       if (CLOUD && CLOUD.avatar && CLOUD.avatar.sync) CLOUD.avatar.sync();
     }
+    paintTabs();
+    notifyModal();
   }
   function closeTab(t) {
     if (t === "shop") {
@@ -77,18 +105,40 @@
       if (global.Shop && global.Shop.close) global.Shop.close();
     } else if (t === "ach") {
       elAch.classList.add("hidden");
-      if (global.Ach && global.Ach.close) global.Ach.close();
+      if (ENGINE && ENGINE.close) ENGINE.close();
     } else {
       elMe.classList.add("hidden");
       document.dispatchEvent(new CustomEvent("me:close"));
     }
+    paintTabs();
+    notifyModal();
   }
   function anyTabOpen() {
     for (var i = 0; i < ME_TABS.length; i++) if (tabOpen(ME_TABS[i])) return ME_TABS[i];
     return null;
   }
+  /* 统一「遮罩层开合」信号：游戏页据此暂停（贪吃蛇 / 扫雷）。
+     每个遮罩层各自发 open/close，游戏侧按深度计数，多个层叠着也不会误判。
+     具体页签另发 me:open / me:close，供需要区分的人用。 */
+  var modalWasOpen = false;
+  function notifyModal() {
+    var now = !!anyTabOpen();
+    if (now === modalWasOpen) return;
+    modalWasOpen = now;
+    document.dispatchEvent(new CustomEvent(now ? "panel:open" : "panel:close",
+      { detail: { name: "me-center" } }));
+  }
+  /* 井字棋没有皮肤：把三份表头里的「皮肤」页签整块摘掉（DOM 是三份共用的表头）。
+     面板本体（#run-shop）保留在 DOM 里但永不打开 —— shop.js 也引用它，删了会出岔子。 */
+  if (!HAS_SHOP) {
+    var shopTabs = document.querySelectorAll('.me-tabs .me-tab[data-me-tab="shop"]');
+    for (var si = 0; si < shopTabs.length; si++) {
+      if (shopTabs[si].parentNode) shopTabs[si].parentNode.removeChild(shopTabs[si]);
+    }
+  }
   function open(tab) {
     var want = (tab === "shop" || tab === "ach") ? tab : "me";
+    if (want === "shop" && !HAS_SHOP) want = "me";   // 井字棋没有皮肤页
     if (tabOpen(want)) return;
     var cur = anyTabOpen();
     if (cur) { closeTab(cur); openTab(want); return; }
@@ -191,7 +241,7 @@
     }
     if (elMeSub) {
       elMeSub.textContent = isLogged
-        ? "已登录 · 头像、昵称与成就跟账号走，换设备也在"
+        ? "已登录 · 头像、昵称与成绩跟账号走，换设备也在"
         : "未登录 · 头像只存在本机，成绩以「访客 N」自动上传";
     }
     /* 改名只对登录用户开放；访客走自动编号 */
@@ -225,7 +275,7 @@
   }
 
   function renderMeAch() {
-    var snap = (global.Ach && global.Ach.snapshot) ? global.Ach.snapshot() : null;
+    var snap = (ENGINE && ENGINE.snapshot) ? ENGINE.snapshot() : null;
     if (!snap) return;
     var got = snap.unlocked || 0, total = snap.total || 0;
     if (elMeGot) elMeGot.textContent = got;
@@ -262,7 +312,11 @@
   document.addEventListener("click", function (e) {
     var n = e.target && e.target.closest ? e.target.closest("[data-open-me],[data-open-shop]") : null;
     if (n && n.hasAttribute("data-open-me")) { e.preventDefault(); open("me"); return; }
-    if (n && n.hasAttribute("data-open-shop")) { e.preventDefault(); open("shop"); return; }
+    if (n && n.hasAttribute("data-open-shop")) {
+      e.preventDefault();
+      if (HAS_SHOP) open("shop");            // 井字棋没有皮肤：入口点了也不开
+      return;
+    }
     var t = e.target && e.target.closest ? e.target.closest("[data-me-tab]") : null;
     if (t) { e.preventDefault(); open(t.getAttribute("data-me-tab")); }
   });
@@ -301,6 +355,12 @@
 
   /* 皮肤/成就页签打开时各自模块自渲染；成就变化后「个人」页进度需要重画 */
   document.addEventListener("ach:change", renderMeAch);
+
+  /* IP 属地实时刷新（cloud.js 检测到换设备/属地变化时广播）：
+     个人页开着就立刻重画，没开也先记着 —— 下次打开 renderMe 会读到新值 */
+  document.addEventListener("cloud:region", function () {
+    if (meOpen()) renderRegion();
+  });
 
   /* 登录态变化：重画「个人」页 */
   if (CLOUD && CLOUD.onAuthChange) {

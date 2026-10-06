@@ -147,7 +147,18 @@
         return;
       }
       loaded = true;
-      lastTop = top.data || [];
+      /* 榜上按人排名：同一昵称只留最好的一条（2026-10-06 用户要求，
+         数据本身也只保留最高分，这里兜底防旧数据 / 并发多行）。
+         top() 按 score 降序返回，所以每个昵称第一条就是最好的。 */
+      var seen = {}, rows = [];
+      var all = top.data || [];
+      for (var i = 0; i < all.length; i++) {
+        var key = String(all[i].nickname || "");
+        if (seen[key]) continue;
+        seen[key] = true;
+        rows.push(all[i]);
+      }
+      lastTop = rows;
       renderAll();
     });
   }
@@ -269,6 +280,13 @@
         /* lastSubmit 只在成功后记账：失败的这局下一回还有机会补传 */
         if (!pending || score > pending.score) pending = stash(entry, score, isGuest, guestName);
         toast("成绩上传失败：" + CLOUD.describe(r.error));
+        return;
+      }
+      if (r.skipped) {
+        /* 榜上已有不低于这一局的最好成绩：不写库，如实说明（不是失败） */
+        lastSubmit = score;
+        if (pending && pending.score <= score) pending = null;
+        toast("这一局没超过你的榜上最好成绩，排行榜只保留最高分");
         return;
       }
       lastSubmit = score;

@@ -1,6 +1,6 @@
 <!-- 扫雷小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
 <link rel="stylesheet" href="/minesweeper.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
-<!-- 个人中心（皮肤 / 成就 / 个人三页签）与云端排行榜共用 runner.css 里的面板样式 -->
+<!-- 个人中心（个人 / 成就 / 皮肤三页签）与云端排行榜共用 runner.css 里的面板样式 -->
 <link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
@@ -65,6 +65,7 @@
 <script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+{{/* 成就引擎：游戏页用 gameach.js（本游戏专属成就），跑酷的 ach.js 只在跑酷页加载（2026-10-06） */}}
+<script src="/gameach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

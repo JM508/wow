@@ -1,14 +1,15 @@
-<!-- ═══ 个人中心（三游戏共用）：皮肤 / 成就 / 个人 三页签 ═══
+<!-- ═══ 个人中心（全游戏共用）：个人 / 成就 / 皮肤 三页签 ═══
      runner 页由 /runner.js 驱动；扫雷 / 井字棋 / 贪吃蛇页由 /me.js 驱动。
+     井字棋没有皮肤：me.js 启动时会把三份表头里的「皮肤」页签摘掉。
      两边共用同一套 DOM id 与样式，改结构时两处驱动逻辑都要核对。 -->
 <div id="run-shop" class="run-shop hidden" data-shop-panel role="dialog" aria-modal="true" aria-labelledby="run-shop-title">
   <div class="run-shop-box">
     <div class="run-shop-head me-head">
       <strong id="run-shop-title" class="me-title">个人中心</strong>
       <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="true">皮肤</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
         <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="true">皮肤</button>
       </div>
       <button type="button" class="run-shop-x" id="run-shop-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
     </div>
@@ -21,9 +22,9 @@
     <div class="run-ach-head me-head">
       <strong id="run-ach-title" class="me-title">个人中心</strong>
       <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="true">成就</button>
         <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="false">个人</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="true">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
       </div>
       <button type="button" class="run-ach-x" id="run-ach-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
     </div>
@@ -37,9 +38,9 @@
     <div class="run-me-head me-head">
       <strong id="run-me-title" class="me-title">个人中心</strong>
       <div class="me-tabs" role="tablist" aria-label="个人中心页面">
-        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
-        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
         <button type="button" role="tab" class="me-tab" data-me-tab="me" aria-selected="true">个人</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="ach" aria-selected="false">成就</button>
+        <button type="button" role="tab" class="me-tab" data-me-tab="shop" aria-selected="false">皮肤</button>
       </div>
       <button type="button" class="run-me-x" id="run-me-close" title="关闭个人中心" aria-label="关闭个人中心">✕</button>
     </div>
@@ -73,10 +74,10 @@
 
     <section class="me-card">
       <div class="me-ach">
-        <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">19</span></span>
-        <span class="me-ach-lab">成就已解锁</span>
+        <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">0</span></span>
+        <span class="me-ach-lab">本游戏成就已解锁</span>
       </div>
-      <div class="me-bar" id="me-bar" role="progressbar" aria-valuemin="0" aria-valuemax="19" aria-valuenow="0" aria-label="成就进度"><i id="me-bar-fill"></i></div>
+      <div class="me-bar" id="me-bar" role="progressbar" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-label="成就进度"><i id="me-bar-fill"></i></div>
     </section>
 
     <p class="me-foot">头像、昵称与成就都跟着账号走：登录后换设备也能看到同一份资料。</p>

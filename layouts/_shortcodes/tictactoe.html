@@ -1,8 +1,9 @@
 <!-- 井字棋小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
 <link rel="stylesheet" href="/tictactoe.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
-<!-- 个人中心（皮肤 / 成就 / 个人三页签）与云端排行榜共用 runner.css 里的面板样式 -->
+<!-- 个人中心（个人 / 成就 两页签）与云端排行榜共用 runner.css 里的面板样式。
+     井字棋没有皮肤（2026-10-06 用户要求），所以不引 skins.js / shop.css / shop.js，
+     me.js 会自动把「皮肤」页签摘掉。 -->
 <link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
-<link rel="stylesheet" href="/shop.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <link rel="stylesheet" href="/grank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="ttt-root" aria-label="井字棋">
@@ -52,7 +53,8 @@
     <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
     <div class="grank-mine" id="grank-mine"></div>
     <p class="grank-foot">
-      榜上按<b>最佳分数</b>排名（同名只留最高的一条）；赢一局得分：简单 1 分 / 中等 2 分 / 困难 3 分；
+      榜上排的是<b>积分</b>（同名只留最高的一条）：胜 <b>+1</b> / 平 <b>0</b> / 负 <b>−1</b>（简单），
+      <b>+2 / −2</b>（中等），<b>+3 / −3</b>（困难）；三个难度各算各的。
       未登录以「访客 N」上榜，登录后可在个人中心用自己的昵称，成绩跟着账号走。
     </p>
   </div>
@@ -93,9 +95,8 @@
 {{/* 云 SDK 必须在 cloud.js 之前（cloud.js 的 build() 依赖 window.WorkBuddyCloud） */}}
 <script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+{{/* 成就引擎：井字棋专属一套（gameach.js），跑酷的 ach.js 只在跑酷页加载 */}}
+<script src="/gameach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/grank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/tictactoe.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

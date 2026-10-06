@@ -32,7 +32,7 @@ var PRECACHE = [
   '/tictactoe.js', '/tictactoe.css',
   '/snake.js', '/snake.css', '/grank.js', '/grank.css', '/me.js',
   '/runner.js', '/runner.css', '/skins.js', '/shop.js', '/shop.css',
-  '/ach.js', '/ach.css', '/rank.js', '/rank.css', '/cloud.js',
+  '/ach.js', '/ach.css', '/gameach.js', '/rank.js', '/rank.css', '/cloud.js',
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
   '/net-status.js',
   '/vendor/workbuddy-cloud-sdk.global.js',

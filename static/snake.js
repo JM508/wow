@@ -3,9 +3,14 @@
    ──────────────────────────────────────────────────────────────
    · 绿色小蛇吃苹果，每吃一个变长一格、加 10 分；撞墙或撞自己结束。
    · 三档难度（速度不同）：简单 / 中等 / 困难。
+   · 蛇皮肤（2026-10-06）：取 skins.js 里当前装备的配色，个人中心 → 皮肤切换，
+     换完立刻生效（监听 shop:change）。
+   · 成就（2026-10-06）：本游戏专属一套，走 GameAch（gameach.js）；
+     吃苹果与结束时报事件，判定全在引擎里。
    · 得分上云榜（game_scores 表，game="snake"）：GameRank 只收比本人
      榜上更高的分，所以实际每次都是刷新纪录才写库。
    · 操作：方向键 / WASD，手机滑动或屏幕按钮；空格暂停。
+   · 打开个人中心 / 排行榜时自动暂停（panel:open / panel:close）。
    · 外链脚本、无内联代码（CSP 同源白名单）。
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -40,6 +45,18 @@
   var cell = 20;                       // 像素 / 格（resize 时按画布宽算）
   var mode = elLevel ? elLevel.value : "easy";
   var best = loadBest();
+
+  /* 蛇皮肤（skins.js 缺失时回落默认配色，游戏照常能玩） */
+  function snakeSkin(dark) {
+    var S = window.RunnerSkins;
+    if (S && S.snakeColors) {
+      try {
+        var c = S.snakeColors(dark);
+        if (c && c.head && c.body) return c;
+      } catch (e) {}
+    }
+    return dark ? { head: "#3ddc68", body: "#2fae54" } : { head: "#1d8a40", body: "#37a352" };
+  }
 
   var snake = [];                      // [{x,y}]，头在前
   var dir = DIRS.right;
@@ -125,13 +142,10 @@
     if (state === "playing") return;
     if (state === "ready" || state === "over") reset();
     state = "playing";
+    autoPaused = false;
     if (btnPause) btnPause.textContent = "暂停";
     if (elMsg) elMsg.textContent = "";
-    lastT = 0;
-    acc = 0;
-    if (!rafId && window.requestAnimationFrame) rafId = window.requestAnimationFrame(loop);
-    else if (!rafId) rafId = 1;
-    loopTickFallback();
+    resumeLoop();
   }
 
   function pause() {
@@ -144,8 +158,51 @@
       state = "playing";
       if (btnPause) btnPause.textContent = "暂停";
       if (elMsg) elMsg.textContent = "";
+      resumeLoop();
     }
   }
+
+  /* 暂停会把 rAF 循环停掉（loop() 见 state !== playing 就直接返回），
+     所以「继续」必须重新把循环接上，否则画面就冻住了（2026-10-06 修）。 */
+  function resumeLoop() {
+    lastT = 0;
+    acc = 0;
+    if (window.requestAnimationFrame) {
+      if (!rafId) rafId = window.requestAnimationFrame(loop);
+    } else {
+      loopTickFallback();
+    }
+  }
+
+  /* ── 打开个人中心 / 排行榜时自动暂停 ──
+     两个遮罩层可能叠着开（比如在个人中心里点开排行榜），所以按深度计数；
+     只有「本该在跑」的那次自动暂停才对应自动恢复，手动暂停不在这里动。 */
+  var modalDepth = 0, autoPaused = false;
+  function modalPause() {
+    if (state === "playing") {
+      state = "paused";
+      autoPaused = true;
+      if (btnPause) btnPause.textContent = "继续";
+      if (elMsg) elMsg.textContent = "已暂停（关掉这个面板后自动继续）。";
+    }
+  }
+  function modalResume() {
+    if (!autoPaused) return;
+    autoPaused = false;
+    if (state !== "paused") return;
+    state = "playing";
+    if (btnPause) btnPause.textContent = "暂停";
+    if (elMsg) elMsg.textContent = "";
+    resumeLoop();
+  }
+  document.addEventListener("panel:open", function () {
+    modalDepth += 1;
+    if (modalDepth === 1) modalPause();
+  });
+  document.addEventListener("panel:close", function () {
+    modalDepth = Math.max(0, modalDepth - 1);
+    if (modalDepth === 0) modalResume();
+  });
 
   /* rAF 循环 + 兜底 setInterval（requestAnimationFrame 不可用的环境） */
   function loop(ts) {
@@ -191,6 +248,8 @@
       if (score > best) { best = score; saveBest(); }
       paintHud();
       placeApple();
+      /* 成就：吃苹果（分数与蛇长一并报上去，单局最高分/最长蛇都在这一条里更新） */
+      if (window.GameAch) window.GameAch.report({ kind: "apple", score: score, len: snake.length, mode: mode });
     }
     if (grow > 0) grow -= 1;
     else snake.pop();
@@ -203,6 +262,8 @@
     if (elOverS) elOverS.textContent = "本局得分 " + score + "（最高 " + best + "）";
     if (elOver) elOver.classList.remove("hidden");
     if (elOverBtn) elOverBtn.focus();
+    /* 成就：本局结束（局数 + 各难度最高分） */
+    if (window.GameAch) window.GameAch.report({ kind: "over", score: score, len: snake.length, mode: mode });
     submitScore();
   }
 
@@ -238,11 +299,12 @@
       ctx.fillStyle = "#5d8a3c";
       ctx.fillRect(apple.x * cell + cell / 2 - 1, apple.y * cell + cell * 0.06, 2, cell * 0.18);
     }
-    /* 蛇：头深、身浅（色盲友好：靠明度差区分） */
+    /* 蛇：头深、身浅（色盲友好：靠明度差区分），颜色来自当前装备的蛇皮肤 */
+    var skin = snakeSkin(dark);
     for (var i = snake.length - 1; i >= 0; i--) {
       var s = snake[i];
       var pad = i === 0 ? cell * 0.06 : cell * 0.1;
-      ctx.fillStyle = i === 0 ? (dark ? "#3ddc68" : "#1d8a40") : (dark ? "#2fae54" : "#37a352");
+      ctx.fillStyle = i === 0 ? skin.head : skin.body;
       ctx.fillRect(s.x * cell + pad, s.y * cell + pad, cell - pad * 2, cell - pad * 2);
       if (i === 0) {
         /* 眼睛 */
@@ -273,12 +335,14 @@
     var d = KEYMAP[e.code];
     if (d) {
       e.preventDefault();
-      if (state === "ready" || state === "over") { start(); }
+      /* 结束弹窗开着时不认方向键：要么点「再来一局」，要么先关掉弹窗（2026-10-06 用户要求） */
+      if (state === "over") return;
+      if (state === "ready") start();
       setDir(d);
       draw();
       return;
     }
-    if (e.code === "Space") { e.preventDefault(); pause(); }
+    if (e.code === "Space") { e.preventDefault(); if (state !== "over") pause(); }
   });
 
   /* 触屏滑动 */
@@ -295,7 +359,8 @@
     var dy = e.changedTouches[0].clientY - touchY;
     touchX = touchY = null;
     if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;    // 当成点按，忽略
-    if (state === "ready" || state === "over") start();
+    if (state === "over") return;                          // 结束后不靠滑动重开
+    if (state === "ready") start();
     setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
   }, { passive: true });
 
@@ -305,7 +370,8 @@
       var b = e.target && e.target.closest ? e.target.closest("[data-dir]") : null;
       if (!b) return;
       e.preventDefault();
-      if (state === "ready" || state === "over") start();
+      if (state === "over") return;                        // 结束后不靠方向键重开
+      if (state === "ready") start();
       setDir(b.getAttribute("data-dir"));
     });
   }
@@ -314,7 +380,7 @@
   if (btnStart) btnStart.addEventListener("click", start);
   if (btnPause) btnPause.addEventListener("click", pause);
   if (elOverBtn) elOverBtn.addEventListener("click", start);
-  if (elOver) elOver.addEventListener("click", function (e) { if (e.target === elOver) start(); });
+  /* 结束弹窗只认「再来一局」按钮：点弹窗空白处不再顺手开局（2026-10-06 用户要求） */
   if (elLevel) {
     elLevel.addEventListener("change", function () {
       mode = elLevel.value;
@@ -323,6 +389,10 @@
   }
 
   window.addEventListener("resize", resize);
+  /* 个人中心里换了蛇皮肤：立刻按新配色重画（不用重开一局）。
+     skins.js 广播 wallet:change，shop.js 另外广播 shop:change，两个都听着。 */
+  document.addEventListener("shop:change", function () { draw(); });
+  document.addEventListener("wallet:change", function () { draw(); });
 
   document.addEventListener("keydown", function (e) {
     if (e.code !== "Space") return;
