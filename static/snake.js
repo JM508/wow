@@ -28,6 +28,7 @@
   var elOverT = document.getElementById("snake-over-t");
   var elOverS = document.getElementById("snake-over-s");
   var elOverBtn = document.getElementById("snake-over-btn");
+  var elOverCancel = document.getElementById("snake-over-cancel");
   var btnPause = document.getElementById("snake-pause");
   var dpad = document.getElementById("snake-dpad");
 
@@ -276,6 +277,12 @@
 
   function hideOver() { if (elOver) elOver.classList.add("hidden"); }
 
+  /* 取消结束弹窗：收起并回到待开局状态（棋盘重摆、分数清零，不自动开局） */
+  function closeOver() {
+    reset();
+    if (btnStart) btnStart.focus();
+  }
+
   /* 云榜：得分 > 0 就提交，grank 内部「没超过本人最好成绩就不写库」 */
   function submitScore() {
     if (score <= 0 || !window.GameRank) return;
@@ -342,6 +349,9 @@
     /* 焦点在按钮 / 下拉 / 输入框上时别抢：空格是「点击」、方向键是「换选项」，
        抢了会吃掉按钮激活、还顺手把游戏暂停掉（排行榜关闭按钮上按空格最典型）。
        游戏快捷键只在焦点不在任何控件上时生效。 */
+    /* Esc 关闭结束弹窗（「取消」）；放在焦点守卫之前 —— 弹窗默认焦点在「再来一局」按钮上，
+       守卫会放过 BUTTON 目标，Esc 就永远轮不到了。Esc 在按钮上也不会触发点击，无冲突。 */
+    if (e.code === "Escape" && state === "over") { e.preventDefault(); closeOver(); return; }
     var t = e.target;
     if (t && t !== document && t !== document.body &&
         (t.tagName === "BUTTON" || t.tagName === "SELECT" ||
@@ -409,6 +419,7 @@
   }
 
   var btnStart = document.getElementById("snake-start");
+  if (elOverCancel) elOverCancel.addEventListener("click", closeOver);
   if (btnStart) btnStart.addEventListener("click", start);
   if (btnPause) btnPause.addEventListener("click", pause);
   if (elOverBtn) elOverBtn.addEventListener("click", start);
