@@ -150,6 +150,9 @@
 
   function pause() {
     if (state !== "playing" && state !== "paused") return;
+    /* 面板开着时局面必定是「自动暂停」：空格/按钮不许在遮罩后面偷偷续跑，
+       关掉面板（panel:close → modalResume）才是唯一的恢复路径 */
+    if (state === "paused" && modalDepth > 0) return;
     if (state === "playing") {
       state = "paused";
       if (btnPause) btnPause.textContent = "继续";
@@ -211,6 +214,10 @@
     if (!lastT) lastT = ts || 0;
     var dt = (ts || 0) - lastT;
     lastT = ts || 0;
+    /* 钳制长帧：切后台 / 手机切应用 / 主线程卡一下，rAF 时间戳会跳好几秒，
+       不钳的话 acc 一口气堆出几十步 → 蛇瞬移撞墙（runner.js 的帧循环同样钳 50ms）。 */
+    if (!(dt > 0)) dt = 0;                 // 时间戳倒退（少见）也别累加负数
+    if (dt > 200) dt = 200;
     acc += dt;
     while (acc >= stepMs) {
       acc -= stepMs;
@@ -332,6 +339,13 @@
   };
   document.addEventListener("keydown", function (e) {
     if (!root || !root.isConnected) return;
+    /* 焦点在按钮 / 下拉 / 输入框上时别抢：空格是「点击」、方向键是「换选项」，
+       抢了会吃掉按钮激活、还顺手把游戏暂停掉（排行榜关闭按钮上按空格最典型）。
+       游戏快捷键只在焦点不在任何控件上时生效。 */
+    var t = e.target;
+    if (t && t !== document && t !== document.body &&
+        (t.tagName === "BUTTON" || t.tagName === "SELECT" ||
+         t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
     var d = KEYMAP[e.code];
     if (d) {
       e.preventDefault();
@@ -394,11 +408,10 @@
   document.addEventListener("shop:change", function () { draw(); });
   document.addEventListener("wallet:change", function () { draw(); });
 
-  document.addEventListener("keydown", function (e) {
-    if (e.code !== "Space") return;
-    /* 焦点在按钮上时空格是「点击」，别抢 */
-    var t = e.target;
-    if (t && (t.tagName === "BUTTON" || t.tagName === "SELECT" || t.tagName === "INPUT")) return;
+  /* 切后台 / 切应用时自动暂停（与跑酷一致）：回来按「继续」接着玩，
+     也从根上避开后台期间 rAF 停摆、回来时间跳变的问题 */
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "playing") pause();
   });
 
   reset();
