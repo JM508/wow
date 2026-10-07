@@ -399,6 +399,8 @@
     if (state === "playing")
       setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
   }, { passive: true });
+  /* 来电 / 系统手势打断触摸（touchcancel）：丢弃本次滑动锚点，别把上一指的起点带进下一指 */
+  canvas.addEventListener("touchcancel", function () { touchX = touchY = null; }, { passive: true });
 
   /* 屏幕方向按钮 */
   if (dpad) {
