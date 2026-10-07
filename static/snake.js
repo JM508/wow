@@ -360,14 +360,31 @@
   });
 
   /* 触屏滑动 */
+  /* 触屏：整个游戏区内都可滑（不只画布），拖动途中实时转向，不必抬手 */
   var touchX = null, touchY = null;
-  canvas.addEventListener("touchstart", function (e) {
+  var touchDead = false;               // 本次触摸起点落在按钮/下拉等控件上，不参与滑动
+  function touchSkip(t) {
+    return !!(t && t.closest && t.closest("[data-dir], button, select, a, input, textarea"));
+  }
+  root.addEventListener("touchstart", function (e) {
     if (!e.touches.length) return;
+    touchDead = touchSkip(e.target);
     touchX = e.touches[0].clientX;
     touchY = e.touches[0].clientY;
   }, { passive: true });
-  canvas.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
-  canvas.addEventListener("touchend", function (e) {
+  root.addEventListener("touchmove", function (e) {
+    if (touchDead || !e.touches.length) return;
+    if (state === "playing") e.preventDefault();          // 玩耍中禁止页面跟着滚
+    if (touchX === null || state !== "playing") return;   // 面板开着(自动暂停)时不偷转向
+    var dx = e.touches[0].clientX - touchX;
+    var dy = e.touches[0].clientY - touchY;
+    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
+    setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    touchX = e.touches[0].clientX;                        // 锚点前移，一次长滑可连转几弯
+    touchY = e.touches[0].clientY;
+  }, { passive: false });
+  root.addEventListener("touchend", function (e) {
+    if (touchDead) { touchX = touchY = null; return; }
     if (touchX === null || !e.changedTouches.length) return;
     var dx = e.changedTouches[0].clientX - touchX;
     var dy = e.changedTouches[0].clientY - touchY;
@@ -375,7 +392,8 @@
     if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;    // 当成点按，忽略
     if (state === "over") return;                          // 结束后不靠滑动重开
     if (state === "ready") start();
-    setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    if (state === "playing")
+      setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
   }, { passive: true });
 
   /* 屏幕方向按钮 */
@@ -417,4 +435,13 @@
   reset();
   resize();
   if (!window.requestAnimationFrame) loopTickFallback();
+
+  /* 调试/测试出口：只读，不改变任何行为（与 runner 暴露 window.Runner 同理） */
+  window.__snakeState = function () {
+    return {
+      state: state,
+      dir: dir ? (dir.x + "," + dir.y) : "",
+      pending: pendingDirs.length
+    };
+  };
 })();
