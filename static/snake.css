@@ -137,6 +137,12 @@
   font-size: 13.5px;
   color: var(--secondary, #888888);
 }
+.snake-over-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+}
 .snake-over-btn {
   min-width: 132px;
   padding: 10px 22px;
@@ -150,6 +156,19 @@
 }
 [data-theme="dark"] .snake-over-btn { background: #e8e8e8; color: #1a1a1a; }
 .snake-over-btn:hover { filter: brightness(1.18); }
+/* 「取消」：透明描边款，收起弹窗回到待开局状态 */
+.snake-over-ghost {
+  background: transparent;
+  color: var(--primary, #1f1f1f);
+  border: 1px solid var(--border, #cfcfcf);
+}
+.snake-over-ghost:hover { filter: none; background: rgba(128, 138, 152, 0.12); }
+[data-theme="dark"] .snake-over-ghost {
+  background: transparent;
+  color: #e8e8e8;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+[data-theme="dark"] .snake-over-ghost:hover { background: rgba(255, 255, 255, 0.1); }
 
 @media (max-width: 520px) {
   #snake-root { padding: 14px 12px 10px; }
