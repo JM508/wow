@@ -800,21 +800,14 @@
     });
   }
 
-  function addFishArc(x, count) {
-    /* 拱顶 ≤ 148px 可达（满跳脚底 155px、判定半径 33 → 玩家中心最高够到 ~157px），
-       旧参数 78+rnd(0,46) 时拱顶最高 158px，最高处几颗永远吃不到 */
-    var baseY = CFG.GROUND - (76 + rnd(0, 30));
-    var ph = rnd(0, 6.28);                        // 整串同相位浮动，排列整齐不东倒西歪
-    var span = Math.max(1, count - 1);
-    for (var i = 0; i < count; i++) {
-      var it = {
-        id: ++itemSeq, kind: "coin", x: x + i * 42, r: 11, ph: ph,
-        y: baseY - Math.sin(i / span * Math.PI) * 34
-      };
-      items.push(it);
-      logItem(it);
-    }
-    return span * 42 + 22;                        // 整串宽度（给「后方空档」用）
+  /* 单颗金币：只给测试钩子（spawnItem）用 —— 场上不再出现自由金币串，
+     金币只以引导币的形式随障碍波生成（见 addGuideLine / addGuideArc）。 */
+  function addCoin(x, y) {
+    var it = { id: ++itemSeq, kind: "coin", x: x, r: 11, ph: rnd(0, 6.28),
+               y: typeof y === "number" ? y : CFG.GROUND - 90 };
+    items.push(it);
+    logItem(it);
+    return it;
   }
   function addCoffee(x) {
     var it = { id: ++itemSeq, kind: "coffee", x: x, y: CFG.GROUND - 74 - rnd(0, 40), r: 14, ph: 0 };
@@ -822,7 +815,7 @@
     logItem(it);
   }
   /* ── 引导币：金币给玩家画路线 ──
-     与自由金币串不同，引导币和障碍波同步生成（不占 itemGap 配额、不受
+     场上所有金币都是引导币，和障碍波同步生成（不占 itemGap 配额、不受
      areaClear 约束），间距/空档由 spawnWave 的 waveHold 一并兜住。 */
   /* 贴地一排：穿飞行物下方（离地 26，币顶 37 < 瓶底 44），跟着金币走 = 下蹲钻过去 */
   function addGuideLine(x, count) {
@@ -1511,37 +1504,33 @@
     }
 
     /* ── 生成道具 ──
-       护盾已改为纯无敌：不再有「无敌冲刺金币雨」，无敌期间照常出
-       金币串与护盾（itemHold + areaClear 跑道闸门）。
+       护盾已改为纯无敌：不再有「无敌冲刺金币雨」。
+       金币只以引导币形式随障碍波生成（见 spawnWave），这个排程只出护盾咖啡。
        护盾期间例外：无敌状态下障碍反正会被撞碎，跑道闸门（itemHold/areaClear）
-       不再拦金币 —— 否则金币排程被障碍随机卡掉，3.6 秒无敌里经常一颗金币
-       都见不着（实测 8 局里出现 1 次整窗 0 颗的大旱）。 */
+       不再拦咖啡 —— 否则护盾排程被障碍随机卡掉，冷却窗口会一拖再拖。 */
     S.itemGap -= move;
     if (S.itemGap <= 0) {
-      /* 金币落点的两个前提：
+      /* 自由金币串已去掉：金币只以引导币的形式随障碍波生成（不受这个排程管）。
+         这个排程现在只负责护盾咖啡 —— 落点前提照旧：
            ① 距上一波障碍已过去 itemRunway()（够玩家落地、再从容起跳）；
-           ② 出生点前方 itemRunway() 内没有障碍 —— 否则玩家会「刚跳过障碍、还在半空」
-              眼看着金币从脚下溜走，这就是之前「有些金币根本吃不到」的原因。
-           （无敌期间不适用：见上。） */
+           ② 出生点前方 itemRunway() 内没有障碍。
+           （无敌期间不适用：障碍反正会被撞碎，闸门不拦咖啡。） */
       var runway = itemRunway();
       S.itemPending = true;                    // 先占位：让障碍暂停生成，把跑道空出来
       if (boosting || (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380))) {
-        var w;
-        /* 护盾比金币「贵」：概率低（SHIELD_CHANCE）且带冷却（SHIELD_COOLDOWN）。
-           原来 18% 且无冷却，实测每分钟能吃到 4 个，一局大半个时间都在无敌冲刺里，
-           难度和乐趣都被削平；现在压到约每分钟 1.5 个。
-           roll 先取出来，保证每次生成消耗的随机数个数与旧版一致。 */
         var roll = random();
         if (S.dist >= S.shieldHold && roll < CFG.SHIELD_CHANCE) {
-          addCoffee(CFG.W + 60); w = 28;
+          addCoffee(CFG.W + 60);
           S.shieldHold = S.dist + CFG.SHIELD_COOLDOWN;
+          S.itemGap = rnd(900, 1700) + S.speed;
+          S.waveHold = S.dist + 28 + waveRunway();
+          S.groups++;
+          S.itemPending = false;
         } else {
-          w = addFishArc(CFG.W + 60, 3 + Math.floor(random() * 3));
+          /* 没轮到护盾：轮空，排程照常推进等下一次 */
+          S.itemGap = rnd(900, 1700) + S.speed;
+          S.itemPending = false;
         }
-        S.itemGap = rnd(900, 1700) + S.speed;
-        S.waveHold = S.dist + w + waveRunway();
-        S.groups++;
-        S.itemPending = false;
       } else {
         S.itemGap = 120;
       }
@@ -2895,9 +2884,9 @@
     spawnObstacle: function (kind, x, h) { return addObstacle(kind || "ground", x, h); },
     spawnItem: function (kind, x, y) {
       if (kind === "coffee") addCoffee(x === undefined ? CFG.W + 60 : x);
-      else addFishArc(x === undefined ? CFG.W + 60 : x, 1);
+      else addCoin(x === undefined ? CFG.W + 60 : x, y);
       var it = items[items.length - 1];
-      if (it && typeof y === "number") it.y = y;
+      if (it && typeof y === "number") it.y = y;   // coffee 也允许测试指定落点
       return it || null;
     },
     records: loadRecords,
