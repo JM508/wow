@@ -821,6 +821,36 @@
     items.push(it);
     logItem(it);
   }
+  /* ── 引导币：金币给玩家画路线 ──
+     与自由金币串不同，引导币和障碍波同步生成（不占 itemGap 配额、不受
+     areaClear 约束），间距/空档由 spawnWave 的 waveHold 一并兜住。 */
+  /* 贴地一排：穿飞行物下方（离地 26，币顶 37 < 瓶底 44），跟着金币走 = 下蹲钻过去 */
+  function addGuideLine(x, count) {
+    var ph = rnd(0, 6.28);
+    for (var i = 0; i < count; i++) {
+      var it = { id: ++itemSeq, kind: "coin", x: x + i * 42, r: 11, ph: ph, y: CFG.GROUND - 26 };
+      items.push(it);
+      logItem(it);
+    }
+    return x + count * 42;                     // 右边缘（给后方空档用）
+  }
+  /* 跨障一道弧：从障碍波前方升到波顶再落下，跟着金币跳 = 走正常的路。
+     峰顶 = 障碍高 + 34（封顶 90），币心最高 ≤146，在可达范围（≤148）内。 */
+  function addGuideArc(x0, x1, maxH) {
+    var span = Math.max(42, x1 - x0);
+    var n = Math.max(3, Math.round(span / 42) + 1);
+    var peak = Math.min(90, maxH + 34);
+    var ph = rnd(0, 6.28);
+    for (var i = 0; i < n; i++) {
+      var it = {
+        id: ++itemSeq, kind: "coin", x: x0 + span * i / (n - 1), r: 11, ph: ph,
+        y: CFG.GROUND - (56 + Math.sin(i / (n - 1) * Math.PI) * peak)
+      };
+      items.push(it);
+      logItem(it);
+    }
+    return x1;
+  }
   /* [x0, x1] 区间是否没有障碍（生成道具用） */
   function areaClear(x0, x1) {
     for (var i = 0; i < obstacles.length; i++) {
@@ -1482,16 +1512,20 @@
 
     /* ── 生成道具 ──
        护盾已改为纯无敌：不再有「无敌冲刺金币雨」，无敌期间照常出
-       金币串与护盾（itemHold + areaClear 跑道闸门）。 */
+       金币串与护盾（itemHold + areaClear 跑道闸门）。
+       护盾期间例外：无敌状态下障碍反正会被撞碎，跑道闸门（itemHold/areaClear）
+       不再拦金币 —— 否则金币排程被障碍随机卡掉，3.6 秒无敌里经常一颗金币
+       都见不着（实测 8 局里出现 1 次整窗 0 颗的大旱）。 */
     S.itemGap -= move;
     if (S.itemGap <= 0) {
       /* 金币落点的两个前提：
            ① 距上一波障碍已过去 itemRunway()（够玩家落地、再从容起跳）；
            ② 出生点前方 itemRunway() 内没有障碍 —— 否则玩家会「刚跳过障碍、还在半空」
-              眼看着金币从脚下溜走，这就是之前「有些金币根本吃不到」的原因。 */
+              眼看着金币从脚下溜走，这就是之前「有些金币根本吃不到」的原因。
+           （无敌期间不适用：见上。） */
       var runway = itemRunway();
       S.itemPending = true;                    // 先占位：让障碍暂停生成，把跑道空出来
-      if (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380)) {
+      if (boosting || (S.dist >= S.itemHold && areaClear(CFG.W + 60 - runway, CFG.W + 380))) {
         var w;
         /* 护盾比金币「贵」：概率低（SHIELD_CHANCE）且带冷却（SHIELD_COOLDOWN）。
            原来 18% 且无冷却，实测每分钟能吃到 4 个，一局大半个时间都在无敌冲刺里，
@@ -1595,9 +1629,11 @@
        对玩家太苛刻；多给 AIR_LEAD 秒，就有 0.4s 稳稳落地再蹲。 */
     if (isAir) from += Math.round(speed * CFG.AIR_LEAD);
     var end = from;                                // 这一波最右侧（决定后方要留多少空档）
+    var waveMaxH = 0;                              // 这一波里最高的障碍（弧顶要用）
     function push(kind, x, h) {
       var o = addObstacle(kind, x, h);
       if (x + o.w > end) end = x + o.w;
+      if (o.h > waveMaxH) waveMaxH = o.h;
       return o;
     }
 
@@ -1615,6 +1651,18 @@
         push("ground", from + o2.w + 6, CLUSTER_H3);
         push("ground", from + o2.w * 2 + 12, Math.min(o2.h, CLUSTER_H3 - 6));
       }
+    }
+
+    /* ── 引导币：金币给玩家画路线 ──
+       地面障碍 → 头顶一道弧，跟着金币跳就是「正常的路」；
+       飞行物   → 脚下一排矮币，跟着金币走就得从下面钻过去。
+       引导币的右边缘并入 end，让后面的空档闸门把这一整波（含币）都兜住。 */
+    if (isAir) {
+      var glEdge = addGuideLine(from - 40, 4);
+      if (glEdge > end) end = glEdge;
+    } else {
+      var gaEdge = addGuideArc(from - 60, end + 60, waveMaxH);
+      if (gaEdge > end) end = gaEdge;
     }
 
     /* 这一波之后必须留够「落地 + 再起跳」的距离，才允许生成金币 */
