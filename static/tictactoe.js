@@ -199,7 +199,19 @@
   }
 
   /* ═══════════ 一局流程 ═══════════ */
+  /* AI 的「思考中」定时器必须随 reset 清掉：思考中换难度 / 换先手会重开一局，
+     旧定时器若还挂着，会在新棋盘上照常落子（先手的 + 新局的 = 电脑一手变两手）。 */
+  var aiTimer = null;
+  function clearAiTimer() {
+    if (aiTimer) { clearTimeout(aiTimer); aiTimer = null; }
+  }
+  function aiLater(fn) {
+    clearAiTimer();
+    aiTimer = setTimeout(fn, AI_DELAY);
+  }
+
   function reset() {
+    clearAiTimer();
     board = newBoard();
     over = false;
     lock = false;
@@ -209,10 +221,10 @@
       say("电脑执 ○ 先手" + levelLabel() + "，电脑思考中…");
       lock = true;
       paintAll();
-      setTimeout(function () {
+      aiLater(function () {
         if (over) { lock = false; return; }
         aiTurn();
-      }, AI_DELAY);
+      });
     } else {
       say("你执 × 先手，点格子落子" + levelLabel());
     }
@@ -284,11 +296,11 @@
     lock = true;
     paintAll();
     say("电脑思考中…");
-    setTimeout(function () {
+    aiLater(function () {
       if (over) { lock = false; return; }
       lock = false;
       aiTurn();
-    }, AI_DELAY);
+    });
   }
 
   /* ═══════════ 事件 ═══════════ */
