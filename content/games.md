@@ -17,6 +17,6 @@ backLabel = '返回首页'
 <div class="games-card-head"><strong>游戏合集</strong></div>
 <a class="games-row games-ms" href="/minesweeper/"><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-10-06</span></span><span class="games-go">点击进入 →</span></a>
 <a class="games-row games-run" href="/runner/"><span class="games-info"><span class="games-name">火柴人快跑</span><span class="games-meta">更新：2026-10-06</span></span><span class="games-go">点击进入 →</span></a>
-<a class="games-row games-ttt" href="/tictactoe/"><span class="games-info"><span class="games-name">井字棋</span><span class="games-meta">更新：2026-10-06</span></span><span class="games-go">点击进入 →</span></a>
-<a class="games-row games-snake" href="/snake/"><span class="games-info"><span class="games-name">贪吃蛇</span><span class="games-meta">更新：2026-10-06</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-ttt" href="/tictactoe/"><span class="games-info"><span class="games-name">井字棋</span><span class="games-meta">更新：2026-10-07</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-snake" href="/snake/"><span class="games-info"><span class="games-name">贪吃蛇</span><span class="games-meta">更新：2026-10-07</span></span><span class="games-go">点击进入 →</span></a>
 </div>

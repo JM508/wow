@@ -81,6 +81,9 @@
   border: 1px solid var(--border, #cfcfcf);
   border-radius: 10px;
   cursor: pointer;
+  touch-action: manipulation;          /* 手机上点按零延迟，也不触发双击缩放 */
+  -webkit-user-select: none;
+  user-select: none;
 }
 #snake-dpad [data-dir]:active { transform: scale(0.95); }
 #snake-dpad .snake-dpad-up { grid-column: 2; grid-row: 1; }
