@@ -231,3 +231,25 @@ html[data-theme="dark"][data-ag-bg] .footer-repo a {
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
 .games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }
 .games-snake:hover { background: linear-gradient(135deg, #37a352, #7bc043); box-shadow: 0 12px 26px -12px rgba(55, 163, 82, 0.9); }
+
+/* ══ 点按涟漪（tapfx.js 按下时注入 .tap-host 与 .tap-ripple）══
+   圆从手指落点扩散到元素外接圆大小，同时淡出；颜色跟 currentColor 走，
+   深底浅字 / 浅底深字都能自适应。 */
+.tap-host { position: relative; overflow: hidden; }
+.tap-ripple {
+  position: absolute;
+  z-index: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  background: currentColor;
+  opacity: 0.22;
+  animation: tap-ripple 0.5s ease-out forwards;
+}
+@keyframes tap-ripple {
+  60%  { opacity: 0.12; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tap-ripple { display: none; }
+}

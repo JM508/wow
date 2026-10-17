@@ -51,9 +51,16 @@
   background: var(--theme, #1d1e20);
   color: var(--secondary, #888888);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease,
+              transform 0.12s ease, box-shadow 0.2s ease;
 }
-.ttt-btn:hover { color: var(--primary, #1f1f1f); border-color: var(--secondary, #9a9a9a); }
+.ttt-btn:hover {
+  color: var(--primary, #1f1f1f);
+  border-color: var(--secondary, #9a9a9a);
+  transform: scale(1.02);
+  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.75);
+}
+.ttt-btn:active { transform: scale(0.97); }
 
 /* ── 棋盘 ── */
 #ttt-board {
@@ -93,6 +100,24 @@
 .ttt-cell.ttt-win {
   background: linear-gradient(135deg, rgba(79, 140, 255, 0.22), rgba(106, 92, 255, 0.22));
   border-color: rgba(79, 140, 255, 0.65);
+}
+
+/* 落子（2026-10-17）：棋子从上方「掉」下来 + 轻微回弹，格子同时泛一圈触感脉冲。
+   .ttt-p 只在真的落下新子时由 tictactoe.js 新建，所以动画每次落子只播一遍。 */
+.ttt-p {
+  display: block;
+  line-height: 1;
+  animation: ttt-drop 0.3s cubic-bezier(0.32, 1.5, 0.5, 1);
+}
+@keyframes ttt-drop {
+  0%   { transform: translateY(-42%) scale(0.78); opacity: 0; }
+  62%  { transform: translateY(5%) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+.ttt-cell.ttt-x, .ttt-cell.ttt-o { animation: ttt-seat 0.34s ease-out; }
+@keyframes ttt-seat {
+  0%   { box-shadow: 0 0 0 0 rgba(79, 140, 255, 0.42); }
+  100% { box-shadow: 0 0 0 12px rgba(79, 140, 255, 0); }
 }
 
 /* ── 提示条 ── */
@@ -255,4 +280,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ttt-set-box { animation: none; }
+  .ttt-p { animation: none; }
+  .ttt-cell.ttt-x, .ttt-cell.ttt-o { animation: none; }
 }

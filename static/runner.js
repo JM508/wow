@@ -742,7 +742,9 @@
       jumps: 0,                                 // 本局起跳次数
       shields: 0,                               // 本局吃到的护盾数
       smashes: 0,                               // 本局在无敌状态下撞碎的障碍数（= 碰到过障碍）
-      crashed: false                            // 本局是否以撞死收场（「无伤」成就要排除）
+      crashed: false,                           // 本局是否以撞死收场（「无伤」成就要排除）
+      /* ── 连击（2026-10-17）：连续吃到的金币数，漏掉一颗就归零 ── */
+      combo: 0, maxCombo: 0
     };
   }
 
@@ -1084,9 +1086,15 @@
       elRecords.innerHTML = "";
     } else if (kind === "over") {
       elOvTitle.textContent = S.isBest ? "新纪录！" : "本轮结束";
+      var gap = Math.max(0, Math.floor(S.best - S.score));
       elOvText.innerHTML = "<span class='run-big'>" + Math.floor(S.score) + "</span>" +
         "最高分 <b>" + Math.floor(S.best) + "</b> ｜ 跑了 <b>" + Math.floor(S.dist / 100) + "</b> 米<br>" +
         "本局金币 <b>" + S.coins + "</b> 枚 ｜ 钱包余额 <b>" + Skins.getWallet() + "</b><br>" +
+        /* 失败别只报分数：把连击和差距摆出来，把「输了」变成「就差一点」 */
+        "最高连击 <b>" + S.maxCombo + "</b> 枚 ｜ " +
+        (S.isBest
+          ? "<span class='run-up-done'>刷新个人最高分</span>"
+          : "距离最高分还差 <b>" + gap + "</b> 分") + "<br>" +
         (S.uploaded
           ? "<span class='run-up-done'>" + (S.upAuto ? "成绩已自动上传到排行榜" : "成绩已上传到排行榜") + "</span>"
           : (S.lastOver
@@ -1566,7 +1574,12 @@
     for (var j = items.length - 1; j >= 0; j--) {
       var it = items[j];
       it.x -= move;
-      if (it.x + it.r < -30) { items.splice(j, 1); continue; }
+      if (it.x + it.r < -30) {
+        /* 金币从脚边溜走 → 连击断（护盾不算，它不吃连击） */
+        if (it.kind === "coin") S.combo = 0;
+        items.splice(j, 1);
+        continue;
+      }
 
       var pcx = CFG.PX, pcy = P.y - curH() * 0.5;      // 玩家碰撞盒中心
       var dx = pcx - it.x, dy = pcy - it.y;
@@ -1584,6 +1597,8 @@
       if (dist < pick) {
         if (it.kind === "coin") {
           S.coins++; S.score += CFG.COIN_SCORE;
+          S.combo += 1;
+          if (S.combo > S.maxCombo) S.maxCombo = S.combo;
           sparkle(it.x, it.y, 6, "#ffd166"); Sfx.coin();
         } else {
           S.boost = CFG.SHIELD_TIME;

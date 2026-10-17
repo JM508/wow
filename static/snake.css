@@ -36,6 +36,26 @@
 .snake-stat b { color: var(--primary, #1f1f1f); font-size: 15px; }
 .snake-stat-first { margin-left: auto; }
 
+/* 连击徽标（2026-10-17）：连吃第 2 颗起露出来，断连后自动收起。
+   只在有连击时占地方，平时那行工具条不会因为多一个空框而错位。 */
+.snake-combo {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-weight: 700;
+  color: #9a6b00;
+  background: rgba(255, 209, 102, 0.22);
+  border: 1px solid rgba(255, 209, 102, 0.55);
+  animation: snake-combo-in 0.18s ease-out;
+}
+.snake-combo b { color: #b57d00; }
+.snake-combo[hidden] { display: none; }
+[data-theme="dark"] .snake-combo { color: #ffd166; background: rgba(255, 209, 102, 0.16); }
+[data-theme="dark"] .snake-combo b { color: #ffd166; }
+@keyframes snake-combo-in {
+  from { transform: scale(0.82); opacity: 0.35; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
 .snake-btn {
   padding: 6px 12px;
   font-size: 13px;
@@ -44,9 +64,16 @@
   background: var(--theme, #1d1e20);
   color: var(--secondary, #888888);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease,
+              transform 0.12s ease, box-shadow 0.2s ease;
 }
-.snake-btn:hover { color: var(--primary, #1f1f1f); border-color: var(--secondary, #9a9a9a); }
+.snake-btn:hover {
+  color: var(--primary, #1f1f1f);
+  border-color: var(--secondary, #9a9a9a);
+  transform: scale(1.02);
+  box-shadow: 0 8px 18px -12px rgba(0, 0, 0, 0.75);
+}
+.snake-btn:active { transform: scale(0.97); }
 .snake-btn-primary {
   color: #fff;
   background: linear-gradient(135deg, #37a352, #22c55e);
@@ -153,9 +180,15 @@
   cursor: pointer;
   color: #fff;
   background: #1f1f1f;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.15s ease;
 }
 [data-theme="dark"] .snake-over-btn { background: #e8e8e8; color: #1a1a1a; }
-.snake-over-btn:hover { filter: brightness(1.18); }
+.snake-over-btn:hover {
+  filter: brightness(1.18);
+  transform: scale(1.02);
+  box-shadow: 0 10px 22px -12px rgba(0, 0, 0, 0.8);
+}
+.snake-over-btn:active { transform: scale(0.97); }
 /* 「取消」：透明描边款，收起弹窗回到待开局状态 */
 .snake-over-ghost {
   background: transparent;
@@ -176,4 +209,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .snake-over-box { animation: none; }
+  .snake-combo { animation: none; }
 }

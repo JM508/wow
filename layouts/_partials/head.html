@@ -206,9 +206,11 @@
 {{- with site.Params.assetVer }}
 <script defer src="/sw-reg.js?v={{ . }}"></script>
 <script defer src="/net-status.js?v={{ . }}"></script>
+<script defer src="/tapfx.js?v={{ . }}"></script>
 {{- else }}
 <script defer src="/sw-reg.js"></script>
 <script defer src="/net-status.js"></script>
+<script defer src="/tapfx.js"></script>
 {{- end }}
 
 {{- /* 结构化数据补充：首页 WebSite / 游戏页 VideoGame（BreadcrumbList 由主题输出） */}}

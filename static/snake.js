@@ -9,7 +9,12 @@
      吃苹果与结束时报事件，判定全在引擎里。
    · 得分上云榜（game_scores 表，game="snake"）：GameRank 只收比本人
      榜上更高的分，所以实际每次都是刷新纪录才写库。
-   · 操作：方向键 / WASD，手机滑动或屏幕按钮；空格暂停。
+   · 连击（2026-10-17）：3.2 秒内连着吃到苹果算连击 —— 第 2、3 颗 ×2，
+     第 4 颗起 ×3；断连（超时）倍率回 1。分数飘字会标出本次倍率。
+   · 手感（2026-10-17）：吃到苹果时 +分飘字 + 蛇头鼓一下；
+     蛇头离墙 / 离自身只剩 1~2 格时，画布四周泛红脉冲提醒。
+   · 操作：方向键 / WASD，手机上「点画布」朝点击方向转弯（点按即可，不用滑），
+     也可以点屏幕方向按钮；空格暂停。
    · 打开个人中心 / 排行榜时自动暂停（panel:open / panel:close）。
    · 外链脚本、无内联代码（CSP 同源白名单）。
    ══════════════════════════════════════════════════════════════ */
@@ -24,6 +29,8 @@
   var elBest = document.getElementById("snake-best");
   var elLevel = document.getElementById("snake-level");
   var elMsg = document.getElementById("snake-msg");
+  var elCombo = document.getElementById("snake-combo");
+  var elComboN = document.getElementById("snake-combo-n");
   var elOver = document.getElementById("snake-over");
   var elOverT = document.getElementById("snake-over-t");
   var elOverS = document.getElementById("snake-over-s");
@@ -72,6 +79,17 @@
   var lastT = 0;
   var rafId = 0;
 
+  /* ── 连击 / 手感状态（2026-10-17） ──
+     combo 是「本次连击吃到第几颗」，comboT 是这把连击的剩余时间（毫秒，按帧衰减）。
+     3.2 秒的窗口在三个难度下都够跨十几格，快蛇也不会因为「手慢」莫名断连。 */
+  var COMBO_MS = 3200;
+  var COMBO_2 = 2;                     // 吃到第 2 颗起 ×2
+  var COMBO_3 = 4;                     // 吃到第 4 颗起 ×3
+  var combo = 0, comboT = 0, maxCombo = 0;
+  var puff = 0;                        // 蛇头「鼓一下」的余量（1 → 0，约 0.22 秒衰减）
+  var pops = [];                       // 画布上的 +分飘字 {cx, cy, text, t0}
+  var bestAtStart = 0;                 // 本局开始时的个人最高分（算「还差几分」用）
+
   function loadBest() {
     var n = parseInt(localStorage.getItem(KEY_BEST) || "0", 10);
     return n > 0 ? n : 0;
@@ -79,9 +97,24 @@
   function saveBest() {
     try { localStorage.setItem(KEY_BEST, String(best)); } catch (e) {}
   }
+  function nowMs() {
+    return (window.performance && window.performance.now) ? window.performance.now() : Date.now();
+  }
+  /* 当前倍率：连吃 1 颗 ×1、2~3 颗 ×2、4 颗起 ×3 */
+  function comboMult() {
+    if (combo >= COMBO_3) return 3;
+    if (combo >= COMBO_2) return 2;
+    return 1;
+  }
   function paintHud() {
     if (elScore) elScore.textContent = String(score);
     if (elBest) elBest.textContent = String(best);
+    /* 连击只在 ≥2 时露出来，平时不占地方 */
+    if (elCombo) {
+      var on = combo >= COMBO_2;
+      elCombo.hidden = !on;
+      if (on && elComboN) elComboN.textContent = "×" + comboMult();
+    }
   }
 
   function resize() {
@@ -105,13 +138,19 @@
     pendingDirs = [];
     grow = 0;
     score = 0;
+    combo = 0;
+    comboT = 0;
+    maxCombo = 0;
+    puff = 0;
+    pops.length = 0;
+    bestAtStart = best;
     stepMs = Math.round(1000 / speed());
     placeApple();
     state = "ready";
     hideOver();
     paintHud();
     draw();
-    if (elMsg) elMsg.textContent = "方向键 / WASD 控制，手机上滑动或点按钮；空格暂停。";
+    if (elMsg) elMsg.textContent = "方向键 / WASD 控制，手机上点画布朝点的方向转弯；空格暂停。";
     if (btnPause) btnPause.textContent = "暂停";
   }
 
@@ -220,6 +259,12 @@
     if (!(dt > 0)) dt = 0;                 // 时间戳倒退（少见）也别累加负数
     if (dt > 200) dt = 200;
     acc += dt;
+    /* 连击窗口与「鼓一下」的余量都按真实时间衰减（不按步进，转向/卡顿时也准） */
+    if (comboT > 0) {
+      comboT -= dt;
+      if (comboT <= 0) { comboT = 0; if (combo) { combo = 0; paintHud(); } }
+    }
+    if (puff > 0) puff = Math.max(0, puff - dt / 220);
     while (acc >= stepMs) {
       acc -= stepMs;
       step();
@@ -236,6 +281,11 @@
     if (fallbackTimer) clearInterval(fallbackTimer);
     fallbackTimer = setInterval(function () {
       if (state !== "playing") return;
+      if (comboT > 0) {
+        comboT -= stepMs;
+        if (comboT <= 0) { comboT = 0; if (combo) { combo = 0; paintHud(); } }
+      }
+      if (puff > 0) puff = Math.max(0, puff - stepMs / 220);
       step();
       draw();
     }, stepMs);
@@ -251,8 +301,20 @@
     }
     snake.unshift(head);
     if (apple && head.x === apple.x && head.y === apple.y) {
-      score += 10;
+      /* 连击：窗口内接着吃到就累加，断了从 1 重新算 */
+      combo = comboT > 0 ? combo + 1 : 1;
+      comboT = COMBO_MS;
+      if (combo > maxCombo) maxCombo = combo;
+      var mult = comboMult();
+      var gain = 10 * mult;
+      score += gain;
       grow += 1;
+      puff = 1;
+      pops.push({
+        cx: apple.x, cy: apple.y,
+        text: "+" + gain + (mult > 1 ? " ×" + mult : ""),
+        t0: nowMs()
+      });
       if (score > best) { best = score; saveBest(); }
       paintHud();
       placeApple();
@@ -266,8 +328,20 @@
   function die() {
     state = "over";
     draw();
-    if (elOverT) elOverT.textContent = "游戏结束";
-    if (elOverS) elOverS.textContent = "本局得分 " + score + "（最高 " + best + "）";
+    var fresh = score > bestAtStart;                 // 本局是否刷了个人纪录
+    var gap = Math.max(0, best - score);
+    if (elOverT) elOverT.textContent = fresh ? "新纪录！" : "游戏结束";
+    if (elOverS) {
+      /* 失败界面别只报个分数：把「本局最高连击」和「离纪录还差几分」摆出来，
+         把「输了」变成「就差一点」。 */
+      var line = "本局得分 " + score + "（个人最高 " + best + "）";
+      if (maxCombo >= COMBO_2) {
+        line += "｜最高连击 " + maxCombo + " 连 ×" + (maxCombo >= COMBO_3 ? 3 : 2);
+      }
+      if (fresh) line += "｜刷新个人纪录";
+      else if (gap > 0) line += "｜距离纪录还差 " + gap + " 分";
+      elOverS.textContent = line;
+    }
     if (elOver) elOver.classList.remove("hidden");
     if (elOverBtn) elOverBtn.focus();
     /* 成就：本局结束（局数 + 各难度最高分） */
@@ -290,6 +364,27 @@
   }
 
   /* ═══════════ 渲染 ═══════════ */
+  /* 危险等级：0 安全 / 1 两格内 / 2 下一格就出事（墙、自己的身体都算） */
+  function dangerLevel() {
+    if (state !== "playing" || !snake.length) return 0;
+    var h = snake[0], steps = 99;
+    if (dir.x === 1) steps = GRID - 1 - h.x;
+    else if (dir.x === -1) steps = h.x;
+    else if (dir.y === 1) steps = GRID - 1 - h.y;
+    else if (dir.y === -1) steps = h.y;
+    var bodyHit = 0;
+    for (var k = 1; k <= 2 && !bodyHit; k++) {
+      var nx = h.x + dir.x * k, ny = h.y + dir.y * k;
+      if (nx < 0 || ny < 0 || nx >= GRID || ny >= GRID) continue;
+      for (var i = 0; i < snake.length - 1; i++) {     // 尾巴尖下一步会让位，不算
+        if (snake[i].x === nx && snake[i].y === ny) { bodyHit = k; break; }
+      }
+    }
+    if (bodyHit === 1 || steps <= 1) return 2;
+    if (bodyHit === 2 || steps <= 2) return 1;
+    return 0;
+  }
+
   function draw() {
     if (!ctx) return;
     var w = canvas.width, h = canvas.height;
@@ -315,19 +410,60 @@
     }
     /* 蛇：头深、身浅（色盲友好：靠明度差区分），颜色来自当前装备的蛇皮肤 */
     var skin = snakeSkin(dark);
+    var hsc = 1 + 0.26 * puff;                     // 刚吃到苹果时蛇头「鼓一下」
+    var bsc = 1 + 0.10 * puff;
     for (var i = snake.length - 1; i >= 0; i--) {
       var s = snake[i];
       var pad = i === 0 ? cell * 0.06 : cell * 0.1;
+      var box = cell - pad * 2;
+      var cx = s.x * cell + cell / 2, cy = s.y * cell + cell / 2;
+      var sc = i === 0 ? hsc : bsc;
       ctx.fillStyle = i === 0 ? skin.head : skin.body;
-      ctx.fillRect(s.x * cell + pad, s.y * cell + pad, cell - pad * 2, cell - pad * 2);
+      ctx.fillRect(cx - box * sc / 2, cy - box * sc / 2, box * sc, box * sc);
       if (i === 0) {
         /* 眼睛 */
         ctx.fillStyle = "#ffffff";
-        var ex = s.x * cell + cell / 2, ey = s.y * cell + cell / 2;
-        var off = cell * 0.16;
-        ctx.fillRect(ex - off - 1.5, ey - cell * 0.12, 3, 3);
-        ctx.fillRect(ex + off - 1.5, ey - cell * 0.12, 3, 3);
+        var off = cell * 0.16 * sc;
+        ctx.fillRect(cx - off - 1.5, cy - cell * 0.12, 3, 3);
+        ctx.fillRect(cx + off - 1.5, cy - cell * 0.12, 3, 3);
       }
+    }
+
+    /* 危险预警（2026-10-17）：蛇头离墙 / 离自己只剩 1~2 格时，画布四周泛红脉冲。
+       给玩家一个「还来得及拐」的视觉窗口，而不是下一格直接猝死。 */
+    var dg = dangerLevel();
+    if (dg > 0) {
+      var pulse = 0.5 + 0.5 * Math.sin(nowMs() / 130);
+      var baseA = (dg === 2 ? 0.34 : 0.18) * (0.55 + 0.45 * pulse);
+      for (var k = 0; k < 3; k++) {
+        ctx.strokeStyle = "rgba(229,72,77," + (baseA * (1 - k * 0.3)).toFixed(3) + ")";
+        ctx.lineWidth = cell * (1.15 - k * 0.32);
+        var inset = ctx.lineWidth / 2 + 1;
+        ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
+      }
+    }
+
+    /* +分飘字：0.8 秒内上浮 + 淡出（带描边，浅色深色底都看得清） */
+    if (pops.length) {
+      var tNow = nowMs(), keep = [];
+      ctx.textAlign = "center";
+      ctx.font = "700 " + Math.round(cell * 0.72) + "px sans-serif";
+      for (var pi = 0; pi < pops.length; pi++) {
+        var pop = pops[pi], age = tNow - pop.t0;
+        if (age < 0 || age > 800) continue;
+        keep.push(pop);
+        var kk = age / 800;
+        var fx = pop.cx * cell + cell / 2;
+        var fy = pop.cy * cell + cell / 2 - kk * cell * 1.6;
+        ctx.globalAlpha = 1 - kk;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = dark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.85)";
+        ctx.strokeText(pop.text, fx, fy);
+        ctx.fillStyle = "#ffd166";
+        ctx.fillText(pop.text, fx, fy);
+      }
+      ctx.globalAlpha = 1;
+      pops = keep;
     }
     if (state === "ready") {
       ctx.fillStyle = dark ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.6)";
@@ -369,38 +505,38 @@
     if (e.code === "Space") { e.preventDefault(); if (state !== "over") pause(); }
   });
 
-  /* 触屏滑动 */
-  /* 触屏滑动：只在画布上（2026-10-07 用户要求改回画布内）。
-     保留拖动途中实时转向：锚点每 24px 前移一次，一次长滑可连转几弯，不必抬手。 */
-  var touchX = null, touchY = null;
-  canvas.addEventListener("touchstart", function (e) {
-    if (!e.touches.length) return;
-    touchX = e.touches[0].clientX;
-    touchY = e.touches[0].clientY;
-  }, { passive: true });
-  canvas.addEventListener("touchmove", function (e) {
-    if (state === "playing") e.preventDefault();          // 玩耍中禁止页面跟着滚
-    if (touchX === null || state !== "playing") return;   // 面板开着(自动暂停)时不偷转向
-    var dx = e.touches[0].clientX - touchX;
-    var dy = e.touches[0].clientY - touchY;
-    if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
-    setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
-    touchX = e.touches[0].clientX;                        // 锚点前移
-    touchY = e.touches[0].clientY;
-  }, { passive: false });
-  canvas.addEventListener("touchend", function (e) {
-    if (touchX === null || !e.changedTouches.length) return;
-    var dx = e.changedTouches[0].clientX - touchX;
-    var dy = e.changedTouches[0].clientY - touchY;
-    touchX = touchY = null;
-    if (Math.abs(dx) < 18 && Math.abs(dy) < 18) return;    // 当成点按，忽略
-    if (state === "over") return;                          // 结束后不靠滑动重开
+  /* ── 触屏 / 鼠标：点画布 → 朝点击的方向转弯（2026-10-17 用户要求「点击就可以移动，不要滑动」） ──
+     点按位置相对蛇头在哪个方向，蛇就往哪个方向拐；横向差大就走左右、纵向差大就走上下。
+     不需要拖动、不需要抬手确认，也不会因为手指抖一下误判成反向。 */
+  function tapAt(clientX, clientY) {
+    if (!snake.length) return;
+    var rect = canvas.getBoundingClientRect ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
+    var cw = rect.width || canvas.width || 1;
+    var ch = rect.height || canvas.height || canvas.width || 1;
+    var gx = (clientX - rect.left) / cw * GRID;
+    var gy = (clientY - rect.top) / ch * GRID;
+    var head = snake[0];
+    var dx = gx - (head.x + 0.5);
+    var dy = gy - (head.y + 0.5);
+    if (Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6) return;   // 点在蛇头上：当作误触，忽略
+    var want = Math.abs(dx) >= Math.abs(dy)
+      ? (dx > 0 ? "right" : "left")
+      : (dy > 0 ? "down" : "up");
+    if (state === "over") return;                           // 结束后不靠点画布重开
     if (state === "ready") start();
-    if (state === "playing")
-      setDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    setDir(want);
+    draw();
+  }
+
+  canvas.addEventListener("click", function (e) {
+    tapAt(e.clientX, e.clientY);
+  });
+  /* 手机上用 touchstart：不用等 click 合成，点下去立刻转向（同一方向重复设置会被 setDir 去重） */
+  canvas.addEventListener("touchstart", function (e) {
+    if (!e.touches || !e.touches.length) return;
+    if (state === "over") return;
+    tapAt(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: true });
-  /* 来电 / 系统手势打断触摸（touchcancel）：丢弃本次滑动锚点，别把上一指的起点带进下一指 */
-  canvas.addEventListener("touchcancel", function () { touchX = touchY = null; }, { passive: true });
 
   /* 屏幕方向按钮 */
   if (dpad) {
@@ -448,7 +584,16 @@
     return {
       state: state,
       dir: dir ? (dir.x + "," + dir.y) : "",
-      pending: pendingDirs.length
+      pending: pendingDirs.length,
+      head: snake.length ? (snake[0].x + "," + snake[0].y) : "",
+      combo: combo,
+      maxCombo: maxCombo,
+      pops: pops.length,
+      danger: dangerLevel()
     };
+  };
+  /* 测试钩子：把苹果摆到指定格子（只影响测试，正常玩法不调用） */
+  window.__snakeSetApple = function (x, y) {
+    apple = { x: x, y: y };
   };
 })();

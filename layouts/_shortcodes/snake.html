@@ -13,6 +13,7 @@
       <option value="hard">困难</option>
     </select>
     <span class="snake-stat snake-stat-first">得分 <b id="snake-score">0</b></span>
+    <span class="snake-stat snake-combo" id="snake-combo" hidden>连击 <b id="snake-combo-n">×2</b></span>
     <span class="snake-stat">最高 <b id="snake-best">0</b></span>
     <button type="button" id="snake-pause" class="snake-btn">暂停</button>
     <button type="button" id="snake-start" class="snake-btn snake-btn-primary">开始</button>
@@ -48,7 +49,8 @@
     <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
     <div class="grank-mine" id="grank-mine"></div>
     <p class="grank-foot">
-      榜上按<b>最佳分数</b>排名（同名只留最高的一条，每吃一个苹果 +10 分）；
+      榜上按<b>最佳分数</b>排名（同名只留最高的一条，每吃一个苹果 +10 分，
+      3.2 秒内连吃可叠 ×2 / ×3 倍率）；
       未登录以「访客 N」上榜，登录后可在个人中心用自己的昵称，成绩跟着账号走。
     </p>
   </div>

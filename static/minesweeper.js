@@ -329,10 +329,17 @@
     }, total);
   }
 
-  /* ── 失败弹窗 ── */
+  /* ── 失败弹窗 ──
+     除了用时，还把「翻开几格 / 插了几面旗 / 还差几格就通关」摆出来：
+     差得少的时候玩家自己就会想再来一局（2026-10-17 失败界面数据）。 */
   function showOver(seconds) {
     if (!overEl) return;
-    if (overSubEl) overSubEl.textContent = "坚持了 " + seconds + " 秒";
+    if (overSubEl) {
+      var total = S.cols * S.rows - S.mines;
+      var left = Math.max(0, total - S.opened);
+      overSubEl.textContent = "坚持了 " + seconds + " 秒 ｜ 翻开 " + S.opened + " 格 ｜ 插旗 " + S.flags + " 面" +
+        (left > 0 ? " ｜ 还差 " + left + " 格就通关" : "");
+    }
     overEl.classList.remove("hidden");
     if (overBtnEl) overBtnEl.focus();
   }

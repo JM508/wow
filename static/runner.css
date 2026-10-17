@@ -254,8 +254,13 @@
   box-shadow: 0 10px 24px -12px rgba(255, 95, 109, 0.95);
   transition: transform 0.12s ease, filter 0.15s ease;
 }
-.run-primary:hover { filter: brightness(1.05); transform: translateY(-1px); }
-.run-primary:active { transform: translateY(0); }
+/* 悬停：抬一像素 + 轻微放大 + 阴影加深；按下缩回去（与三个小游戏的按钮同一套手感） */
+.run-primary:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 14px 28px -12px rgba(255, 95, 109, 1);
+}
+.run-primary:active { transform: translateY(0) scale(0.97); }
 
 .run-records { margin: 14px 0 0; padding: 0; list-style: none; }
 .run-records li {
