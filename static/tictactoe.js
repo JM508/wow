@@ -49,6 +49,8 @@
   var mode = elLevel ? elLevel.value : "easy";
   var score = loadScore();
   var first = loadFirst();
+  var history = [];            // 悔棋栈：每项 = 一步落子的快照（棋盘 + 谁下的）
+  var cursor = 0;              // 键盘落子的当前聚焦格
 
   function newBoard() { return [0, 0, 0, 0, 0, 0, 0, 0, 0]; }
 
@@ -83,6 +85,55 @@
   }
   function saveScore() {
     try { localStorage.setItem(KEY, JSON.stringify(score)); } catch (e) {}
+    queueCloudPush();
+  }
+
+  /* ═══════════ 战绩云同步（2026-10-17，第 17 项） ═══════════
+     战绩原本只在本机 localStorage，换设备就归零。现在登录后：
+       · 打开页面先拉云端那份，三个难度逐项取「更大的计数」合并
+         （两台设备各自打过几局都不能丢，取 max 才合理）；
+       · 本地有变化就防抖 1.5s 推上去。
+     走 settings.merge 而不是 push —— user_settings 那一列跑酷设置也在用，
+     直接 push 会把跑酷的设置整块冲掉。 */
+  var pushTimer = null;
+  function queueCloudPush() {
+    var C = window.WowCloud;
+    if (!C || !C.settings || !C.settings.merge) return;
+    if (!(C.user && C.user())) return;              // 未登录：只存本机
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () {
+      pushTimer = null;
+      var snap = { easy: score.easy, mid: score.mid, hard: score.hard };
+      try { C.settings.merge({ __ttt: snap })["catch"](function () {}); } catch (e) {}
+    }, 1500);
+  }
+
+  function pullCloudScore() {
+    var C = window.WowCloud;
+    if (!C || !C.settings || !C.settings.pull) return;
+    if (!(C.user && C.user())) return;
+    C.settings.pull().then(function (r) {
+      if (r && r.error) return;
+      var text = r && r.data && r.data.settings;
+      if (!text) return;
+      var obj = null;
+      try { obj = JSON.parse(text); } catch (e) { return; }
+      var remote = obj && obj.__ttt;
+      if (!remote) return;
+      var changed = false;
+      var modes = ["easy", "mid", "hard"];
+      for (var i = 0; i < modes.length; i++) {
+        var m = modes[i], a = score[m], b = norm(remote[m]);
+        var win = Math.max(a.win, b.win), draw = Math.max(a.draw, b.draw), lose = Math.max(a.lose, b.lose);
+        if (win !== a.win || draw !== a.draw || lose !== a.lose) changed = true;
+        score[m] = { win: win, draw: draw, lose: lose };
+      }
+      if (changed) {
+        try { localStorage.setItem(KEY, JSON.stringify(score)); } catch (e) {}
+        paintScore();
+        queueCloudPush();                       // 本机这边更全，回推一次把两边拉齐
+      }
+    })["catch"](function () {});
   }
   function paintScore() {
     var s = score[mode];
@@ -206,6 +257,39 @@
     for (var i = 0; i < line.length; i++) cells[line[i]] && cells[line[i]].classList.add("ttt-win");
   }
 
+  /* ═══════════ 悔棋（2026-10-17） ═══════════
+     一次悔棋退掉「玩家这一手 + 电脑应的一手」，回到玩家落子前。
+     已分出结果（over）后不给悔：那一局已经计入战绩、也提交过排行榜积分，
+     让玩家事后反悔等于自己改战绩。 */
+  var btnUndo = document.getElementById("ttt-undo");
+  function canUndo() {
+    if (over || lock) return false;
+    for (var i = history.length - 1; i >= 0; i--) if (history[i].who === ME) return true;
+    return false;
+  }
+  function paintUndo() {
+    if (!btnUndo) return;
+    var ok = canUndo();
+    btnUndo.disabled = !ok;
+    btnUndo.classList.toggle("is-off", !ok);
+    btnUndo.setAttribute("aria-disabled", ok ? "false" : "true");
+  }
+  function undo() {
+    if (!canUndo()) return;
+    var at = -1;
+    for (var i = history.length - 1; i >= 0; i--) if (history[i].who === ME) { at = i; break; }
+    if (at < 0) return;
+    clearAiTimer();
+    board = history[at].before.slice();
+    history.length = at;             // 连同这一手之后的电脑应手一起丢掉
+    over = false;
+    lock = false;
+    clearWinHighlight();
+    paintAll();
+    paintUndo();
+    say("已悔棋，轮到你（×）" + levelLabel());
+  }
+
   /* ═══════════ 一局流程 ═══════════ */
   /* AI 的「思考中」定时器必须随 reset 清掉：思考中换难度 / 换先手会重开一局，
      旧定时器若还挂着，会在新棋盘上照常落子（先手的 + 新局的 = 电脑一手变两手）。 */
@@ -221,10 +305,12 @@
   function reset() {
     clearAiTimer();
     board = newBoard();
+    history = [];
     over = false;
     lock = false;
     clearWinHighlight();
     paintAll();
+    paintUndo();
     if (first === "ai") {
       say("电脑执 ○ 先手" + levelLabel() + "，电脑思考中…");
       lock = true;
@@ -250,6 +336,7 @@
     paintScore();
     markWin(w.line);
     paintAll();
+    paintUndo();
     /* 成就：本游戏专属（胜负平 + 连胜 + 累计对局） */
     if (window.GameAch) {
       window.GameAch.report({ kind: w.p === ME ? "win" : (w.p === AI ? "lose" : "draw"), mode: mode });
@@ -286,23 +373,27 @@
   function aiTurn() {
     var mv = aiMove();
     if (mv < 0) return;
+    history.push({ before: board.slice(), idx: mv, who: AI });
     board[mv] = AI;
     paintCell(mv);
     var w = winInfo(board);
     if (w) { settle(w); return; }
     lock = false;
     paintAll();
+    paintUndo();
     say("轮到你（×）" + levelLabel());
   }
 
   function play(i) {
     if (over || lock || board[i] !== EMPTY) return;
+    history.push({ before: board.slice(), idx: i, who: ME });
     board[i] = ME;
     paintCell(i);
     var w = winInfo(board);
     if (w) { settle(w); return; }
     lock = true;
     paintAll();
+    paintUndo();
     say("电脑思考中…");
     aiLater(function () {
       if (over) { lock = false; return; }
@@ -325,6 +416,48 @@
     });
   }
 
+  /* ═══════════ 键盘操作（2026-10-17） ═══════════
+     1-9 直接落子（数字小键盘布局，5 就是正中间）；方向键在九宫格里挪焦点，
+     Enter / 空格交给 button 原生行为；Backspace / Z 悔棋，R 重开。 */
+  document.addEventListener("keydown", function (e) {
+    if (setPanelOpen()) return;                 // 设置弹窗开着时不抢键
+    /* 个人中心里的登录框、改名框是输入区：在那儿敲 1-9 是打字，不是落子 */
+    var t = e.target;
+    if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    if (window.MeCenter && window.MeCenter.isOpen && window.MeCenter.isOpen()) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var k = e.key;
+    if (k >= "1" && k <= "9" && k.length === 1) {
+      var idx = Number(k) - 1;
+      if (cells[idx] && !cells[idx].disabled) { e.preventDefault(); play(idx); }
+      return;
+    }
+    if (k === "ArrowLeft" || k === "ArrowRight" || k === "ArrowUp" || k === "ArrowDown") {
+      var cur = -1;
+      for (var i = 0; i < 9; i++) if (cells[i] === document.activeElement) { cur = i; break; }
+      if (cur < 0) cur = 4;
+      var to = cur;
+      if (k === "ArrowLeft" && cur % 3 > 0) to = cur - 1;
+      if (k === "ArrowRight" && cur % 3 < 2) to = cur + 1;
+      if (k === "ArrowUp" && cur > 2) to = cur - 3;
+      if (k === "ArrowDown" && cur < 6) to = cur + 3;
+      if (cells[to] && cells[to].focus) { e.preventDefault(); cells[to].focus(); }
+      return;
+    }
+    if (k === "Backspace" || k === "z" || k === "Z") {
+      if (canUndo()) { e.preventDefault(); undo(); }
+      return;
+    }
+    if (k === "r" || k === "R") { e.preventDefault(); reset(); }
+  });
+
+  if (btnUndo) {
+    btnUndo.addEventListener("click", function () {
+      if (!canUndo()) { say("现在没有可以悔的棋（电脑思考中或本局已结束）", false); return; }
+      undo();
+    });
+  }
+
   /* ═══════════ 设置面板（谁先起手 / 清空战绩） ═══════════ */
   var elSet = document.getElementById("ttt-set");
   var btnSetOpen = document.getElementById("ttt-set-open");
@@ -343,6 +476,8 @@
 
   if (btnSetOpen) btnSetOpen.addEventListener("click", openSet);
   if (btnSetClose) btnSetClose.addEventListener("click", closeSet);
+  /* 顶栏的「设置」按钮已收进个人中心（第 34 项），入口改由 meplus.js 派发 */
+  document.addEventListener("game:set-open", openSet);
   if (elSet) elSet.addEventListener("click", function (e) { if (e.target === elSet) closeSet(); });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && setPanelOpen()) { e.preventDefault(); closeSet(); }
@@ -388,4 +523,5 @@
   }
 
   reset();
+  pullCloudScore();
 })();

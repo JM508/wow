@@ -744,7 +744,8 @@
       smashes: 0,                               // 本局在无敌状态下撞碎的障碍数（= 碰到过障碍）
       crashed: false,                           // 本局是否以撞死收场（「无伤」成就要排除）
       /* ── 连击（2026-10-17）：连续吃到的金币数，漏掉一颗就归零 ── */
-      combo: 0, maxCombo: 0
+      combo: 0, maxCombo: 0,
+      stage: 0                                  // 分段难度：当前所在区段（0 教学 / 1 进阶 / 2 高手）
     };
   }
 
@@ -1456,6 +1457,24 @@
     return S.coins;
   }
 
+  /* ═══════════ 分段难度（2026-10-17，第 10 项）═══════════
+     跑过的距离（px，100px = 1 米）把一局切成三段，只调「提速 / 间距 / 障碍组合」，
+     不动重力与跳跃参数 —— 手感始终一致，变的是「有多忙」：
+       0–100 米   教学区：提速 55%，间距 ×1.45，只排单个地面障碍，不出飞行物
+       100–300 米 进阶区：正常提速，双联 / 三联、飞行物全部解锁
+       300 米后   高手区：提速 1.25 倍，间距收到 0.94 —— 跨过段位后压力才真正上来 */
+  var STAGE = [
+    { idx: 0, accel: 0.55, gap: 1.45, combo: false, air: 0,    name: "教学区" },
+    { idx: 1, accel: 1.00, gap: 1.00, combo: true,  air: 0.32, name: "进阶区" },
+    { idx: 2, accel: 1.25, gap: 0.94, combo: true,  air: 0.32, name: "高手区" }
+  ];
+  var STAGE_DIST = [10000, 30000];               // 100 米 / 300 米
+
+  function stageOf(dist) {
+    /* 返回常量对象本身，别每帧 new —— 60fps 下这点垃圾也会让 GC 抖动 */
+    return dist < STAGE_DIST[0] ? STAGE[0] : dist < STAGE_DIST[1] ? STAGE[1] : STAGE[2];
+  }
+
   /* ═══════════ 主逻辑步进 ═══════════ */
   function step(dt) {
     /* 蹲下 / 起立的过渡：暂停时定格，其它状态照常推进（免得死在半蹲上定住不动） */
@@ -1471,7 +1490,15 @@
 
     var boosting = S.boost > 0;
     S.time += dt;
-    S.speed = Math.min(CFG.SPEED_MAX, CFG.SPEED0 + CFG.SPEED_ACC * S.time);
+    var ST = stageOf(S.dist);
+    /* 提速做成「逐帧积分」而不是「总时间 × 系数」：跨段时加速度变了，
+       速度本身不会瞬间跳一下 —— 玩家感觉是越跑越急，而不是被踹了一脚。 */
+    S.speed = Math.min(CFG.SPEED_MAX, S.speed + CFG.SPEED_ACC * ST.accel * dt);
+    if (ST.idx !== S.stage) {
+      S.stage = ST.idx;
+      if (ST.idx === 1) toast("100 米 · 进阶区：障碍开始组合出现");
+      else if (ST.idx === 2) toast("300 米 · 高手区：节奏加快，稳住");
+    }
     var move = S.speed * dt;
 
     S.dist += move;
@@ -1508,7 +1535,8 @@
     if (S.spawnGap <= 0) {
       if (!boostTail && !S.itemPending && S.dist >= S.waveHold && itemsClear(CFG.W + 40, CFG.W + 140)) {
         spawnWave();
-        S.spawnGap = S.speed * rnd(CFG.GAP_MIN, CFG.GAP_MAX);
+        /* 教学区把间距再放大一截：新手第一次玩时，看到障碍到撞上还有富余时间 */
+        S.spawnGap = S.speed * rnd(CFG.GAP_MIN, CFG.GAP_MAX) * ST.gap;
       } else {
         S.spawnGap = 140;                        // 被挡：往前挪一点再试，不整波吞掉
       }
@@ -1628,8 +1656,9 @@
 
   function spawnWave() {
     var speed = S.speed;
+    var ST = stageOf(S.dist);
     var from = CFG.W + 60;
-    var isAir = speed > 600 && random() < 0.32;
+    var isAir = ST.air > 0 && speed > 600 && random() < ST.air;
     /* 飞行物这一波整体往后推一点时间：
        它只能下蹲通过（跳起来会撞上去），万一玩家正为上一个地面障碍起跳、人还在半空，
        落地前就会被它撞死。正常最小间距 0.80s 减掉一次完整跳跃的 0.655s 只剩 0.145s 反应，
@@ -1648,7 +1677,8 @@
       push("air", from);                           // 飞行物：可跳可蹲（站着会撞）
     } else {
       var r = random();
-      if (r < 0.5) {
+      /* 教学区只排单个障碍：双联/三联在玩家还没摸清起跳时机时就是两道送命题 */
+      if (!ST.combo || r < 0.5) {
         push("ground", from);
       } else if (r < 0.82 || speed < TRIPLE_MIN_SPEED) {
         var o1 = push("ground", from);
@@ -2784,6 +2814,9 @@
   function bindSet() {
     if (!elSet) return;
     if (btnSetOpen) btnSetOpen.addEventListener("click", openSet);
+    /* 顶栏的「设置」按钮已收进个人中心（2026-10-17，第 34 项），
+       入口改由 meplus.js 统一派发 game:set-open */
+    document.addEventListener("game:set-open", openSet);
     if (btnSetX) btnSetX.addEventListener("click", closeSet);
     if (btnSetBack) btnSetBack.addEventListener("click", function () { showSetView("main"); });
     elSet.addEventListener("click", function (e) {          // 点遮罩空白处关掉
@@ -2977,11 +3010,16 @@
     setWallet: function (n) { var v = Skins.setWallet(n); updateHud(); return v; },
     skins: function () { return { player: skinPlayer, coin: skinCoin }; },
     clearObstacles: function () { obstacles.length = 0; },
-    /* 测试钩子：把速度（近似）拉到 v —— 速度由 S.time 推导，这里直接改时间轴，
-       下一帧起 S.speed = SPEED0 + SPEED_ACC × S.time 生效 */
+    /* 测试钩子：把速度直接拉到 v。速度现在是逐帧积分出来的状态量，
+       直接赋值即可，下一帧会从这里按当前区段的加速度继续涨。 */
     setSpeed: function (v) {
-      S.time = Math.max(0, (Math.max(CFG.SPEED0, Math.min(CFG.SPEED_MAX, v)) - CFG.SPEED0) / CFG.SPEED_ACC);
-      return CFG.SPEED0 + CFG.SPEED_ACC * S.time;
+      S.speed = Math.max(CFG.SPEED0 * 0.8, Math.min(CFG.SPEED_MAX, v));
+      return S.speed;
+    },
+    /* 分段难度只读视图：供测试核对当前区段与目标值 */
+    stage: function () {
+      var st = stageOf(S.dist);
+      return { idx: st.idx, name: st.name, accel: st.accel, gap: st.gap, combo: st.combo, air: st.air };
     },
     /* 只读快照：供调试与「自动试跑」测试读取当前障碍分布 */
     obstacles: function () {

@@ -72,6 +72,38 @@
       <p class="me-hint" id="me-nick-hint">取名后会显示在排行榜上（不允许重名）；未登录时成绩以「访客 N」自动上传。</p>
     </section>
 
+    <!-- 云账号（2026-10-17，第 19 项）：四个游戏页的个人中心里都有这一块 -->
+    <section class="me-card me-acc">
+      <span class="me-nick-lab">云账号</span>
+      <div class="me-acc-row" id="me-acc-guest">
+        <span class="me-acc-who">未登录 · 成绩以「访客 N」上榜</span>
+        <button type="button" class="me-btn me-btn-main" id="me-login-open">登录云账号</button>
+      </div>
+      <div class="me-acc-row hidden" id="me-acc-on">
+        <span class="me-acc-who" id="me-acc-who">已登录</span>
+        <button type="button" class="me-btn" id="me-logout">退出登录</button>
+      </div>
+      <div class="me-login hidden" id="me-login-box">
+        <input id="me-login-email" type="email" placeholder="邮箱" autocomplete="email" inputmode="email">
+        <input id="me-login-pass" type="password" placeholder="密码（至少 8 位）" autocomplete="current-password">
+        <button type="button" class="me-btn me-btn-main" id="me-login-go">登录</button>
+        <p class="me-hint" id="me-login-hint">还没有账号？去 <a href="/account/">账号页</a> 用邮箱验证码注册；忘记密码也在那里找回。</p>
+      </div>
+    </section>
+
+    <!-- 设置与无障碍（2026-10-17，第 12 / 34 项）：原各游戏顶栏的「设置」入口统一收到这里 -->
+    <section class="me-card">
+      <span class="me-nick-lab">设置</span>
+      <div class="me-switches" role="group" aria-label="无障碍选项">
+        <button type="button" class="me-sw" id="me-a11y-big" aria-pressed="false">大字号</button>
+        <button type="button" class="me-sw" id="me-a11y-calm" aria-pressed="false">减少动效</button>
+        <button type="button" class="me-sw" id="me-a11y-hc" aria-pressed="false">高对比</button>
+        <button type="button" class="me-sw" id="me-theme-sw" aria-pressed="false">浅色主题</button>
+      </div>
+      <button type="button" class="me-btn me-btn-wide" id="me-game-set">打开本游戏设置</button>
+      <p class="me-hint">无障碍选项对所有游戏生效，只记在这台设备上。</p>
+    </section>
+
     <section class="me-card">
       <div class="me-ach">
         <span class="me-ach-num"><b id="me-ach-got">0</b><em>/</em><span id="me-ach-total">0</span></span>
@@ -83,3 +115,6 @@
     <p class="me-foot">头像、昵称与成就都跟着账号走：登录后换设备也能看到同一份资料。</p>
   </div>
 </div>
+
+<!-- 账号登录 / 无障碍 / 主题 / 打开本游戏设置：四游戏页共用（2026-10-17 新增） -->
+<script defer src="/meplus.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}"></script>

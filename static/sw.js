@@ -34,7 +34,7 @@ var PRECACHE = [
   '/runner.js', '/runner.css', '/skins.js', '/shop.js', '/shop.css',
   '/ach.js', '/ach.css', '/gameach.js', '/rank.js', '/rank.css', '/cloud.js',
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
-  '/net-status.js', '/tapfx.js',
+  '/net-status.js', '/tapfx.js', '/meplus.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
   '/img/seia-duck.webp', '/img/seia-runner.webp',
