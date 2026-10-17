@@ -1,22 +1,18 @@
 /* ══════════════════════════════════════════════════════════════
    个人中心增强（全游戏页共用，2026-10-17）
    ──────────────────────────────────────────────────────────────
-   补三块原来没有的能力，都长在 _partials/me-center.html 的「个人」页里：
+   补两块原来没有的能力，都长在 _partials/me-center.html 的「个人」页里：
 
      ① 云账号登录 / 退出（第 19 项）：四个游戏页都能就地登录，
         不必再跳 /account/。只有邮箱 + 密码这一条主路径 ——
         验证码登录 / 注册 / 找回密码仍在账号页（要发信、要倒计时，
         塞进弹层容易做半截）。
-     ② 无障碍选项（第 34 项）：大字号 / 减少动效 / 高对比，
-        落在 <html> 的 class 上，由 site.css 统一接管，四个游戏都吃。
-     ③ 主题切换（第 12 项）：和页头那个开关是同一套 data-theme，
-        个人中心里也能切，游戏玩到一半不用跑去页头。
-     ④ 打开本游戏设置：各游戏把自己的设置面板收进个人中心之后，
-        由本文件派发 game:set-open，游戏脚本自己开面板。
+     ② 设置入口（2026-10-17 第二批）：主题与无障碍四项开关已搬到
+        独立页 /settings/，这里只留「打开设置」跳转，
+        外加「打开本游戏设置」派发 game:set-open 开本局玩法面板。
 
-   无障碍与主题都记在本机（localStorage / sessionStorage），不跟账号走：
-   这是「这台设备看得清不清楚」的事，不该跨设备传染。
-   纯外链脚本、无内联代码（CSP 同源白名单）。
+   进页面时把 localStorage 里的无障碍偏好应用上（/settings/ 负责写），
+   这样设置页之外的所有页面表现一致。纯外链脚本、无内联代码（CSP 同源白名单）。
    ══════════════════════════════════════════════════════════════ */
 (function (global) {
   "use strict";
@@ -45,50 +41,24 @@
     html.classList.toggle("a11y-calm", !!A11Y.calm);
     html.classList.toggle("a11y-hc", !!A11Y.hc);
   }
-  function saveA11y() {
-    try { localStorage.setItem(A11Y_KEY, JSON.stringify(A11Y)); } catch (e) {}
-    applyA11y();
-    paintA11y();
-    document.dispatchEvent(new CustomEvent("a11y:change", { detail: { big: !!A11Y.big, calm: !!A11Y.calm, hc: !!A11Y.hc } }));
-  }
 
-  var btnBig = document.getElementById("me-a11y-big");
-  var btnCalm = document.getElementById("me-a11y-calm");
-  var btnHc = document.getElementById("me-a11y-hc");
-  var btnTheme = document.getElementById("me-theme-sw");
+  /* 2026-10-17 第二批：显示设置（主题 / 大字号 / 减少动效 / 高对比）已搬到
+     独立页 /settings/，个人中心里不再有这四个开关。
+     本文件只负责「进游戏时把已存的设置应用上」，读写都在设置页做。 */
+  applyA11y();
 
-  function paintA11y() {
-    var pairs = [[btnBig, A11Y.big], [btnCalm, A11Y.calm], [btnHc, A11Y.hc]];
-    for (var i = 0; i < pairs.length; i++) {
-      var el = pairs[i][0];
-      if (!el) continue;
-      el.classList.toggle("is-on", !!pairs[i][1]);
-      el.setAttribute("aria-pressed", pairs[i][1] ? "true" : "false");
-    }
-    if (btnTheme) {
-      var light = html.dataset.theme === "light";
-      btnTheme.classList.toggle("is-on", light);
-      btnTheme.setAttribute("aria-pressed", light ? "true" : "false");
-      btnTheme.textContent = light ? "深色主题" : "浅色主题";
-    }
-  }
-
-  if (btnBig) btnBig.addEventListener("click", function () { A11Y.big = !A11Y.big; saveA11y(); });
-  if (btnCalm) btnCalm.addEventListener("click", function () { A11Y.calm = !A11Y.calm; saveA11y(); });
-  if (btnHc) btnHc.addEventListener("click", function () { A11Y.hc = !A11Y.hc; saveA11y(); });
-
-  /* ═══════════ ③ 主题 ═══════════ */
-  if (btnTheme) {
-    btnTheme.addEventListener("click", function () {
-      var to = html.dataset.theme === "light" ? "dark" : "light";
-      html.dataset.theme = to;
-      try { sessionStorage.setItem("pref-theme", to); } catch (e) {}
-      paintA11y();
-      document.dispatchEvent(new CustomEvent("theme:change", { detail: to }));
+  /* ═══════════ ④ 打开本游戏设置 / 打开设置页 ═══════════ */
+  var btnSetOpen = document.getElementById("me-set-open");
+  if (btnSetOpen) {
+    btnSetOpen.addEventListener("click", function () {
+      /* 显示设置已搬到独立页（2026-10-17）；离开前先关掉弹层，
+         从设置页返回时不会撞上一个仍开着的个人中心。 */
+      if (global.MeCenter && global.MeCenter.close) global.MeCenter.close();
+      else document.dispatchEvent(new CustomEvent("me:close"));
+      location.href = "/settings/";
     });
   }
 
-  /* ═══════════ ④ 打开本游戏设置 ═══════════ */
   var btnGameSet = document.getElementById("me-game-set");
   /* 扫雷 / 贪吃蛇本来就没有独立设置面板（难度在顶栏、音效一键开关），
      这一格对它们没有意义，直接藏掉，别留一个点了没反应的按钮。 */
@@ -203,7 +173,6 @@
   if (C() && C().onAuthChange) C().onAuthChange(paintAccount);
 
   applyA11y();
-  paintA11y();
   paintAccount();
 
   /* 对外暴露：游戏脚本想读无障碍状态（例如跑酷要据此关掉屏幕震动）可以问这里 */

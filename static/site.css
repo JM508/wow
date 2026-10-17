@@ -600,3 +600,126 @@ html.a11y-calm .wp-item:hover .wp-img { transform: none; }
   .wp-item:hover { transform: none; }
   .wp-item:hover .wp-img { transform: none; }
 }
+
+/* ══ 设置页（/settings/，2026-10-17）══
+   从个人中心搬出来的独立页：外观（主题）+ 无障碍三开关。
+   开关是 role="switch" + aria-checked 的按钮，状态由 /settings.js 维护。 */
+.set-root {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 4px 0 24px;
+}
+.set-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.set-title { font-size: 22px; letter-spacing: 0.02em; }
+.set-sub { font-size: 13px; color: var(--secondary, #888); }
+
+.set-card {
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  background: var(--entry, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+}
+.set-h {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--secondary, #888);
+}
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border, #eee);
+}
+.set-row:first-of-type { border-top: 0; padding-top: 2px; }
+
+.set-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.set-name { font-size: 15px; font-weight: 700; }
+.set-desc { font-size: 12px; line-height: 1.6; color: var(--secondary, #888); }
+
+/* 开关本体：54x30 药丸，滑块平移 24px */
+.set-sw {
+  position: relative;
+  flex: none;
+  width: 54px;
+  height: 30px;
+  padding: 0;
+  background: var(--tertiary, #e6e6e6);
+  border: 1px solid var(--border, #d5d5d5);
+  border-radius: 999px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+.set-sw:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
+.set-sw-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary, #1f1f1f);
+  opacity: 0.55;
+  transition: transform 0.18s ease, opacity 0.18s ease, background-color 0.18s ease;
+}
+.set-sw.is-on { background: #4f8cff; border-color: #4f8cff; }
+.set-sw.is-on .set-sw-knob { transform: translateX(24px); background: #fff; opacity: 1; }
+
+.set-hint {
+  min-height: 18px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--secondary, #888);
+}
+
+.set-reset {
+  margin-top: 6px;
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 9px;
+  cursor: pointer;
+}
+.set-reset:hover { background: var(--tertiary, rgba(127, 127, 127, 0.1)); }
+
+.set-note { margin: 0 0 8px; font-size: 12px; line-height: 1.75; color: var(--secondary, #888); }
+.set-note:last-child { margin-bottom: 0; }
+.set-note a { text-decoration: underline; }
+
+.set-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--secondary, #888);
+}
+.set-foot a { text-decoration: underline; }
+
+/* 高对比：开关边框与滑块也拉满，别在深底上看不清 */
+html.a11y-hc .set-sw { border-color: var(--primary, #000); }
+html.a11y-hc .set-sw-knob { opacity: 1; }
+html.a11y-hc .set-card { border-color: var(--primary, #000); }
+
+@media (max-width: 520px) {
+  .set-card { padding: 14px; }
+  .set-row { gap: 10px; }
+  .set-name { font-size: 14px; }
+}

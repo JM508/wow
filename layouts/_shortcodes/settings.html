@@ -1,0 +1,80 @@
+{{- /* 设置页（/settings/）：外观 + 无障碍，全部只存本机。
+     从个人中心的「设置」搬出来的独立页（2026-10-17）。
+     样式统一在 /site.css（全站已在 extend_head 里引入），CSP 禁内联 style；
+     开关状态由 /settings.js 上屏。 */ -}}
+<div class="set-root" id="set-root">
+  <div class="set-head">
+    <strong class="set-title">设置</strong>
+    <span class="set-sub">显示相关，只记在这台设备上</span>
+  </div>
+
+  <section class="set-card" aria-labelledby="set-h-look">
+    <h2 class="set-h" id="set-h-look">外观</h2>
+    <div class="set-row">
+      <span class="set-label">
+        <span class="set-name" id="set-theme-name">浅色主题</span>
+        <span class="set-desc">默认深色；本次浏览会话内有效</span>
+      </span>
+      <button type="button" class="set-sw" id="set-theme" role="switch" aria-checked="false" aria-labelledby="set-theme-name">
+        <span class="set-sw-knob" aria-hidden="true"></span>
+      </button>
+    </div>
+  </section>
+
+  <section class="set-card" aria-labelledby="set-h-a11y">
+    <h2 class="set-h" id="set-h-a11y">无障碍</h2>
+
+    <div class="set-row">
+      <span class="set-label">
+        <span class="set-name" id="set-big-name">大字号</span>
+        <span class="set-desc">正文、按钮与排行榜整体放大</span>
+      </span>
+      <button type="button" class="set-sw" id="set-big" role="switch" aria-checked="false" aria-labelledby="set-big-name">
+        <span class="set-sw-knob" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="set-row">
+      <span class="set-label">
+        <span class="set-name" id="set-calm-name">减少动效</span>
+        <span class="set-desc">关掉卡片抬升、图片缩放与界面过渡</span>
+      </span>
+      <button type="button" class="set-sw" id="set-calm" role="switch" aria-checked="false" aria-labelledby="set-calm-name">
+        <span class="set-sw-knob" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="set-row">
+      <span class="set-label">
+        <span class="set-name" id="set-hc-name">高对比</span>
+        <span class="set-desc">加深文字与边框，弱化背景图与半透明层</span>
+      </span>
+      <button type="button" class="set-sw" id="set-hc" role="switch" aria-checked="false" aria-labelledby="set-hc-name">
+        <span class="set-sw-knob" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <p class="set-hint" id="set-hint" role="status" aria-live="polite"></p>
+    <button type="button" class="set-reset" id="set-reset">恢复默认（深色 · 全部关闭）</button>
+  </section>
+
+  <section class="set-card">
+    <h2 class="set-h">说明</h2>
+    <p class="set-note">
+      这些选项决定「这台设备看得清不清楚」，因此只写在本机浏览器（localStorage）里，
+      不跟账号同步，换设备不会互相影响。
+    </p>
+    <p class="set-note">
+      游戏内的玩法设置（音效、色盲辅助、自定义按键等）仍在各游戏自己的「⚙ 设置」面板里；
+      从这里也能进入：<a href="/games/">先去小游戏</a>。
+    </p>
+  </section>
+
+  <p class="set-foot">
+    <a href="/">回首页</a>
+    <span aria-hidden="true">·</span>
+    <a href="/account/">账号与云存档</a>
+  </p>
+</div>
+
+<script src="/settings.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
