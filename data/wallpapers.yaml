@@ -1,0 +1,302 @@
+# 壁纸清单：由 _make_wallpapers.py 生成，勿手改
+# tags 由脚本按题材（游戏 / 二次元）与构图（横屏）推导
+version: 1
+count: 27
+items:
+  - slug: wp-01
+    title: "亚瑟 · 旅行日记"
+    hero: "亚瑟"
+    skin: "旅行日记"
+    w: 8771
+    h: 4463
+    ratio: 1.965
+    color: "#afab9e"
+    thumb: /wp/wp-01-640.webp
+    full: /wp/wp-01-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-02
+    title: "伽罗 · 月影弦鸣"
+    hero: "伽罗"
+    skin: "月影弦鸣"
+    w: 8363
+    h: 4211
+    ratio: 1.986
+    color: "#847097"
+    thumb: /wp/wp-02-640.webp
+    full: /wp/wp-02-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-03
+    title: "公孙离 · 祈雪灵祝-星传说"
+    hero: "公孙离"
+    skin: "祈雪灵祝-星传说"
+    w: 8124
+    h: 4100
+    ratio: 1.981
+    color: "#577499"
+    thumb: /wp/wp-03-640.webp
+    full: /wp/wp-03-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-04
+    title: "公孙离 · 祈雪灵祝"
+    hero: "公孙离"
+    skin: "祈雪灵祝"
+    w: 8448
+    h: 4290
+    ratio: 1.969
+    color: "#90929e"
+    thumb: /wp/wp-04-640.webp
+    full: /wp/wp-04-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-05
+    title: "刘备 · 督灵司正"
+    hero: "刘备"
+    skin: "督灵司正"
+    w: 8120
+    h: 4134
+    ratio: 1.964
+    color: "#607188"
+    thumb: /wp/wp-05-640.webp
+    full: /wp/wp-05-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-06
+    title: "卢雅那 · 烈焰狂欢"
+    hero: "卢雅那"
+    skin: "烈焰狂欢"
+    w: 8000
+    h: 4057
+    ratio: 1.972
+    color: "#a86a40"
+    thumb: /wp/wp-06-640.webp
+    full: /wp/wp-06-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-07
+    title: "墨子 · 迪迦奥特曼"
+    hero: "墨子"
+    skin: "迪迦奥特曼"
+    w: 8425
+    h: 5157
+    ratio: 1.634
+    color: "#676586"
+    thumb: /wp/wp-07-640.webp
+    full: /wp/wp-07-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-08
+    title: "姬小满 · 小满鸭"
+    hero: "姬小满"
+    skin: "小满鸭"
+    w: 8918
+    h: 3909
+    ratio: 2.281
+    color: "#a88688"
+    thumb: /wp/wp-08-640.webp
+    full: /wp/wp-08-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-09
+    title: "孙尚香 · 云端乐园"
+    hero: "孙尚香"
+    skin: "云端乐园"
+    w: 8120
+    h: 4134
+    ratio: 1.964
+    color: "#a07d99"
+    thumb: /wp/wp-09-640.webp
+    full: /wp/wp-09-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-10
+    title: "孙膑 · 帕恰狗之风"
+    hero: "孙膑"
+    skin: "帕恰狗之风"
+    w: 9000
+    h: 4583
+    ratio: 1.964
+    color: "#84abbc"
+    thumb: /wp/wp-10-640.webp
+    full: /wp/wp-10-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-11
+    title: "安琪拉 · 旅行日记"
+    hero: "安琪拉"
+    skin: "旅行日记"
+    w: 8120
+    h: 4102
+    ratio: 1.98
+    color: "#acaeb3"
+    thumb: /wp/wp-11-640.webp
+    full: /wp/wp-11-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-12
+    title: "库洛米闪卡"
+    hero: ""
+    skin: "库洛米闪卡"
+    w: 8665
+    h: 4147
+    ratio: 2.089
+    color: "#5f537e"
+    thumb: /wp/wp-12-640.webp
+    full: /wp/wp-12-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-13
+    title: "扁鹊"
+    hero: "扁鹊"
+    skin: ""
+    w: 8120
+    h: 4134
+    ratio: 1.964
+    color: "#495955"
+    thumb: /wp/wp-13-640.webp
+    full: /wp/wp-13-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-14
+    title: "海月"
+    hero: "海月"
+    skin: ""
+    w: 8120
+    h: 4137
+    ratio: 1.963
+    color: "#575382"
+    thumb: /wp/wp-14-640.webp
+    full: /wp/wp-14-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-15
+    title: "海诺 · 星光竞辉"
+    hero: "海诺"
+    skin: "星光竞辉"
+    w: 8000
+    h: 4077
+    ratio: 1.962
+    color: "#8699ae"
+    thumb: /wp/wp-15-640.webp
+    full: /wp/wp-15-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-16
+    title: "澜"
+    hero: "澜"
+    skin: ""
+    w: 8121
+    h: 4140
+    ratio: 1.962
+    color: "#653047"
+    thumb: /wp/wp-16-640.webp
+    full: /wp/wp-16-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-17
+    title: "澜 · 闪卡"
+    hero: "澜"
+    skin: "闪卡"
+    w: 9672
+    h: 5967
+    ratio: 1.621
+    color: "#502c30"
+    thumb: /wp/wp-17-640.webp
+    full: /wp/wp-17-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-18
+    title: "牛魔 · 小牛鸭"
+    hero: "牛魔"
+    skin: "小牛鸭"
+    w: 7000
+    h: 3562
+    ratio: 1.965
+    color: "#89747d"
+    thumb: /wp/wp-18-640.webp
+    full: /wp/wp-18-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-19
+    title: "王维 · 立绘 1"
+    hero: "王维"
+    skin: "立绘 1"
+    w: 8120
+    h: 4120
+    ratio: 1.971
+    color: "#4b5981"
+    thumb: /wp/wp-19-640.webp
+    full: /wp/wp-19-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-20
+    title: "王维"
+    hero: "王维"
+    skin: ""
+    w: 8118
+    h: 4111
+    ratio: 1.975
+    color: "#6b80aa"
+    thumb: /wp/wp-20-640.webp
+    full: /wp/wp-20-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-21
+    title: "王者 26 周年庆"
+    hero: ""
+    skin: "王者 26 周年庆"
+    w: 3457
+    h: 1945
+    ratio: 1.777
+    color: "#7c7e81"
+    thumb: /wp/wp-21-640.webp
+    full: /wp/wp-21-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-22
+    title: "全英雄 Q 图海报"
+    hero: ""
+    skin: "全英雄 Q 图海报"
+    w: 16000
+    h: 9000
+    ratio: 1.778
+    color: "#d6c2a7"
+    thumb: /wp/wp-22-640.webp
+    full: /wp/wp-22-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-23
+    title: "百里守约"
+    hero: "百里守约"
+    skin: ""
+    w: 8120
+    h: 4134
+    ratio: 1.964
+    color: "#786651"
+    thumb: /wp/wp-23-640.webp
+    full: /wp/wp-23-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-24
+    title: "盾山"
+    hero: "盾山"
+    skin: ""
+    w: 7995
+    h: 4058
+    ratio: 1.97
+    color: "#846d52"
+    thumb: /wp/wp-24-640.webp
+    full: /wp/wp-24-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-25
+    title: "美乐蒂闪卡"
+    hero: ""
+    skin: "美乐蒂闪卡"
+    w: 8654
+    h: 4123
+    ratio: 2.099
+    color: "#c1adc8"
+    thumb: /wp/wp-25-640.webp
+    full: /wp/wp-25-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-26
+    title: "蚩奼"
+    hero: "蚩奼"
+    skin: ""
+    w: 8120
+    h: 4135
+    ratio: 1.964
+    color: "#748c8f"
+    thumb: /wp/wp-26-640.webp
+    full: /wp/wp-26-1920.webp
+    tags: [游戏, 横屏]
+  - slug: wp-27
+    title: "鲁班大师"
+    hero: "鲁班大师"
+    skin: ""
+    w: 8120
+    h: 4134
+    ratio: 1.964
+    color: "#564162"
+    thumb: /wp/wp-27-640.webp
+    full: /wp/wp-27-1920.webp
+    tags: [游戏, 横屏]

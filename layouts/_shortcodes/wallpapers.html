@@ -1,0 +1,66 @@
+{{- /* 壁纸页：读 data/wallpapers.yaml 渲染筛选栏 + 网格。
+     图片卡是 <button>，键盘也能打开；灯箱与筛选逻辑在 /wallpapers.js。
+     CSP 是 style-src 'self'，所以这里不写任何内联 style，占位底色由 JS 用 CSSOM 赋值。 */ -}}
+{{- $d := site.Data.wallpapers -}}
+{{- $items := $d.items -}}
+{{- $anime := 0 -}}
+{{- range $items }}{{ if in .tags "二次元" }}{{ $anime = add $anime 1 }}{{ end }}{{ end -}}
+{{- $games := sub (len $items) $anime -}}
+
+<div class="wp-root" id="wp-root">
+  <div class="wp-head">
+    <strong class="wp-title">壁纸</strong>
+    <span class="wp-sub">王者荣耀英雄原画，共 {{ len $items }} 张</span>
+  </div>
+
+  <div class="wp-bar" role="group" aria-label="壁纸分类">
+    <button type="button" class="wp-tab is-on" data-wp-tag="all" aria-pressed="true">
+      全部<span class="wp-n">{{ len $items }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="游戏" aria-pressed="false">
+      游戏<span class="wp-n">{{ $games }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="二次元" aria-pressed="false">
+      二次元<span class="wp-n">{{ $anime }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="横屏" aria-pressed="false">
+      横屏<span class="wp-n">{{ len $items }}</span>
+    </button>
+  </div>
+
+  <div class="wp-grid" id="wp-grid">
+    {{- range $items }}
+    {{- $thumbH := math.Round (div (mul 640.0 .h) .w) -}}
+    <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
+            data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
+            data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
+            data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看 {{ .title }} 大图">
+      <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
+           alt="{{ .title }} 壁纸" loading="lazy" decoding="async">
+      <span class="wp-cap">
+        <span class="wp-name">{{ .title }}</span>
+        <span class="wp-kind">{{ if in .tags "二次元" }}二次元{{ else }}游戏{{ end }}</span>
+      </span>
+    </button>
+    {{- end }}
+  </div>
+
+  <p class="wp-empty" id="wp-empty" hidden>这个分类下暂时没有壁纸。</p>
+
+  <p class="wp-note">全部为横屏构图，点任意一张可看 1920 宽大图。壁纸版权归原权利人所有，本站仅作展示，权利人可依
+    <a href="/dmca/">版权投诉</a> 要求下架。</p>
+</div>
+
+<div class="wp-lb" id="wp-lb" hidden role="dialog" aria-modal="true" aria-label="壁纸大图">
+  <button type="button" class="wp-lb-x" id="wp-lb-x" aria-label="关闭（Esc）">×</button>
+  <button type="button" class="wp-lb-nav wp-lb-prev" id="wp-lb-prev" aria-label="上一张（←）">‹</button>
+  <img class="wp-lb-img" id="wp-lb-img" alt="">
+  <button type="button" class="wp-lb-nav wp-lb-next" id="wp-lb-next" aria-label="下一张（→）">›</button>
+  <div class="wp-lb-bar">
+    <span class="wp-lb-cap" id="wp-lb-cap"></span>
+    <span class="wp-lb-dim" id="wp-lb-dim"></span>
+  </div>
+</div>
+
+{{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}
+<script src="/wallpapers.js?v={{ site.Params.assetVer }}" defer></script>
