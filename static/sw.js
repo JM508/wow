@@ -28,14 +28,14 @@ function ver(p) {
 /* 预缓存核心清单：几个小游戏离线可玩所需的最小集合 */
 var PRECACHE = [
   '/', '/games/', '/minesweeper/', '/runner/', '/account/', '/tictactoe/', '/snake/',
-  '/privacy/', '/terms/', '/disclaimer/', '/dmca/', '/cookies/',
+  '/privacy/', '/terms/', '/disclaimer/', '/dmca/', '/cookies/', '/wallpapers/',
   '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css', '/msrank.js',
   '/tictactoe.js', '/tictactoe.css',
   '/snake.js', '/snake.css', '/grank.js', '/grank.css', '/me.js',
   '/runner.js', '/runner.css', '/skins.js', '/shop.js', '/shop.css',
   '/ach.js', '/ach.css', '/gameach.js', '/rank.js', '/rank.css', '/cloud.js',
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
-  '/net-status.js', '/tapfx.js', '/meplus.js',
+  '/net-status.js', '/tapfx.js', '/meplus.js', '/wallpapers.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
   '/site.webmanifest',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
