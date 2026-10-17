@@ -20,7 +20,7 @@
     bgExt: ".jpg",
     /* 背景图的缓存穿透版本号：/images/* 是 30 天强缓存，换图必须换号，
        否则回访客户端会一直命中旧图的缓存（文件名不变时无感知更新）。 */
-    bgVer: 4,
+    bgVer: 5,
     /* 视口 ≤ 此宽度改用手机版竖版小图 bgN-m.webp（1080x1440 裁切，约原图 1/4 体积）：
        手机上加载 300KB+ 的 1920 宽横图很慢，且横图在竖屏上只能取中间一小条，
        改用竖版裁切图既更快、取景也更合适（背景还盖着一层蒙版，看不出差别）。 */
@@ -136,11 +136,18 @@
     } catch (e) { webpSupport = false; }
     return webpSupport;
   }
-  /* 窄屏（手机）→ 竖版小图 bgN-m.webp；桌面 → 横版原图。全部带 bgVer 版本号穿透缓存 */
+  /* 窄屏（手机）→ 竖版小图 bgN-m.webp；桌面 → 横版 WebP（bgN.webp）。
+     2026-10-17：桌面也从 JPG 换成 WebP —— 首屏背景是 LCP 最大的一块，
+     平均 325KB 的 JPG 换成 ~150KB 的 WebP，首屏能早半秒出图。
+     原 JPG 仍保留：不支持 WebP 时兜底，「下载原图」也走它。 */
   function bgUrlFor(idx) {
     var base = CFG.bgFolder + (idx + 1) + CFG.bgExt;
-    if (CFG.bgMobileMax && window.innerWidth <= CFG.bgMobileMax && canWebp()) {
-      base = base.replace(/\.jpg$/, "-m.webp");
+    if (canWebp()) {
+      if (CFG.bgMobileMax && window.innerWidth <= CFG.bgMobileMax) {
+        base = base.replace(/\.jpg$/, "-m.webp");
+      } else {
+        base = base.replace(/\.jpg$/, ".webp");
+      }
     }
     return base + (CFG.bgVer ? "?v=" + CFG.bgVer : "");
   }
@@ -170,6 +177,8 @@
       agPre.rel = "preload";
       agPre.as = "image";
       agPre.href = bgUrlFor(bgPicked);
+      /* 背景就是 LCP 元素，给它最高优先级，别让后面的脚本抢带宽 */
+      agPre.setAttribute("fetchpriority", "high");
       document.head.appendChild(agPre);
     } catch (e) {}
   }
