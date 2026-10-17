@@ -211,6 +211,9 @@
 <script defer src="/net-status.js"></script>
 {{- end }}
 
+{{- /* 结构化数据补充：首页 WebSite / 游戏页 VideoGame（BreadcrumbList 由主题输出） */}}
+{{- partial "schema.html" . -}}
+
 {{- partial "extend_head.html" . -}}
 
 {{- /* Misc */}}
