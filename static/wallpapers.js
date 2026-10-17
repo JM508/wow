@@ -30,8 +30,11 @@
 
   /* ── 筛选 ── */
   var current = "all";
+  /* 卡片外面还有一层 .wp-cell（用来放下载按钮，避免按钮套按钮）；
+     隐藏要落在 cell 上，否则网格里会留下空位。 */
+  function cellOf(el) { return el.closest ? el.closest(".wp-cell") : el.parentNode; }
   function visible() {
-    return items.filter(function (el) { return !el.hidden; });
+    return items.filter(function (el) { var c = cellOf(el); return !c || !c.hidden; });
   }
   function applyTag(tag) {
     current = tag;
@@ -39,6 +42,8 @@
     items.forEach(function (el) {
       var tags = (el.getAttribute("data-wp-tags") || "").split(",");
       var hit = tag === "all" || tags.indexOf(tag) >= 0;
+      var c = cellOf(el);
+      if (c) c.hidden = !hit;
       el.hidden = !hit;
       if (hit) shown++;
     });
@@ -76,11 +81,16 @@
     var el = arr[pos];
     var full = el.getAttribute("data-wp-full");
     var title = el.getAttribute("data-wp-title") || "";
+    var kb = el.getAttribute("data-wp-kb") || "";
     lbImg.src = full;
     lbImg.alt = title + " 壁纸";
     lbCap.textContent = title;
     lbDim.textContent = (el.getAttribute("data-wp-size") || "").replace("x", " × ") + " · " +
       (pos + 1) + " / " + arr.length;
+    if (btnDl) {
+      btnDl.textContent = kb ? "下载 · " + kb + "KB" : "下载";
+      btnDl.setAttribute("aria-label", "下载" + (title ? " " + title : "") + "大图" + (kb ? "，WebP 约 " + kb + "KB" : ""));
+    }
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;
     btnNext.hidden = !multi;
@@ -89,18 +99,12 @@
   /* ── 下载 ──
      和首页「下载背景图」同一条路径：fetch 拿 blob 再生 a[download]，
      跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名在不同系统乱码。*/
-  function download() {
-    var arr = list();
-    if (!arr.length || pos < 0) return;
-    var el = arr[pos];
-    var url = el.getAttribute("data-wp-full");
+  function saveUrl(url, slug, btn) {
     if (!url) return;
-    var slug = el.getAttribute("data-wp-key") || "wallpaper";
-    var name = "wow-wallpaper-" + slug + ".webp";
-    var old = btnDl.textContent;
-    btnDl.disabled = true;
-    btnDl.textContent = "下载中";
-    var done = function () { btnDl.disabled = false; btnDl.textContent = old; };
+    var name = "wow-wallpaper-" + (slug || "wallpaper") + ".webp";
+    var old = btn ? btn.textContent : "";
+    if (btn) { btn.disabled = true; btn.textContent = "下载中"; }
+    var done = function () { if (btn) { btn.disabled = false; btn.textContent = old; } };
     fetch(url).then(function (r) {
       if (!r.ok) throw new Error("http " + r.status);
       return r.blob();
@@ -118,6 +122,13 @@
       var w = window.open(url, "_blank");
       if (!w) location.href = url;
     });
+  }
+
+  function download() {
+    var arr = list();
+    if (!arr.length || pos < 0) return;
+    var el = arr[pos];
+    saveUrl(el.getAttribute("data-wp-full"), el.getAttribute("data-wp-key"), btnDl);
   }
 
   function open(el) {
@@ -139,6 +150,17 @@
 
   items.forEach(function (el) {
     el.addEventListener("click", function () { open(el); });
+  });
+
+  /* 卡片右上角的下载按钮：不进灯箱，直接下这张大图（首屏可见的下载入口） */
+  items.forEach(function (el) {
+    var cell = cellOf(el);
+    var btn = cell && cell.querySelector ? cell.querySelector(".wp-dl") : null;
+    if (!btn) return;
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      saveUrl(el.getAttribute("data-wp-full"), el.getAttribute("data-wp-key"), btn);
+    });
   });
   btnX.addEventListener("click", close);
   btnPrev.addEventListener("click", function () { show(pos - 1); });

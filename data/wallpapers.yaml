@@ -4,6 +4,8 @@ version: 1
 count: 28
 items:
   - slug: wp-01
+    kb: 189
+    kb_thumb: 38
     title: "亚瑟 · 旅行日记"
     hero: "亚瑟"
     skin: "旅行日记"
@@ -15,6 +17,8 @@ items:
     full: /wp/wp-01-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-02
+    kb: 177
+    kb_thumb: 34
     title: "伽罗 · 月影弦鸣"
     hero: "伽罗"
     skin: "月影弦鸣"
@@ -26,6 +30,8 @@ items:
     full: /wp/wp-02-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-03
+    kb: 160
+    kb_thumb: 32
     title: "公孙离 · 祈雪灵祝-星传说"
     hero: "公孙离"
     skin: "祈雪灵祝-星传说"
@@ -37,6 +43,8 @@ items:
     full: /wp/wp-03-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-04
+    kb: 161
+    kb_thumb: 31
     title: "公孙离 · 祈雪灵祝"
     hero: "公孙离"
     skin: "祈雪灵祝"
@@ -48,6 +56,8 @@ items:
     full: /wp/wp-04-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-05
+    kb: 173
+    kb_thumb: 34
     title: "刘备 · 督灵司正"
     hero: "刘备"
     skin: "督灵司正"
@@ -59,6 +69,8 @@ items:
     full: /wp/wp-05-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-06
+    kb: 171
+    kb_thumb: 34
     title: "卢雅那 · 烈焰狂欢"
     hero: "卢雅那"
     skin: "烈焰狂欢"
@@ -70,6 +82,8 @@ items:
     full: /wp/wp-06-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-07
+    kb: 150
+    kb_thumb: 29
     title: "墨子 · 迪迦奥特曼"
     hero: "墨子"
     skin: "迪迦奥特曼"
@@ -81,6 +95,8 @@ items:
     full: /wp/wp-07-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-08
+    kb: 136
+    kb_thumb: 29
     title: "姬小满 · 小满鸭"
     hero: "姬小满"
     skin: "小满鸭"
@@ -92,6 +108,8 @@ items:
     full: /wp/wp-08-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-09
+    kb: 214
+    kb_thumb: 37
     title: "孙尚香 · 云端乐园"
     hero: "孙尚香"
     skin: "云端乐园"
@@ -103,6 +121,8 @@ items:
     full: /wp/wp-09-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-10
+    kb: 190
+    kb_thumb: 37
     title: "孙膑 · 帕恰狗之风"
     hero: "孙膑"
     skin: "帕恰狗之风"
@@ -114,6 +134,8 @@ items:
     full: /wp/wp-10-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-11
+    kb: 200
+    kb_thumb: 40
     title: "安琪拉 · 旅行日记"
     hero: "安琪拉"
     skin: "旅行日记"
@@ -125,6 +147,8 @@ items:
     full: /wp/wp-11-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-12
+    kb: 218
+    kb_thumb: 39
     title: "库洛米闪卡"
     hero: ""
     skin: "库洛米闪卡"
@@ -136,6 +160,8 @@ items:
     full: /wp/wp-12-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-13
+    kb: 186
+    kb_thumb: 34
     title: "扁鹊"
     hero: "扁鹊"
     skin: ""
@@ -147,6 +173,8 @@ items:
     full: /wp/wp-13-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-14
+    kb: 231
+    kb_thumb: 38
     title: "海月"
     hero: "海月"
     skin: ""
@@ -158,6 +186,8 @@ items:
     full: /wp/wp-14-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-15
+    kb: 215
+    kb_thumb: 39
     title: "海诺 · 星光竞辉"
     hero: "海诺"
     skin: "星光竞辉"
@@ -169,6 +199,8 @@ items:
     full: /wp/wp-15-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-16
+    kb: 170
+    kb_thumb: 29
     title: "澜"
     hero: "澜"
     skin: ""
@@ -180,6 +212,8 @@ items:
     full: /wp/wp-16-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-17
+    kb: 182
+    kb_thumb: 28
     title: "澜 1"
     hero: "澜"
     skin: "闪卡"
@@ -191,6 +225,8 @@ items:
     full: /wp/wp-17-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-18
+    kb: 156
+    kb_thumb: 30
     title: "牛魔 · 小牛鸭"
     hero: "牛魔"
     skin: "小牛鸭"
@@ -202,6 +238,8 @@ items:
     full: /wp/wp-18-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-19
+    kb: 144
+    kb_thumb: 28
     title: "王维 1"
     hero: "王维"
     skin: "立绘 1"
@@ -213,6 +251,8 @@ items:
     full: /wp/wp-19-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-20
+    kb: 134
+    kb_thumb: 24
     title: "王维"
     hero: "王维"
     skin: ""
@@ -224,6 +264,8 @@ items:
     full: /wp/wp-20-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-21
+    kb: 229
+    kb_thumb: 41
     title: "王者 26 周年庆"
     hero: ""
     skin: "王者 26 周年庆"
@@ -235,6 +277,8 @@ items:
     full: /wp/wp-21-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-22
+    kb: 405
+    kb_thumb: 60
     title: "全英雄 Q 图海报"
     hero: ""
     skin: "全英雄 Q 图海报"
@@ -246,6 +290,8 @@ items:
     full: /wp/wp-22-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-23
+    kb: 218
+    kb_thumb: 38
     title: "百里守约"
     hero: "百里守约"
     skin: ""
@@ -257,6 +303,8 @@ items:
     full: /wp/wp-23-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-24
+    kb: 205
+    kb_thumb: 35
     title: "盾山"
     hero: "盾山"
     skin: ""
@@ -268,6 +316,8 @@ items:
     full: /wp/wp-24-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-25
+    kb: 203
+    kb_thumb: 33
     title: "美乐蒂闪卡"
     hero: ""
     skin: "美乐蒂闪卡"
@@ -279,6 +329,8 @@ items:
     full: /wp/wp-25-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-26
+    kb: 188
+    kb_thumb: 37
     title: "蚩奼"
     hero: "蚩奼"
     skin: ""
@@ -290,6 +342,8 @@ items:
     full: /wp/wp-26-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-27
+    kb: 98
+    kb_thumb: 20
     title: "鲁班大师"
     hero: "鲁班大师"
     skin: ""
@@ -301,6 +355,8 @@ items:
     full: /wp/wp-27-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-28
+    kb: 146
+    kb_thumb: 33
     title: ""
     hero: ""
     skin: ""

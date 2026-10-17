@@ -29,23 +29,36 @@
   </div>
 
   <div class="wp-grid" id="wp-grid">
-    {{- range $items }}
+    {{- range $i, $e := $items }}
     {{- $thumbH := math.Round (div (mul 640.0 .h) .w) -}}
-    <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
-            data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
-            data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
-            data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看{{ with .title }} {{ . }}{{ end }} 大图">
-      <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
-           alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}" loading="lazy" decoding="async">
-      <span class="wp-cap">
-        {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
-        {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
-        <span class="wp-tags">
-          {{- range first 3 .tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
-          {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
+    {{- /* 首屏 6 张即时加载（LCP 候选），第一张最高优先级；其余懒加载。
+           展示层优先进 AVIF，浏览器不支持时回退 WebP（<picture>）；
+           下载按钮始终给 WebP 大图，体积直接标在按钮上。 */ -}}
+    <div class="wp-cell" data-wp-cell="{{ .slug }}">
+      <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
+              data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
+              data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
+              data-wp-kb="{{ .kb }}"
+              data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看{{ with .title }} {{ . }}{{ end }} 大图">
+        <picture class="wp-pic">
+          <source srcset="{{ replace .thumb ".webp" ".avif" }}" type="image/avif">
+          <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
+               alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}"
+               loading="{{ if lt $i 6 }}eager{{ else }}lazy{{ end }}"
+               {{- if eq $i 0 }} fetchpriority="high"{{ end }} decoding="async">
+        </picture>
+        <span class="wp-cap">
+          {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
+          {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
+          <span class="wp-tags">
+            {{- range first 3 .tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
+            {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
+          </span>
         </span>
-      </span>
-    </button>
+      </button>
+      <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}"
+              aria-label="下载{{ with .title }} {{ . }}{{ end }}大图，WebP 约 {{ .kb }}KB">下载 · {{ .kb }}KB</button>
+    </div>
     {{- end }}
   </div>
 
@@ -64,8 +77,7 @@
     <span class="wp-lb-cap" id="wp-lb-cap"></span>
     <span class="wp-lb-dim" id="wp-lb-dim"></span>
     <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载这张壁纸">下载</button>
-  </div>
-</div>
+  </div></div>
 
 {{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}
 <script src="/wallpapers.js?v={{ site.Params.assetVer }}" defer></script>
