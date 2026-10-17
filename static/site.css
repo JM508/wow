@@ -30,19 +30,20 @@
   font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: #ffffff;
+  color: var(--primary, #1f1f1f);
   text-align: center;
   text-decoration: none;
+  border: 1px solid var(--primary, #1f1f1f);
   border-radius: 999px;
-  background: linear-gradient(135deg, #4f8cff, #6a5cff);
-  box-shadow: 0 14px 30px -14px rgba(79, 140, 255, 0.9);
-  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  background: transparent;
+  box-shadow: none;
+  transition: transform 0.12s ease, background-color 0.18s ease, border-color 0.18s ease;
 }
 
+/* 透明按钮：hover 只加一层淡淡底色，不改成实心 */
 .games-entry-btn:hover {
   transform: translateY(-2px);
-  filter: brightness(1.08);
-  box-shadow: 0 18px 34px -14px rgba(79, 140, 255, 0.95);
+  background: var(--tertiary, rgba(127, 127, 127, 0.12));
 }
 
 /* 小屏：按钮收窄 */
@@ -50,20 +51,27 @@
   .games-entry-btn { min-width: 196px; padding: 12px 38px; font-size: 16px; }
 }
 
-/* 次级入口（首页「壁纸」）：描边样式，不跟主按钮抢注意力 */
+/* 次级入口（首页「壁纸」）：同为透明底，整钮降一档透明度，不跟主按钮抢注意力。
+   首页按钮压在背景图上，主题的 --border/--secondary 在深色下太暗会隐身，
+   所以边框/文字用带透明度的中性白，明暗主题都可读。 */
 .games-entry-btn.games-entry-ghost {
   color: var(--primary, #1f1f1f);
-  background: var(--tertiary, #ececec);
-  border: 1px solid var(--border, #ddd);
-  box-shadow: none;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.8);
+  opacity: 0.78;
 }
 .games-entry-btn.games-entry-ghost:hover {
-  filter: none;
-  background: var(--entry, #fff);
-  box-shadow: 0 12px 26px -16px rgba(0, 0, 0, 0.55);
+  color: var(--primary, #1f1f1f);
+  border-color: var(--primary, #1f1f1f);
+  opacity: 1;
+  background: var(--tertiary, rgba(128, 128, 128, 0.12));
 }
-html.a11y-hc .games-entry-btn.games-entry-ghost { background: #000; color: #fff; border-color: #000; }
-html.a11y-hc[data-theme="dark"] .games-entry-btn.games-entry-ghost { background: #fff; color: #000; border-color: #fff; }
+html.a11y-hc .games-entry-btn { border-color: #000; color: #000; background: transparent; }
+html.a11y-hc .games-entry-btn:hover { background: #000; color: #fff; }
+html.a11y-hc .games-entry-btn.games-entry-ghost { color: #000; border-color: #000; background: transparent; }
+html.a11y-hc[data-theme="dark"] .games-entry-btn { border-color: #fff; color: #fff; background: transparent; }
+html.a11y-hc[data-theme="dark"] .games-entry-btn:hover { background: #fff; color: #000; }
+html.a11y-hc[data-theme="dark"] .games-entry-btn.games-entry-ghost { color: #fff; border-color: #fff; background: transparent; }
 
 /* ══ /games/ 游戏合集页的游戏卡片 ══
    与首页旧卡片同一套样式（games-card / games-row），合集页复用；
