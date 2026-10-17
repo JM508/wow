@@ -7,9 +7,13 @@ enableRobotsTXT = true
 
 [params]
   defaultTheme = "dark"
+  # 站点级 SEO：env=production 让 PaperMod 的 OG / Twitter / Schema 模板稳定输出
+  env = "production"
+  description = "Wow 娱乐小站：扫雷、火柴人快跑、井字棋、贪吃蛇，打开即玩，无需下载。"
+  keywords = ["小游戏", "在线游戏", "扫雷", "火柴人快跑", "井字棋", "贪吃蛇", "免费游戏"]
   # 自定义静态资源（/site.css /age-gate.js /runner.js 等）的缓存穿透版本号：
   # 改了 JS/CSS 记得把这里换个新值（配合 _headers 里对 /*.js / *.css 的一年强缓存）
-  assetVer = "v20261007g"
+  assetVer = "v20261017a"
   # 站点仓库（首页页脚展示）
   githubUrl = "https://github.com/JM508/wow"
   # 首页只留标题 + 「玩游戏」入口按钮（描述句与「进入游戏合集：…」副标题已按需求去掉）
@@ -21,3 +25,16 @@ enableRobotsTXT = true
     [markup.goldmark.renderer]
       # 首页「玩游戏」卡片需要写入原生 HTML（homeInfoParams.Content）
       unsafe = true
+
+# 构建后压缩产物（Hugo 内置 minify，无需外部工具）
+# HTML 暂不压缩：Hugo 会把属性引号一并省掉（href="/x" → href=/x），
+# 站点测试与若干探针按带引号属性断言，压缩收益（每页约 1KB）不值得引入回归；
+# CSS / JS / XML 仍照常压缩（PaperMod 本身也对资源做 Minify）。
+[minify]
+  minifyOutput = true
+  disableHTML = true
+
+# 最小权限：本项目构建不使用任何外部命令（无 PostCSS / Tailwind / Sass / Node），
+# 显式清空 exec 白名单，避免主题或依赖拿到不必要的执行权限。
+[security.exec]
+  allow = []

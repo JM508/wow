@@ -1,0 +1,57 @@
+{{- /* ══════════════════════════════════════════════════════════════════════
+     结构化数据（Schema.org）补充
+     ──────────────────────────────────────────────────────────────────────
+     主题自带 templates/schema_json.html 只输出首页 Organization 与文章
+     BreadcrumbList；这里补：
+       · 首页   → WebSite（站点名 / 描述 / 语言）
+       · 小游戏 → VideoGame（name / description / gamePlatform /
+                  applicationCategory / genre / offers / inLanguage）
+     BreadcrumbList 由主题负责，不重复输出。
+     站内搜索未启用，因此 WebSite 暂不带 SearchAction（无搜索页会让 Google
+     报「potentialAction 指向 404」）。
+     游戏清单按固定路径匹配 —— 页面 slug 是站点路由的一部分，比从标题猜稳。
+     ══════════════════════════════════════════════════════════════════════ */}}
+{{- $games := dict
+  "/runner/"      (dict "name" "火柴人快跑" "genre" "Action" "desc" "火柴人快跑：跳跃、下蹲、吃金币，跟着引导金币躲开障碍，越跑越快。" "image" "/img/seia-runner.webp")
+  "/minesweeper/" (dict "name" "扫雷" "genre" "Puzzle" "desc" "经典扫雷：翻开格子、插旗标记，连环爆炸与多种雷皮肤，支持排行榜。" "image" "/img/seia-duck.webp")
+  "/tictactoe/"   (dict "name" "井字棋" "genre" "Puzzle" "desc" "井字棋：三档 AI 难度，赢棋积分制，支持云端排行榜与个人中心。" "image" "/img/zhang-duck.webp")
+  "/snake/"       (dict "name" "贪吃蛇" "genre" "Arcade" "desc" "贪吃蛇：吃食物变长、连击加倍，多种皮肤与云端最高分。" "image" "/img/qiaolezi.webp")
+-}}
+
+{{- if .IsHome }}
+{{- $desc := site.Params.description | default "小游戏合集，打开即玩。" }}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": {{ site.Title }},
+  "url": {{ site.Home.Permalink }},
+  "description": {{ $desc }},
+  "inLanguage": "zh-CN"
+}
+</script>
+{{- else }}
+{{- with index $games .RelPermalink }}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": {{ .name }},
+  "description": {{ .desc }},
+  "url": {{ $.Permalink }},
+  "image": {{ .image | absURL }},
+  "gamePlatform": "Web Browser",
+  "applicationCategory": "GameApplication",
+  "genre": {{ .genre }},
+  "operatingSystem": "Any",
+  "inLanguage": "zh-CN",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "CNY"
+  }
+}
+</script>
+{{- end }}
+{{- end }}

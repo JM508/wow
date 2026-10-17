@@ -231,7 +231,7 @@
     BracketRight: "]", Minus: "-", Equal: "=", Backquote: "`"
   };
   var SET_DEF = {
-    sfx: 1, vol: 0.7, cb: 0, calm: 0, big: 0, autoUp: 0,
+    sfx: 1, vol: 0.7, cb: 0, calm: 0, big: 0, autoUp: 1,   // 自动上榜默认开启（设置里可关）
     keys: {
       jump: ["Space", "ArrowUp", "KeyW"],
       duck: ["ArrowDown", "KeyS"],
@@ -262,7 +262,7 @@
   function loadSet() {
     var raw = null;
     try { raw = JSON.parse(store(KEY_SET) || "null"); } catch (e) { raw = null; }
-    var o = { sfx: SET_DEF.sfx, vol: SET_DEF.vol, cb: 0, calm: 0, big: 0, autoUp: 0, keys: {} };
+    var o = { sfx: SET_DEF.sfx, vol: SET_DEF.vol, cb: 0, calm: 0, big: 0, autoUp: 1, keys: {} };
     var a;
     if (raw && typeof raw === "object") {
       o.sfx = (raw.sfx === 0 || raw.sfx === false) ? 0 : 1;
@@ -271,7 +271,8 @@
       o.cb = raw.cb ? 1 : 0;
       o.calm = raw.calm ? 1 : 0;
       o.big = raw.big ? 1 : 0;
-      o.autoUp = raw.autoUp ? 1 : 0;
+      /* 默认开启自动上榜；老存档里明确存了 0（关闭）的保持关闭 */
+      o.autoUp = (raw.autoUp === 0 || raw.autoUp === false || raw.autoUp === "0") ? 0 : 1;
       for (a = 0; a < KEY_ACTIONS.length; a++) {
         var act = KEY_ACTIONS[a], src = raw.keys && raw.keys[act], out = [];
         if (Object.prototype.toString.call(src) === "[object Array]") {
@@ -828,10 +829,12 @@
     return x + count * 42;                     // 右边缘（给后方空档用）
   }
   /* 跨障一道弧：从障碍波前方升到波顶再落下，跟着金币跳 = 走正常的路。
-     峰顶 = 障碍高 + 34（封顶 90），币心最高 ≤146，在可达范围（≤148）内。 */
+     峰顶 = 障碍高 + 34（封顶 90），币心最高 ≤146，在可达范围（≤148）内。
+     用户 2026-10-17 要求：引导金币固定 3 个（原来按跨度算 5 个左右），
+     起跳点 / 顶点 / 落地点各一颗，路线照样看得懂但不显得铺满。 */
   function addGuideArc(x0, x1, maxH) {
     var span = Math.max(42, x1 - x0);
-    var n = Math.max(3, Math.round(span / 42) + 1);
+    var n = 3;
     var peak = Math.min(90, maxH + 34);
     var ph = rnd(0, 6.28);
     for (var i = 0; i < n; i++) {
@@ -1647,7 +1650,7 @@
        飞行物   → 脚下一排矮币，跟着金币走就得从下面钻过去。
        引导币的右边缘并入 end，让后面的空档闸门把这一整波（含币）都兜住。 */
     if (isAir) {
-      var glEdge = addGuideLine(from - 40, 4);
+      var glEdge = addGuideLine(from - 40, 3);
       if (glEdge > end) end = glEdge;
     } else {
       var gaEdge = addGuideArc(from - 60, end + 60, waveMaxH);
@@ -2889,6 +2892,8 @@
       if (it && typeof y === "number") it.y = y;   // coffee 也允许测试指定落点
       return it || null;
     },
+    /* 测试钩子：自动上榜默认开启，用例需要手动上传路径时先关掉 */
+    setAutoUp: function (on) { setOpt("autoUp", !!on); },
     records: loadRecords,
     /* 商店弹层（供控制台与测试使用） */
     openShop: openShop,
@@ -2911,7 +2916,8 @@
     settings: function () {
       var keys = {};
       for (var a = 0; a < KEY_ACTIONS.length; a++) keys[KEY_ACTIONS[a]] = keyList(KEY_ACTIONS[a]).slice();
-      return { sfx: !!SET.sfx, vol: SET.vol, cb: !!SET.cb, calm: !!SET.calm, big: !!SET.big, keys: keys };
+      return { sfx: !!SET.sfx, vol: SET.vol, cb: !!SET.cb, calm: !!SET.calm, big: !!SET.big,
+               autoUp: !!SET.autoUp, keys: keys };
     },
     setOption: function (name, val) { return setOpt(name, val); },
     /* 清理本地缓存：纯清理（不刷新页面，供测试用）
