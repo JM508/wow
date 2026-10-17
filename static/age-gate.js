@@ -112,6 +112,19 @@
 
   var passed = readStore;
 
+  /* ---------- 爬虫放行（2026-10-17，第 16 项） ----------
+     门禁只挡人、不挡索引：被遮罩挡住的页面在搜索引擎眼里就是空白页。
+     这里按 UA 识别主流爬虫，对它们直接放行（不写任何「已验证」标记，
+     它们本来也不会留在这台设备上）。人（含普通浏览器 UA）照旧要过门禁。
+     注意：UA 可以伪造，这不是安全边界，只是「让内容能被收录」的取舍；
+     挡真人的那一步（点「是」+ 滑块）没有放宽。 */
+  var CRAWLER_UA = /googlebot|google-inspectiontool|bingbot|msnbot|baiduspider|yandex(bot|images)|duckduckbot|sogou\s+(web\s+)?spider|360spider|haosouspider|bytespider|applebot|petalbot|gptbot|claude(bot|-web)|ccbot|facebookexternalhit|twitterbot|slackbot|telegrambot|semrushbot|ahrefsbot|mj12bot/i;
+  function isCrawler() {
+    var ua = "";
+    try { ua = window.navigator && window.navigator.userAgent || ""; } catch (e) { ua = ""; }
+    return CRAWLER_UA.test(ua);
+  }
+
   /* ---------- 会话背景图：每次新开浏览器随机换一张（与上次不同） ---------- */
   /* 浏览器是否支持 webp（不支持就退回原图，别让手机背景开天窗） */
   var webpSupport = null;
@@ -665,8 +678,8 @@
     applyBg();
   }
 
-  if (passed()) {
-    html.setAttribute("data-ag", "ok");       // 已通过：不遮罩，正文正常显示
+  if (passed() || isCrawler()) {
+    html.setAttribute("data-ag", "ok");       // 已通过 / 搜索引擎爬虫：不遮罩，正文正常显示
   } else if (!CFG.homeOnly || isHome) {
     html.setAttribute("data-ag", "pending");  // 未通过（且在首页）：隐藏正文，画遮罩
     if (document.readyState === "loading") {

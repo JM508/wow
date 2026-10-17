@@ -130,6 +130,47 @@
 
   function speed() { return SPEEDS[mode] || SPEEDS.easy; }
 
+  /* ═══════════ 难度曲线（2026-10-17，第 10 项） ═══════════
+     原来一开局就是固定步频，新手第一口苹果就可能撞墙。现在分三层叠：
+       ① 热身：前 30 秒只跑 72%，线性升到 100%（给手指和眼睛适应的时间）
+       ② 吃食提速：每吃满 5 个 +8%，最多 +48%（吃到 31 个封顶）
+       ③ 连死怜悯：连输几局下一局起步更慢（每局 −6%，最多 −24%），
+          只要本局吃到 5 个就算「上手了」，连败计数清零，速度回归正常
+     三层相乘后由 tickSpeed() 换算成 stepMs。 */
+  var WARM_MS = 30000;          // 热身时长
+  var EATEN_PER_LEVEL = 5;      // 每吃几个提速一档
+  var RAMP_STEP = 0.08;         // 每档 +8%
+  var RAMP_MAX_LEVEL = 6;       // 最多 6 档（+48%）
+  var MERCY_STEP = 0.06;        // 每连败 −6%
+  var MERCY_MAX = 4;            // 最多算 4 连败（−24%）
+  var KEY_DEATHS = "snake-deaths-v1";
+
+  var elapsedMs = 0;            // 本局已跑时长（只累计对局中的步进）
+  var eaten = 0;                // 本局吃到的苹果数
+  var deaths = loadDeaths();
+
+  function loadDeaths() {
+    try {
+      var n = parseInt(localStorage.getItem(KEY_DEATHS) || "0", 10);
+      return isNaN(n) ? 0 : Math.max(0, Math.min(MERCY_MAX, n | 0));
+    } catch (e) { return 0; }
+  }
+  function saveDeaths() {
+    try { localStorage.setItem(KEY_DEATHS, String(deaths)); } catch (e) {}
+  }
+
+  function speedNow() {
+    var warm = 0.72 + 0.28 * Math.min(1, elapsedMs / WARM_MS);
+    var lv = Math.min(RAMP_MAX_LEVEL, Math.floor(eaten / EATEN_PER_LEVEL));
+    var mercy = 1 - Math.min(MERCY_MAX, deaths) * MERCY_STEP;
+    return speed() * warm * (1 + lv * RAMP_STEP) * mercy;
+  }
+  function tickSpeed() {
+    /* 上限 16 格/秒：再快就变成「看不清也反应不过来」，不是难度而是恶心 */
+    var s = Math.min(16, Math.max(3, speedNow()));
+    stepMs = Math.round(1000 / s);
+  }
+
   function reset() {
     var mid = Math.floor(GRID / 2);
     snake = [{ x: mid - 1, y: mid }, { x: mid - 2, y: mid }, { x: mid - 3, y: mid }];
@@ -144,7 +185,9 @@
     puff = 0;
     pops.length = 0;
     bestAtStart = best;
-    stepMs = Math.round(1000 / speed());
+    elapsedMs = 0;
+    eaten = 0;
+    tickSpeed();
     placeApple();
     state = "ready";
     hideOver();
@@ -316,6 +359,10 @@
         t0: nowMs()
       });
       if (score > best) { best = score; saveBest(); }
+      eaten += 1;
+      /* 吃到 5 个就算上手了：把连败怜悯清零，下一局起速回归正常 */
+      if (deaths > 0 && eaten >= EATEN_PER_LEVEL) { deaths = 0; saveDeaths(); }
+      tickSpeed();
       paintHud();
       placeApple();
       /* 成就：吃苹果（分数与蛇长一并报上去，单局最高分/最长蛇都在这一条里更新） */
@@ -323,10 +370,14 @@
     }
     if (grow > 0) grow -= 1;
     else snake.pop();
+    elapsedMs += stepMs;
+    tickSpeed();
   }
 
   function die() {
     state = "over";
+    /* 连败计数：这一局又没撑到 5 个苹果，下一局起步再慢一点（最多 4 连） */
+    if (eaten < EATEN_PER_LEVEL && deaths < MERCY_MAX) { deaths += 1; saveDeaths(); }
     draw();
     var fresh = score > bestAtStart;                 // 本局是否刷了个人纪录
     var gap = Math.max(0, best - score);
@@ -589,7 +640,10 @@
       combo: combo,
       maxCombo: maxCombo,
       pops: pops.length,
-      danger: dangerLevel()
+      danger: dangerLevel(),
+      stepMs: stepMs,
+      eaten: eaten,
+      deaths: deaths
     };
   };
   /* 测试钩子：把苹果摆到指定格子（只影响测试，正常玩法不调用） */

@@ -904,6 +904,33 @@
     });
   }
 
+  /* 合并推送：user_settings 只有一列，跑酷的音效/按键和井字棋的战绩都存在这里，
+     直接 push 会互相覆盖 → 先拉回来、把补丁并进去、再整体写回。
+     补丁按顶层键合并，值为 null 表示删掉这个键。 */
+  function settingsMerge(patch) {
+    if (!patch || typeof patch !== "object") {
+      return Promise.resolve({ data: null, error: { kind: "invalid-request", message: "合并内容必须是对象", status: 0 } });
+    }
+    return settingsPull().then(function (r) {
+      if (r && (r.error || r.notLoggedIn)) return r;
+      var base = {};
+      var raw = r && r.data && r.data.settings;
+      if (raw) {
+        try { base = typeof raw === "string" ? JSON.parse(raw) : raw; } catch (e) { base = {}; }
+      }
+      if (!base || typeof base !== "object") base = {};
+      Object.keys(patch).forEach(function (k) {
+        if (patch[k] === null) delete base[k];
+        else base[k] = patch[k];
+      });
+      return settingsPush(JSON.stringify(base)).then(function (w) {
+        if (w && w.error) return { data: null, error: w.error };
+        if (w && w.notLoggedIn) return w;
+        return { data: base, error: null };
+      });
+    });
+  }
+
   /* ═══════════ 对外接口 ═══════════ */
   /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待。
      regionLive() 再补上实时检测：换设备立刻重取、回到前台定期复查、变了就广播。 */
@@ -981,7 +1008,9 @@
     /* 设置云同步（仅登录用户；本地读写仍在各页脚本里） */
     settings: {
       pull: settingsPull,
-      push: settingsPush
+      push: settingsPush,
+      /* 合并推送：多个模块共用 user_settings 这一列时用它，别直接 push（会互相覆盖） */
+      merge: settingsMerge
     }
   };
 })(window);

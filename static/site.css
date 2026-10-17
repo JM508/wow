@@ -253,3 +253,46 @@ html[data-theme="dark"][data-ag-bg] .footer-repo a {
 @media (prefers-reduced-motion: reduce) {
   .tap-ripple { display: none; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   无障碍选项（2026-10-17，第 34 项）：个人中心「设置」里的三个开关，
+   落在 <html> 的 class 上，全站四个游戏一起生效。
+   只放大文字与控件，不缩放画布 —— 画布缩放会糊，游戏内的字号由各自
+   的 canvas 逻辑按像素绘制，这里管不到。
+   ═══════════════════════════════════════════════════════════════ */
+html.a11y-big body { font-size: 18px; }
+html.a11y-big .games-name { font-size: 20px; }
+html.a11y-big .games-meta { font-size: 14px; }
+html.a11y-big .snake-stat,
+html.a11y-big .ms-stat,
+html.a11y-big .ttt-score,
+html.a11y-big .run-hud { font-size: 15px; }
+html.a11y-big .snake-btn,
+html.a11y-big .ms-rank-btn,
+html.a11y-big .ttt-btn,
+html.a11y-big .run-shop-btn { font-size: 15px; padding: 8px 14px; }
+html.a11y-big .me-nick { font-size: 22px; }
+html.a11y-big .me-hint { font-size: 13px; }
+
+/* 减少动效：连 CSS 动画/过渡一起停掉（含 prefers-reduced-motion 已经在做的那些） */
+html.a11y-calm *,
+html.a11y-calm *::before,
+html.a11y-calm *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+html.a11y-calm .tap-ripple { display: none; }
+
+/* 高对比：加深正文与边框、去掉渐变底（低视力下渐变上的白字最糊） */
+html.a11y-hc { --primary: #000; --secondary: #333; --border: #000; }
+html.a11y-hc[data-theme="dark"] { --primary: #fff; --secondary: #e0e0e0; --border: #fff; }
+html.a11y-hc .me-btn,
+html.a11y-hc .me-sw.is-on,
+html.a11y-hc .run-primary { background: #000; }
+html.a11y-hc[data-theme="dark"] .me-btn,
+html.a11y-hc[data-theme="dark"] .me-sw.is-on,
+html.a11y-hc[data-theme="dark"] .run-primary { background: #fff; color: #000; }
+html.a11y-hc .games-row { border-color: #000; }
+html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
