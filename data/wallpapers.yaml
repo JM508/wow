@@ -1,7 +1,7 @@
 # 壁纸清单：由 _make_wallpapers.py 生成，勿手改
 # tags 由脚本按题材（游戏 / 二次元）与构图（横屏）推导
 version: 1
-count: 27
+count: 28
 items:
   - slug: wp-01
     title: "亚瑟 · 旅行日记"
@@ -300,3 +300,14 @@ items:
     thumb: /wp/wp-27-640.webp
     full: /wp/wp-27-1920.webp
     tags: [游戏, 横屏]
+  - slug: wp-28
+    title: ""
+    hero: ""
+    skin: ""
+    w: 1920
+    h: 1152
+    ratio: 1.667
+    color: "#dcc8d9"
+    thumb: /wp/wp-28-640.webp
+    full: /wp/wp-28-1920.webp
+    tags: [二次元, 横屏]

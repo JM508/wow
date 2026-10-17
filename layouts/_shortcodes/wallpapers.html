@@ -10,7 +10,7 @@
 <div class="wp-root" id="wp-root">
   <div class="wp-head">
     <strong class="wp-title">壁纸</strong>
-    <span class="wp-sub">王者荣耀英雄原画，共 {{ len $items }} 张</span>
+    <span class="wp-sub">游戏原画与二次元壁纸，共 {{ len $items }} 张</span>
   </div>
 
   <div class="wp-bar" role="group" aria-label="壁纸分类">
@@ -34,11 +34,11 @@
     <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
             data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
             data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
-            data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看 {{ .title }} 大图">
+            data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看{{ with .title }} {{ . }}{{ end }} 大图">
       <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
-           alt="{{ .title }} 壁纸" loading="lazy" decoding="async">
+           alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}" loading="lazy" decoding="async">
       <span class="wp-cap">
-        <span class="wp-name">{{ .title }}</span>
+        {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
         <span class="wp-kind">{{ if in .tags "二次元" }}二次元{{ else }}游戏{{ end }}</span>
       </span>
     </button>
