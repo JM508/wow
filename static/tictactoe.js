@@ -177,7 +177,15 @@
     var el = cells[i];
     if (!el) return;
     var v = board[i];
-    el.textContent = v === ME ? "×" : (v === AI ? "○" : "");
+    var glyph = v === ME ? "×" : (v === AI ? "○" : "");
+    var cur = el.firstElementChild ? el.firstElementChild.textContent : "";
+    /* 只在「真的落了新子」时重建节点：这样落子动画（ttt-drop）每次只播一遍，
+       而不是每次 paintAll 都把整盘棋子重新掉一次。 */
+    if (glyph && cur !== glyph) {
+      el.innerHTML = '<span class="ttt-p ' + (v === ME ? "ttt-px" : "ttt-po") + '">' + glyph + "</span>";
+    } else if (!glyph && el.textContent) {
+      el.textContent = "";
+    }
     el.classList.toggle("ttt-x", v === ME);
     el.classList.toggle("ttt-o", v === AI);
     el.disabled = v !== EMPTY || over || lock;

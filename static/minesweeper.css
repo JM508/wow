@@ -102,19 +102,26 @@
   color: var(--primary, #1f1f1f);
   background: var(--tertiary, #e6e6e6);
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.12), inset 0 2px 0 rgba(255, 255, 255, 0.5);
-  transition: background 0.1s ease;
+  transition: background-color 0.16s ease, transform 0.1s ease;
 }
 .ms-cell:hover { background: var(--code-bg, #dcdcdc); }
 .ms-cell:active { transform: scale(0.94); }
 .ms-cell:focus-visible { outline: 2px solid #ff5f6d; outline-offset: 1px; }
 
-/* 已翻开 */
+/* 已翻开：底色从灰渐变到白（transition 在 .ms-cell 上），再配一个「弹入」缩放。
+   泛洪展开一次翻开几十格时，整片一起轻轻弹一下，比硬切出来有手感。 */
 .ms-cell.open {
   cursor: default;
   background: var(--theme, #f3f3f3);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  animation: ms-open-pop 0.18s ease-out;
 }
 .ms-cell.open:active { transform: none; }
+@keyframes ms-open-pop {
+  0%   { transform: scale(0.72); }
+  60%  { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
 
 /* 数字配色（经典扫雷） */
 .ms-cell.n1 { color: #1976d2; }
@@ -154,6 +161,18 @@
 /* 旗子 / 地雷 SVG：跟格子字号走（fitCells 会按格子大小设 fontSize） */
 .ms-cell .ms-flag,
 .ms-cell .ms-mine { display: block; margin: 0 auto; width: 1em; height: 1em; }
+
+/* 插旗：旗杆底部为轴、从上往下「插」进来（小角度超摆再回正，像手掌拍下去）。
+   SVG 是每次插旗新插入的节点，动画自动从头播一遍，不用额外加类。 */
+.ms-cell .ms-flag {
+  transform-origin: 50% 92%;
+  animation: ms-flag-plant 0.24s cubic-bezier(0.22, 1.4, 0.5, 1);
+}
+@keyframes ms-flag-plant {
+  0%   { transform: translateY(-45%) rotate(-38deg) scale(0.7); opacity: 0; }
+  65%  { transform: translateY(0) rotate(7deg) scale(1.06); opacity: 1; }
+  100% { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+}
 
 .ms-cell:disabled { cursor: default; }
 
@@ -218,12 +237,20 @@
   cursor: pointer;
   color: #fff;
   background: #1f1f1f;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.15s ease;
 }
 [data-theme="dark"] .ms-over-btn { background: #e8e8e8; color: #1a1a1a; }
-.ms-over-btn:hover { filter: brightness(1.18); }
+.ms-over-btn:hover {
+  filter: brightness(1.18);
+  transform: scale(1.02);
+  box-shadow: 0 10px 22px -12px rgba(0, 0, 0, 0.8);
+}
+.ms-over-btn:active { transform: scale(0.97); }
 .ms-over-btn:focus-visible { outline: 2px solid var(--secondary, #888888); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ms-over-box { animation: none; }
+  .ms-cell.open { animation: none; }
+  .ms-cell .ms-flag { animation: none; }
 }
 
 /* ═══ 排行榜入口按钮（顶部工具条右侧） ═══ */
