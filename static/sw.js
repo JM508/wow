@@ -28,6 +28,7 @@ function ver(p) {
 /* 预缓存核心清单：几个小游戏离线可玩所需的最小集合 */
 var PRECACHE = [
   '/', '/games/', '/minesweeper/', '/runner/', '/account/', '/tictactoe/', '/snake/',
+  '/privacy/', '/terms/', '/disclaimer/', '/dmca/', '/cookies/',
   '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css', '/msrank.js',
   '/tictactoe.js', '/tictactoe.css',
   '/snake.js', '/snake.css', '/grank.js', '/grank.css', '/me.js',
@@ -36,11 +37,12 @@ var PRECACHE = [
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
   '/net-status.js', '/tapfx.js', '/meplus.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
+  '/site.webmanifest',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
   '/img/seia-duck.webp', '/img/seia-runner.webp',
   '/img/sprite-bottle.webp',
   '/img/zhang-duck.webp', '/img/zhang-runner.webp',
-  '/favicon.ico'
+  '/favicon.ico', '/icon-192.png', '/icon-512.png', '/icon-512-maskable.png'
 ].map(ver);
 
 /* 版本化资源（带 ?v= 引用的）走缓存优先；判断依据：URL 带 v= 参数 */

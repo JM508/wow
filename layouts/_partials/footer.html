@@ -15,6 +15,16 @@
         {{- print " · "}}
     {{- end }}
 
+    {{- /* 法务页链接（2026-10-17，第 29 项）：全站页脚可见，与 robots/sitemap 同步收录 */}}
+    <span class="footer-legal">
+        <a href="{{ "/privacy/" | relURL }}">隐私政策</a> ·
+        <a href="{{ "/terms/" | relURL }}">服务条款</a> ·
+        <a href="{{ "/disclaimer/" | relURL }}">免责声明</a> ·
+        <a href="{{ "/dmca/" | relURL }}">版权投诉</a> ·
+        <a href="{{ "/cookies/" | relURL }}">Cookie 说明</a>
+    </span>
+    {{- print " · "}}
+
     {{- with site.Params.footer.text }}
         {{ . | markdownify }}
         {{- print " · "}}

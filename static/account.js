@@ -428,6 +428,78 @@
     });
   });
 
+  /* ═══════════ 数据与隐私（第 29 项） ═══════════ */
+  function snapshotStorage(store) {
+    var out = {};
+    try {
+      for (var i = 0; i < store.length; i++) {
+        var k = store.key(i);
+        out[k] = store.getItem(k);
+      }
+    } catch (e) { /* 隐私模式等场景读不到就跳过 */ }
+    return out;
+  }
+
+  function stamp() {
+    var d = new Date(), p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes());
+  }
+
+  $("ac-export").addEventListener("click", function () {
+    var btn = this, u = CLOUD.user();
+    busy(btn, true, "整理中…");
+    var data = {
+      app: "wow-entertainment-site",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      account: u ? { id: u.id, email: u.email || "" } : null,
+      cloud: { wallet: null, settings: null },
+      local: snapshotStorage(window.localStorage),
+      session: snapshotStorage(window.sessionStorage)
+    };
+    var finish = function () {
+      try {
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "wow-export-" + stamp() + ".json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        msg(elMsg2, "已导出：云存档与本地偏好都在这个 JSON 里，请妥善保管", "ok");
+      } catch (e) {
+        msg(elMsg2, "导出失败：浏览器拦截了下载，请检查站点权限", "bad");
+      }
+      busy(btn, false);
+    };
+    var pulls = [];
+    if (u) {
+      pulls.push(CLOUD.wallet.pull().then(function (r) { data.cloud.wallet = (r && !r.error) ? r.data : { error: (r && CLOUD.describe(r.error)) || "读取失败" }; }));
+      pulls.push(CLOUD.settings.pull().then(function (r) { data.cloud.settings = (r && !r.error && r.data) ? r.data.settings : (r && r.data ? null : { error: (r && CLOUD.describe(r.error)) || "读取失败" }); }));
+    }
+    Promise.all(pulls).then(finish, finish);
+  });
+
+  $("ac-clear-scores").addEventListener("click", function () {
+    if (!window.confirm("确定清除云端战绩？井字棋与贪吃蛇的云端成绩（含榜单记录）会被删除，金币与皮肤云存档保留。本操作不可撤销。")) return;
+    var btn = this;
+    busy(btn, true, "清除中…");
+    var games = ["ttt", "snake"];
+    Promise.all(games.map(function (g) { return CLOUD.games.clearMy(g); })).then(function (rs) {
+      busy(btn, false);
+      var ok = 0, fail = 0;
+      rs.forEach(function (r) { if (r && !r.error) ok++; else fail++; });
+      if (ok > 0) {
+        msg(elMsg2, "云端战绩已清除（" + ok + "/" + games.length + " 类）。榜单刷新后即看不到旧成绩", "ok");
+        refreshFacts();
+      } else {
+        msg(elMsg2, "清除失败：" + CLOUD.describe((rs[0] && rs[0].error) || {}), "bad");
+      }
+    });
+  });
+
   /* ═══════════ 启动 ═══════════ */
   if (!CLOUD.available()) {
     msg(elMsg, "云服务组件未加载，请刷新页面重试", "bad");
