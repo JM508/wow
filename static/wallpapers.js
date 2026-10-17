@@ -63,6 +63,7 @@
   var btnX = document.getElementById("wp-lb-x");
   var btnPrev = document.getElementById("wp-lb-prev");
   var btnNext = document.getElementById("wp-lb-next");
+  var btnDl = document.getElementById("wp-lb-dl");
   var lastFocus = null;
   var pos = -1;
 
@@ -83,6 +84,40 @@
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;
     btnNext.hidden = !multi;
+  }
+
+  /* ── 下载 ──
+     和首页「下载背景图」同一条路径：fetch 拿 blob 再生 a[download]，
+     跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名在不同系统乱码。*/
+  function download() {
+    var arr = list();
+    if (!arr.length || pos < 0) return;
+    var el = arr[pos];
+    var url = el.getAttribute("data-wp-full");
+    if (!url) return;
+    var slug = el.getAttribute("data-wp-key") || "wallpaper";
+    var name = "wow-wallpaper-" + slug + ".webp";
+    var old = btnDl.textContent;
+    btnDl.disabled = true;
+    btnDl.textContent = "下载中";
+    var done = function () { btnDl.disabled = false; btnDl.textContent = old; };
+    fetch(url).then(function (r) {
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.blob();
+    }).then(function (blob) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.parentNode.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+      done();
+    }).catch(function () {
+      done();
+      var w = window.open(url, "_blank");
+      if (!w) location.href = url;
+    });
   }
 
   function open(el) {
@@ -108,6 +143,7 @@
   btnX.addEventListener("click", close);
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
+  if (btnDl) btnDl.addEventListener("click", download);
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
@@ -144,10 +180,11 @@
     else if (e.key === "ArrowLeft") { show(pos - 1); e.preventDefault(); }
     else if (e.key === "ArrowRight") { show(pos + 1); e.preventDefault(); }
     else if (e.key === "Tab") {
-      /* 焦点留在灯箱内：三个按钮循环 */
+      /* 焦点留在灯箱内：按钮循环（关闭 → 上一张 → 下一张 → 下载） */
       var order = [btnX];
       if (!btnPrev.hidden) order.push(btnPrev);
       if (!btnNext.hidden) order.push(btnNext);
+      if (btnDl) order.push(btnDl);
       var at = order.indexOf(document.activeElement);
       var next = e.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : (at === order.length - 1 ? 0 : at + 1);
       order[next].focus();

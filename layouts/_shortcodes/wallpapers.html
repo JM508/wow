@@ -39,7 +39,11 @@
            alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}" loading="lazy" decoding="async">
       <span class="wp-cap">
         {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
-        <span class="wp-kind">{{ if in .tags "二次元" }}二次元{{ else }}游戏{{ end }}</span>
+        {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
+        <span class="wp-tags">
+          {{- range first 3 .tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
+          {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
+        </span>
       </span>
     </button>
     {{- end }}
@@ -59,6 +63,7 @@
   <div class="wp-lb-bar">
     <span class="wp-lb-cap" id="wp-lb-cap"></span>
     <span class="wp-lb-dim" id="wp-lb-dim"></span>
+    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载这张壁纸">下载</button>
   </div>
 </div>
 
