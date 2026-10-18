@@ -71,7 +71,7 @@
           <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
                alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}"
                loading="{{ if lt $i 6 }}eager{{ else }}lazy{{ end }}"
-               {{- if eq $i 0 }} fetchpriority="high"{{ end }} decoding="async">
+               {{- if lt $i 6 }} fetchpriority="high"{{ end }} decoding="async">
         </picture>
         <span class="wp-cap">
           {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}

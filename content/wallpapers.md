@@ -1,4 +1,5 @@
 +++
+wpPreload = ['wp-01', 'wp-02', 'wp-03']
 date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = '壁纸'

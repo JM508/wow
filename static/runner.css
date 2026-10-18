@@ -161,6 +161,9 @@
   font-size: 13px;
   line-height: 1.7;
   color: var(--secondary, #5b6470);
+  /* 预留约两行：初始提示由 JS 填充（按键名可自定义，无法写死在 HTML），
+     不预留的话卡片会随内容长高、遮罩整体下坠一次（CLS） */
+  min-height: 3.4em;
 }
 .run-ov-text .run-big { display: block; font-size: 26px; font-weight: 800; color: var(--run-accent); }
 .run-ov-text b { color: var(--primary, #1f1f1f); }

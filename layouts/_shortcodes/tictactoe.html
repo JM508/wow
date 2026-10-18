@@ -1,11 +1,7 @@
 <!-- 井字棋小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
-<link rel="stylesheet" href="/tictactoe.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <!-- 个人中心（个人 / 成就 两页签）与云端排行榜共用 runner.css 里的面板样式。
      井字棋没有皮肤（2026-10-06 用户要求），所以不引 skins.js / shop.css / shop.js，
      me.js 会自动把「皮肤」页签摘掉。 -->
-<link rel="stylesheet" href="/runner.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
-<link rel="stylesheet" href="/ach.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
-<link rel="stylesheet" href="/grank.css{{ with site.Params.assetVer }}?v={{ . }}{{ end }}">
 <div id="ttt-root" aria-label="井字棋">
   <div class="ttt-bar">
     <select id="ttt-level" aria-label="难度">

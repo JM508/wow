@@ -1,4 +1,5 @@
 +++
+gameCss = ['runner', 'shop', 'rank', 'ach']
 date = '2026-10-01T09:20:00+08:00'
 draft = false
 title = '火柴人快跑'
