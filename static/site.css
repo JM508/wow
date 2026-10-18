@@ -510,7 +510,8 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-empty, .wp-note {
   font-size: 12px;
   line-height: 1.7;
-  color: var(--secondary, #888);
+  /* a11y：说明文字从 --secondary 灰提到 --primary，保证 4.5:1 对比（Lighthouse color-contrast） */
+  color: var(--primary, #1f1f1f);
 }
 .wp-note { margin-top: 18px; }
 .wp-note a { text-decoration: underline; }
@@ -751,3 +752,26 @@ html.a11y-hc .set-card { border-color: var(--primary, #000); }
   .set-row { gap: 10px; }
   .set-name { font-size: 14px; }
 }
+
+/* 跳到主内容（键盘可访问性）：视觉隐藏，聚焦即现于顶部 */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2147483001;
+  padding: 10px 18px;
+  background: var(--theme, #fff);
+  color: var(--primary, #1f1f1f);
+  border: 1px solid var(--border, #ccc);
+  border-radius: 0 0 8px 0;
+  text-decoration: none;
+  font-size: 14px;
+}
+.skip-link:focus {
+  left: 0;
+  outline: 2px solid var(--primary, #1f1f1f);
+}
+
+/* 页脚文字对比度（a11y）：主题默认 --secondary 灰在两套主题下都摸不到 4.5:1，
+   提到 --primary（Lighthouse color-contrast 全站通用项） */
+footer.footer { color: var(--primary, #1f1f1f); }

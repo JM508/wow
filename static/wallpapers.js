@@ -89,7 +89,9 @@
       (pos + 1) + " / " + arr.length;
     if (btnDl) {
       btnDl.textContent = kb ? "下载 · " + kb + "KB" : "下载";
-      btnDl.setAttribute("aria-label", "下载" + (title ? " " + title : "") + "大图" + (kb ? "，WebP 约 " + kb + "KB" : ""));
+      /* a11y：accessible name 必须包含可见文本「下载 · NKB」，否则 Lighthouse
+         label-content-name-mismatch 扣分 */
+      btnDl.setAttribute("aria-label", "下载 · " + kb + "KB" + (title ? "，" + title + " 大图" : ""));
     }
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;

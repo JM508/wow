@@ -232,3 +232,14 @@
 {{- partial "templates/twitter_cards.html" . }}
 {{- partial "templates/schema_json.html" . }}
 {{- end -}}
+
+{{- /* og:image（2026-10-18）：主题只在设了 cover 时输出，本站各页都没设 cover，
+       导致全站分享卡片无图。补一张站级分享图 static/og-image.jpg（1200x630，
+       bg20 中心裁切）。页面带 cover 时以 cover 为先，不覆盖主题输出。 */}}
+{{- if not .Params.cover }}
+<meta property="og:image" content="{{ "og-image.jpg" | absURL }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{ site.Title }}{{ with .Title }} - {{ . }}{{ end }}">
+<meta name="twitter:image" content="{{ "og-image.jpg" | absURL }}">
+{{- end }}

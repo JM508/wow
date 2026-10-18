@@ -7,6 +7,32 @@
 {{- range $items }}{{ if in .tags "二次元" }}{{ $anime = add $anime 1 }}{{ end }}{{ end -}}
 {{- $games := sub (len $items) $anime -}}
 
+{{- /* ImageGallery 结构化数据（2026-10-18）：壁纸页此前只有 BreadcrumbList/BlogPosting，
+       补上画集语义 + 28 张 ImageObject 清单，便于搜索引擎理解图片内容。 */}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ImageGallery",
+  "name": "{{ site.Title }}壁纸图集",
+  "url": {{ .Page.Permalink }},
+  "numberOfItems": {{ len $items }},
+  "associatedMedia": [
+  {{- range $i, $e := $items }}
+    {{- if $i }},{{ end }}
+    {
+      "@type": "ImageObject",
+      "name": "{{ with .title }}{{ . }}{{ else }}壁纸 {{ printf "%02d" (add $i 1) }}{{ end }}",
+      "contentUrl": {{ .full | absURL }},
+      "thumbnailUrl": {{ .thumb | absURL }},
+      "width": {{ .w }},
+      "height": {{ .h }},
+      "keywords": "{{ delimit .tags "," }}"
+    }
+  {{- end }}
+  ]
+}
+</script>
+
 <div class="wp-root" id="wp-root">
   <div class="wp-head">
     <strong class="wp-title">壁纸</strong>
@@ -39,7 +65,7 @@
               data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
               data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
               data-wp-kb="{{ .kb }}"
-              data-wp-size="{{ .w }}x{{ .h }}" aria-label="查看{{ with .title }} {{ . }}{{ end }} 大图">
+              data-wp-size="{{ .w }}x{{ .h }}" aria-label="{{ with .title }}{{ . }} {{ end }}{{ delimit .tags " " }}，查看大图">
         <picture class="wp-pic">
           <source srcset="{{ replace .thumb ".webp" ".avif" }}" type="image/avif">
           <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
@@ -57,7 +83,7 @@
         </span>
       </button>
       <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}"
-              aria-label="下载{{ with .title }} {{ . }}{{ end }}大图，WebP 约 {{ .kb }}KB">下载 · {{ .kb }}KB</button>
+              aria-label="下载 · {{ .kb }}KB{{ with .title }}，{{ . }}{{ end }} 大图">下载 · {{ .kb }}KB</button>
     </div>
     {{- end }}
   </div>
