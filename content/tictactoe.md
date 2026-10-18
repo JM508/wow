@@ -1,4 +1,5 @@
 +++
+gameCss = ['tictactoe', 'runner', 'ach', 'grank']
 date = '2026-10-05T20:50:00+08:00'
 draft = false
 title = '井字棋'

@@ -1,4 +1,5 @@
 +++
+gameCss = ['snake', 'runner', 'shop', 'ach', 'grank']
 date = '2026-10-06T08:00:00+08:00'
 draft = false
 title = '贪吃蛇'
