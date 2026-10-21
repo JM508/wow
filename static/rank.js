@@ -73,7 +73,8 @@
      同一个人每次进来颜色都一样，不会满屏灰头像。 */
   function avatarHtml(r) {
     var av = (r && r.avatar) ? String(r.avatar) : "";
-    if (av && av.indexOf("data:image/") === 0) {
+    /* 长度上限与 msrank/grank 对齐（服务端 CHECK 16384，这里 20000 兜底） */
+    if (av && av.length <= 20000 && av.indexOf("data:image/") === 0) {
       return "<img class='rank-ava' src='" + esc(av) + "' alt='' loading='lazy' decoding='async'>";
     }
     var name = String((r && r.nickname) || "");

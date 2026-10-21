@@ -109,11 +109,16 @@
     for (var k in best) payload.push(best[k]);
     if (!payload.length) return;
     try {
-      /* keepalive：页面即将卸载时也能发出 */
+      /* keepalive：页面即将卸载时也能发出。
+         publishableKey 本就随页面公开（与 cloud.js 同值），网关凭它认应用 */
       fetch("/.cloud/database/rest/site_vitals", {
         method: "POST",
         keepalive: true,
-        headers: { "Content-Type": "application/json", "Prefer": "return=minimal" },
+        headers: {
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal",
+          "x-wb-webapp-access-key": "wbpk_dGlKhLDrZRLF6YuQQJWWWV_kdS84808B2F9Y1Wq6jVQpWQPvEASGH4c"
+        },
         body: JSON.stringify(payload)
       }).catch(function () {});
     } catch (e) {}

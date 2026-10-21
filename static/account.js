@@ -463,7 +463,14 @@
     try {
       for (var i = 0; i < store.length; i++) {
         var k = store.key(i);
-        out[k] = store.getItem(k);
+        var v = store.getItem(k);
+        /* 登录凭证不导出：导出文件常被发给他人求助，带 token 等于交出账号。
+           键名含凭证字样、或值形如 JWT（以 eyJ 开头）的一律过滤（2026-10-21 审查补） */
+        if (/token|auth|session|secret|credential|password/i.test(k) || /^eyJ/.test(String(v || ""))) {
+          out[k] = "[已过滤：登录凭证]";
+          continue;
+        }
+        out[k] = v;
       }
     } catch (e) { /* 隐私模式等场景读不到就跳过 */ }
     return out;

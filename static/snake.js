@@ -91,8 +91,11 @@
   var bestAtStart = 0;                 // 本局开始时的个人最高分（算「还差几分」用）
 
   function loadBest() {
-    var n = parseInt(localStorage.getItem(KEY_BEST) || "0", 10);
-    return n > 0 ? n : 0;
+    /* 隐私模式/禁存储下 localStorage 直接抛异常：吞掉按 0 分处理 */
+    try {
+      var n = parseInt(localStorage.getItem(KEY_BEST) || "0", 10);
+      return n > 0 ? n : 0;
+    } catch (e) { return 0; }
   }
   function saveBest() {
     try { localStorage.setItem(KEY_BEST, String(best)); } catch (e) {}
