@@ -149,7 +149,7 @@
        解锁前不进常规判定（test 恒 false），由 evaluate 里的特殊分支触发：
        其余全部成就都解锁的那一刻自动达成。 */
     { id: "all_done", tier: "master", icon: "🏆", name: "达成全部成就",
-      desc: "解锁其余全部成就（隐藏成就）",
+      desc: "？？？",
       hidden: true,
       live: false,
       test: function () { return false; },
@@ -612,11 +612,14 @@
 
     if (elProg) {
       var pct = Math.round(n / ACHS.length * 100);
+      /* CSP style-src 'self' 拦 inline style：进度条先空壳注入，再用 CSSOM 赋宽 */
       elProg.innerHTML =
-        "<div class='ach-bar-outer'><i style='width:" + pct + "%'></i></div>" +
+        "<div class='ach-bar-outer'><i></i></div>" +
         "<p class='ach-bar-text'>已解锁 <b>" + n + "</b> / " + ACHS.length + " 个成就（" + pct + "%）" +
         "　累计跑 <b>" + c.totalMeters + "</b> 米 · <b>" + c.runs + "</b> 局</p>" +
         cloudLine();
+      var bar = elProg.querySelector(".ach-bar-outer i");
+      if (bar) bar.style.width = pct + "%";
     }
 
     if (!elList) return;
@@ -629,6 +632,11 @@
         : rowHtml(ACHS[j], c);
     }
     elList.innerHTML = "<section class='ach-group'><ul class='ach-rows'>" + rows + "</ul></section>";
+    /* CSP style-src 'self'：各行小进度条用 data-pct 带宽度，插进 DOM 后 CSSOM 赋值 */
+    var minis = elList.querySelectorAll(".ach-mini b[data-pct]");
+    for (var k = 0; k < minis.length; k++) {
+      minis[k].style.width = minis[k].getAttribute("data-pct") + "%";
+    }
   }
 
   /* 隐藏成就行：解锁前只显示 ？？？（不给进度、不给名字） */
@@ -649,7 +657,7 @@
           if (!p) return "<span class='ach-todo'>未解锁</span>";
           var pct = p[1] > 0 ? Math.min(100, Math.round(p[0] / p[1] * 100)) : 0;
           return "<span class='ach-todo'>" +
-            "<i class='ach-mini'><b style='width:" + pct + "%'></b></i>" +
+            "<i class='ach-mini'><b data-pct='" + pct + "'></b></i>" +
             "<em class='ach-nums'>" + p[0] + " / " + p[1] + " " + p[2] + "</em></span>";
         })();
     return "<li class='ach-row" + (on ? " is-on" : "") + "'>" +
