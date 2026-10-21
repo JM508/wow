@@ -340,38 +340,67 @@
     refreshFacts();
   }
 
-  function refreshFacts() {
+  /* 三块数据互不依赖 —— 并行发，谁先回来先显示各自的占位行。
+     旧版是三层 then 串行（wallet → mine → rankAbove），最慢时三倍 RTT。
+     渲染用一个快照对象，避免「后回来的旧请求」把新结果覆盖掉。 */
+  var factsSeq = 0;                  // 请求批次号：只有最新一批允许上屏
+  var factsAt = 0;                   // 上次自动刷新的时间戳（节流用）
+  var FACTS_TTL = 30000;             // 自动刷新最短间隔 30 秒
+
+  function refreshFacts(force) {
     if (!elFacts) return;
+    /* 自动触发（renderUser 等）在 30 秒内不重复打网络；手动按钮传 force=true 直接刷 */
+    if (!force && factsAt && Date.now() - factsAt < FACTS_TTL) return;
+    factsAt = Date.now();
+    var seq = ++factsSeq;
     elFacts.innerHTML = fact("云端存档", "读取中…") + fact("排行榜", "读取中…");
-    CLOUD.wallet.pull().then(function (r) {
+
+    var slots = { wallet: '读取中…', best: '读取中…' };
+
+    function paint() {
+      if (seq !== factsSeq) return;          // 已被更新的一批取代，丢弃
       var html = "";
+      html += fact("云端存档", slots.wallet);
+      html += fact("我的最好成绩", slots.best);
+      elFacts.innerHTML = html;
+    }
+
+    CLOUD.wallet.pull().then(function (r) {
       if (r.error) {
-        html += fact("云端存档", "读取失败：" + esc(CLOUD.describe(r.error)));
+        slots.wallet = "读取失败：" + esc(CLOUD.describe(r.error));
       } else if (!r.data) {
-        html += fact("云端存档", "还没有（在游戏里赚到金币后会自动上传）");
+        slots.wallet = "还没有（在游戏里赚到金币后会自动上传）";
       } else {
         var row = r.data;
         var ownedN = Array.isArray(row.owned) ? row.owned.length : 0;
-        html += fact("云端金币", (Number(row.coins) || 0) + " 💰");
-        html += fact("云端皮肤", ownedN + " 件");
-        html += fact("当前皮肤", esc(row.skin || "默认") + " ｜ " + esc(row.coin_skin || "默认"));
-        html += fact("最近同步", esc(fmtTime(row.updated_at)));
+        slots.wallet = (Number(row.coins) || 0) + " 💰 ｜ " + ownedN + " 件皮肤 ｜ " +
+          esc(row.skin || "默认") + " / " + esc(row.coin_skin || "默认") + " ｜ 最近同步 " +
+          esc(fmtTime(row.updated_at));
       }
-      CLOUD.scores.mine(1).then(function (m) {
-        if (m.error) {
-          html += fact("我的最好成绩", "读取失败：" + esc(CLOUD.describe(m.error)));
-        } else if (!m.data || !m.data.length) {
-          html += fact("我的最好成绩", "还没有上榜记录");
-        } else {
-          var best = m.data[0];
-          CLOUD.scores.rankAbove(Number(best.score) || 0).then(function (above) {
-            var rank = above && !above.error ? (Number(above.count) || 0) + 1 : null;
-            var line = (Number(best.score) || 0) + " 分" + (rank ? "（第 " + rank + " 名）" : "");
-            elFacts.innerHTML = html + fact("我的最好成绩", esc(line));
-          });
-          html += fact("我的最好成绩", (Number(best.score) || 0) + " 分");
+      paint();
+    });
+
+    CLOUD.scores.mine(1).then(function (m) {
+      if (m.error) {
+        slots.best = "读取失败：" + esc(CLOUD.describe(m.error));
+        paint();
+        return;
+      }
+      if (!m.data || !m.data.length) {
+        slots.best = "还没有上榜记录";
+        paint();
+        return;
+      }
+      var best = Number(m.data[0].score) || 0;
+      slots.best = best + " 分";
+      paint();
+      /* 名次是附加信息：单独回来后再补，拿不到就只显示分数 */
+      CLOUD.scores.rankAbove(best).then(function (above) {
+        if (seq !== factsSeq) return;
+        if (above && !above.error) {
+          slots.best = best + " 分（第 " + ((Number(above.count) || 0) + 1) + " 名）";
+          paint();
         }
-        elFacts.innerHTML = html;
       });
     });
   }
@@ -386,7 +415,7 @@
         } else {
           msg(elMsg2, (r.needLogin ? "登录状态已过期，请重新登录" : "同步失败：" + CLOUD.describe(r.error)), "bad");
         }
-        refreshFacts();
+        refreshFacts(true);
       });
     });
   }
@@ -394,7 +423,7 @@
   $("ac-reload").addEventListener("click", function () {
     CLOUD.clearSessionCache();
     CLOUD.session(true).then(function () { renderUser(); });
-    refreshFacts();
+    refreshFacts(true);
   });
 
   $("ac-signout").addEventListener("click", function () {
@@ -411,7 +440,7 @@
     if (!v) { msg(elMsg2, "昵称不能为空", "bad"); return; }
     elNick.value = v;
     msg(elMsg2, "昵称已保存：" + v + "，以后提交成绩就用这个名字", "ok");
-    if (CLOUD.user()) CLOUD.wallet.sync().then(refreshFacts);
+    if (CLOUD.user()) CLOUD.wallet.sync().then(function () { refreshFacts(true); });
   });
 
   $("ac-form-chpw").addEventListener("submit", function (e) {
@@ -493,7 +522,7 @@
       rs.forEach(function (r) { if (r && !r.error) ok++; else fail++; });
       if (ok > 0) {
         msg(elMsg2, "云端战绩已清除（" + ok + "/" + games.length + " 类）。榜单刷新后即看不到旧成绩", "ok");
-        refreshFacts();
+        refreshFacts(true);
       } else {
         msg(elMsg2, "清除失败：" + CLOUD.describe((rs[0] && rs[0].error) || {}), "bad");
       }
@@ -510,7 +539,7 @@
   CLOUD.session().then(function (r) {
     if (r && r.data) {
       renderUser();
-      CLOUD.wallet.sync().then(refreshFacts);
+      CLOUD.wallet.sync().then(function () { refreshFacts(true); });
     } else {
       renderUser();
     }
