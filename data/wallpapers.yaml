@@ -93,7 +93,7 @@ items:
     color: "#676586"
     thumb: /wp/wp-07-640.webp
     full: /wp/wp-07-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-08
     kb: 136
     kb_thumb: 29
@@ -106,7 +106,7 @@ items:
     color: "#a88688"
     thumb: /wp/wp-08-640.webp
     full: /wp/wp-08-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-09
     kb: 214
     kb_thumb: 37
@@ -132,7 +132,7 @@ items:
     color: "#84abbc"
     thumb: /wp/wp-10-640.webp
     full: /wp/wp-10-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-11
     kb: 200
     kb_thumb: 40
@@ -158,7 +158,7 @@ items:
     color: "#5f537e"
     thumb: /wp/wp-12-640.webp
     full: /wp/wp-12-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-13
     kb: 186
     kb_thumb: 34
@@ -223,7 +223,7 @@ items:
     color: "#502c30"
     thumb: /wp/wp-17-640.webp
     full: /wp/wp-17-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-18
     kb: 156
     kb_thumb: 30
@@ -236,7 +236,7 @@ items:
     color: "#89747d"
     thumb: /wp/wp-18-640.webp
     full: /wp/wp-18-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-19
     kb: 144
     kb_thumb: 28
@@ -288,7 +288,7 @@ items:
     color: "#d6c2a7"
     thumb: /wp/wp-22-640.webp
     full: /wp/wp-22-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-23
     kb: 218
     kb_thumb: 38
@@ -327,7 +327,7 @@ items:
     color: "#c1adc8"
     thumb: /wp/wp-25-640.webp
     full: /wp/wp-25-1920.webp
-    tags: [二次元, 横屏]
+    tags: [游戏, 横屏]
   - slug: wp-26
     kb: 188
     kb_thumb: 37
@@ -366,4 +366,6 @@ items:
     color: "#dcc8d9"
     thumb: /wp/wp-28-640.webp
     full: /wp/wp-28-1920.webp
+    orig: /wp/wp-28-orig.jpg
+    orig_kb: 416
     tags: [二次元, 横屏]

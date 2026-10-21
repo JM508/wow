@@ -30,18 +30,9 @@
     else html.dataset.theme = "dark";
   } catch (e) {}
 
-  /* ── 2) CSP 探测 ──
-     旧版用 eval("void 0") 抛错判断内联脚本是否被拦——既触发 CSP 违规告警，
-     又会被安全扫描器标红。两站 <head> 都有 meta CSP 兜底（check_csp.js 断言
-     与 _headers 一致），直接读它判断：script-src 'self' 且无 'unsafe-inline'
-     ⇒ 主题 footer 的内联脚本必然被拦 ⇒ 本文件需要接管主题切换绑定。 */
-  var cspBlocked = false;
-  try {
-    var metaCsp = document.querySelector('meta[http-equiv="Content-Security-Policy"]');
-    cspBlocked = !!(metaCsp &&
-      /script-src[^;]*'self'/.test(metaCsp.content) &&
-      metaCsp.content.indexOf("'unsafe-inline'") === -1);
-  } catch (e) { cspBlocked = false; }
+  /* ── 2) CSP 探测（历史遗留说明）──
+     模板内联脚本 2026-10-21 已全部删除，本文件无条件接管全部行为；
+     原 eval / meta CSP 探测逻辑随之移除。 */
 
   function initUI() {
     /* 菜单横向滚动位置记忆（footer.html 内联脚本 1）*/
@@ -89,10 +80,12 @@
       };
     }
 
-    /* 黑夜/白天切换（footer.html 内联脚本 3）
-       仅在 CSP 已拦截主题内联脚本时绑定，防止镜像站双重绑定 */
+    /* 黑夜/白天切换（原 footer.html 内联脚本 3）
+       2026-10-21 起模板里的 4 段内联脚本已全部删除，本文件无条件接管；
+       旧缓存页面上内联脚本若还在执行，最多一次点击翻两次（点击无感），SW 更新后自愈 */
     var toggle = document.getElementById("theme-toggle");
-    if (toggle && cspBlocked) {
+    if (toggle && !toggle.dataset.tgBound) {
+      toggle.dataset.tgBound = "1";
       toggle.addEventListener("click", function () {
         if (html.dataset.theme === "dark") {
           html.dataset.theme = "light";

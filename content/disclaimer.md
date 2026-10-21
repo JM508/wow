@@ -3,6 +3,8 @@ date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = '免责声明'
 description = 'Wow 娱乐小站的免责声明：娱乐用途、成绩与奖励说明、健康提示与外部链接。'
+backHref = '/'
+backLabel = '返回首页'
 weight = 3
 +++
 

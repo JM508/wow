@@ -3,6 +3,8 @@ date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = '隐私政策'
 description = 'Wow 娱乐小站收集哪些数据、存在哪里、怎么删除。不接第三方统计，不投广告，不上传任何不必要的个人信息。'
+backHref = '/'
+backLabel = '返回首页'
 weight = 1
 +++
 

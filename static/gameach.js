@@ -56,7 +56,7 @@
         test: function (c) { return c.s.opens >= 2000; } },
       { id: "wins50", name: "排雷老兵", desc: "累计通关 50 局",
         test: function (c) { return c.s.wins >= 50; } },
-      { id: "all_done", name: "达成全部成就", desc: "解锁其余全部成就（隐藏成就）",
+      { id: "all_done", name: "达成全部成就", desc: "？？？",
         hidden: true, test: function () { return false; } }
     ],
 
@@ -77,11 +77,17 @@
         test: function (c) { return c.s.streak >= 5; } },
       { id: "w_hard3", name: "困难克星", desc: "击败困难电脑 3 次",
         test: function (c) { return c.s.w_hard >= 3; } },
-      { id: "score10", name: "积分上双", desc: "某个难度的积分达到 10 分（积分 = 胜减负乘难度分）",
+      { id: "score10", name: "积分上双", desc: "某个难度的积分达到 10 分（胜 +难度分、负 -难度分；输棋会扣分，赢了赢回来）",
         test: function (c) {
           return Math.max((c.s.w_easy - c.s.l_easy) * 1,
                           (c.s.w_mid - c.s.l_mid) * 2,
                           (c.s.w_hard - c.s.l_hard) * 3) >= 10;
+        },
+        prog: function (c) {
+          var m = Math.max((c.s.w_easy - c.s.l_easy) * 1,
+                           (c.s.w_mid - c.s.l_mid) * 2,
+                           (c.s.w_hard - c.s.l_hard) * 3);
+          return [Math.max(0, m), 10, "分"];
         } },
       { id: "wins10", name: "十全十美", desc: "累计获胜 10 局",
         test: function (c) { return c.s.wins >= 10; } },
@@ -91,7 +97,7 @@
         test: function (c) { return c.s.games >= 50; } },
       { id: "wins50", name: "胜利收藏家", desc: "累计获胜 50 局",
         test: function (c) { return c.s.wins >= 50; } },
-      { id: "all_done", name: "达成全部成就", desc: "解锁其余全部成就（隐藏成就）",
+      { id: "all_done", name: "达成全部成就", desc: "？？？",
         hidden: true, test: function () { return false; } }
     ],
 
@@ -123,7 +129,7 @@
         test: function (c) { return c.s.apples >= 200; } },
       { id: "games20", name: "常客", desc: "累计玩 20 局",
         test: function (c) { return c.s.games >= 20; } },
-      { id: "all_done", name: "达成全部成就", desc: "解锁其余全部成就（隐藏成就）",
+      { id: "all_done", name: "达成全部成就", desc: "？？？",
         hidden: true, test: function () { return false; } }
     ]
   }[SCOPE];
@@ -309,6 +315,16 @@
     return (d.getMonth() + 1) + "/" + d.getDate();
   }
 
+  /* 未解锁成就的可选进度：成就定义了 prog(c) → [cur, max, 单位] 就显示「cur / max 单位」 */
+  function progText(a) {
+    if (!a.prog) return "未解锁";
+    try {
+      var p = a.prog({ s: data.stat });
+      if (!p || p.length < 2) return "未解锁";
+      return "进度 " + Math.max(0, Math.round(p[0])) + " / " + p[1] + (p[2] || "");
+    } catch (e) { return "未解锁"; }
+  }
+
   function render() {
     var n = unlockedCount();
     if (elProg) {
@@ -335,7 +351,7 @@
       rows += "<li class='ach-row" + (ts ? " is-on" : "") + "'>" +
         "<span class='ach-txt'><b>" + esc(a.name) + "</b><em>" + esc(a.desc) + "</em></span>" +
         (ts ? "<span class='ach-got'>已解锁 · " + fmtDay(ts) + "</span>"
-            : "<span class='ach-todo'>未解锁</span>") +
+            : "<span class='ach-todo'>" + progText(a) + "</span>") +
         "</li>";
     }
     elList.innerHTML = "<section class='ach-group'><ul class='ach-rows'>" + rows + "</ul></section>";

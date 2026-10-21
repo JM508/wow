@@ -3,6 +3,8 @@ date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = 'Cookie 与本地存储说明'
 description = 'Wow 娱乐小站不使用 Cookie，只使用浏览器本地存储（localStorage / sessionStorage）保存偏好与成绩，清单与清除方法见本页。'
+backHref = '/'
+backLabel = '返回首页'
 weight = 5
 +++
 

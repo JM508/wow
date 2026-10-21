@@ -134,14 +134,23 @@
             e.preventDefault();
             onCell(r, c, "flag");
           });
-          // 手机长按插旗
-          var lp = null, fired = false;
-          b.addEventListener("touchstart", function () {
+          // 手机长按插旗（400ms）：移动超过 10px 视为滑动取消；
+          // touchcancel（来电 / 系统手势中断）也必须清掉定时器，否则会幽灵插旗
+          var lp = null, fired = false, sx = 0, sy = 0;
+          var lpCancel = function () { if (lp) { clearTimeout(lp); lp = null; } };
+          b.addEventListener("touchstart", function (e) {
             fired = false;
-            lp = setTimeout(function () { fired = true; onCell(r, c, "flag"); }, 400);
+            var t = e.touches && e.touches[0];
+            sx = t ? t.clientX : 0; sy = t ? t.clientY : 0;
+            lpCancel();
+            lp = setTimeout(function () { lp = null; fired = true; onCell(r, c, "flag"); }, 400);
           }, { passive: true });
-          b.addEventListener("touchend", function () { clearTimeout(lp); }, { passive: true });
-          b.addEventListener("touchmove", function () { clearTimeout(lp); }, { passive: true });
+          b.addEventListener("touchmove", function (e) {
+            var t = e.touches && e.touches[0];
+            if (t && (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10)) lpCancel();
+          }, { passive: true });
+          b.addEventListener("touchend", lpCancel, { passive: true });
+          b.addEventListener("touchcancel", lpCancel, { passive: true });
           b.addEventListener("click", function (e) {
             if (fired) { e.stopImmediatePropagation(); fired = false; }
           }, true);

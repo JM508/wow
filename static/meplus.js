@@ -102,6 +102,11 @@
       var n = (C().nick && C().nick()) || (C().nickOrDefault && C().nickOrDefault()) || "玩家";
       elWho.textContent = "已登录 · " + n;
     }
+    /* 设置页签最下方的退出按钮：登录后才出现（个人中心的第四页签共用这块 UI） */
+    var setLogout = document.getElementById("me-set-logout");
+    var setLogoutHint = document.getElementById("me-set-logout-hint");
+    if (setLogout) setLogout.classList.toggle("hidden", !on);
+    if (setLogoutHint) setLogoutHint.classList.toggle("hidden", on);
     if (!on) closeBox();
   }
 
@@ -158,14 +163,24 @@
     });
   }
   if (btnLogout) {
-    btnLogout.addEventListener("click", function () {
-      if (!C() || !C().signOut) return;
-      btnLogout.disabled = true;
-      C().signOut().then(function () {
-        btnLogout.disabled = false;
-        paintAccount();
-        setTimeout(function () { location.reload(); }, 400);
-      })["catch"](function () { btnLogout.disabled = false; });
+    btnLogout.addEventListener("click", doLogout);
+  }
+  /* 设置页签（第四页签，2026-10-21）最下方的退出登录：与「个人」页同一条退出路径 */
+  var btnSetLogout = document.getElementById("me-set-logout");
+  if (btnSetLogout) btnSetLogout.addEventListener("click", doLogout);
+
+  function doLogout() {
+    if (!C() || !C().signOut) return;
+    if (btnLogout) btnLogout.disabled = true;
+    if (btnSetLogout) btnSetLogout.disabled = true;
+    C().signOut().then(function () {
+      if (btnLogout) btnLogout.disabled = false;
+      if (btnSetLogout) btnSetLogout.disabled = false;
+      paintAccount();
+      setTimeout(function () { location.reload(); }, 400);
+    })["catch"](function () {
+      if (btnLogout) btnLogout.disabled = false;
+      if (btnSetLogout) btnSetLogout.disabled = false;
     });
   }
 
