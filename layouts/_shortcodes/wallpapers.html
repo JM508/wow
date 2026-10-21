@@ -6,6 +6,8 @@
 {{- $anime := 0 -}}
 {{- range $items }}{{ if in .tags "二次元" }}{{ $anime = add $anime 1 }}{{ end }}{{ end -}}
 {{- $games := sub (len $items) $anime -}}
+{{- $portrait := 0 -}}
+{{- range $items }}{{ if lt .ratio 1.0 }}{{ $portrait = add $portrait 1 }}{{ end }}{{ end -}}
 
 {{- /* ImageGallery 结构化数据（2026-10-18）：壁纸页此前只有 BreadcrumbList/BlogPosting，
        补上画集语义 + 28 张 ImageObject 清单，便于搜索引擎理解图片内容。 */}}
@@ -50,7 +52,10 @@
       二次元<span class="wp-n">{{ $anime }}</span>
     </button>
     <button type="button" class="wp-tab" data-wp-tag="横屏" aria-pressed="false">
-      横屏<span class="wp-n">{{ len $items }}</span>
+      横屏<span class="wp-n">{{ sub (len $items) $portrait }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="竖屏" aria-pressed="false">
+      竖屏<span class="wp-n">{{ $portrait }}</span>
     </button>
   </div>
 
@@ -63,8 +68,9 @@
     <div class="wp-cell" data-wp-cell="{{ .slug }}">
       <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
               data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
+              data-wp-thumb="{{ .thumb }}" data-wp-orig="{{ with .orig }}{{ . }}{{ end }}"
               data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
-              data-wp-kb="{{ .kb }}"
+              data-wp-kb="{{ .kb }}" data-wp-origkb="{{ with .orig_kb }}{{ . }}{{ end }}"
               data-wp-size="{{ .w }}x{{ .h }}" aria-label="{{ with .title }}{{ . }} {{ end }}{{ delimit .tags " " }}，查看大图">
         <picture class="wp-pic">
           <source srcset="{{ replace .thumb ".webp" ".avif" }}" type="image/avif">
@@ -82,16 +88,32 @@
           </span>
         </span>
       </button>
-      <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}"
-              aria-label="下载 · {{ .kb }}KB{{ with .title }}，{{ . }}{{ end }} 大图">下载 · {{ .kb }}KB</button>
+      <span class="wp-dls">
+        <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}" data-wp-kind="orig"
+                aria-label="下载原图{{ with .title }}，{{ . }}{{ end }}{{ with .orig_kb }}（{{ . }}KB）{{ end }}">原图</button>
+        <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}" data-wp-kind="zip"
+                aria-label="下载压缩图{{ with .title }}，{{ . }}{{ end }}（{{ .kb_thumb }}KB）">压缩</button>
+      </span>
     </div>
     {{- end }}
   </div>
 
   <p class="wp-empty" id="wp-empty" hidden>这个分类下暂时没有壁纸。</p>
+</div>
 
-  <p class="wp-note">全部为横屏构图，点任意一张可看 1920 宽大图。壁纸版权归原权利人所有，本站仅作展示，权利人可依
-    <a href="/dmca/">版权投诉</a> 要求下架。</p>
+{{- /* 版权公告：进页弹出，5 秒倒计时后可关闭；「不再出现」勾选后写入 localStorage */}}
+<div class="wp-notice" id="wp-notice" hidden role="dialog" aria-modal="true" aria-labelledby="wp-notice-title">
+  <div class="wp-notice-card">
+    <strong class="wp-notice-title" id="wp-notice-title">壁纸版权公告</strong>
+    <div class="wp-notice-body">
+      <p>壁纸版权归原作者所有，本站不主张著作权，亦不因提供下载而授予您任何版权许可。请仅将壁纸用于个人设备的背景展示（如手机、电脑桌面）。未经权利人书面许可，不得将壁纸用于任何商业目的，包括但不限于：商品包装、广告宣传、网站/APP模板、付费内容、转售或重新上传至其他图库。</p>
+      <p>本站壁纸由运营者从公开网络收集整理，版权归原作者所有。部分内容可能无法追溯原始作者或授权信息；权利人认为本站内容侵犯其权利的，请通过<a href="mailto:wow-notice@qq.com">版权投诉邮箱（wow-notice@qq.com）</a>通知，本站将依法及时删除或断开链接。</p>
+    </div>
+    <label class="wp-notice-keep">
+      <input type="checkbox" id="wp-notice-keep"> 不再出现该公告
+    </label>
+    <button type="button" class="wp-notice-ok" id="wp-notice-ok" disabled>我已知晓（5）</button>
+  </div>
 </div>
 
 <div class="wp-lb" id="wp-lb" hidden role="dialog" aria-modal="true" aria-label="壁纸大图">
@@ -102,7 +124,8 @@
   <div class="wp-lb-bar">
     <span class="wp-lb-cap" id="wp-lb-cap"></span>
     <span class="wp-lb-dim" id="wp-lb-dim"></span>
-    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载这张壁纸">下载</button>
+    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载原图">下载原图</button>
+    <button type="button" class="wp-lb-dl" id="wp-lb-dl-zip" aria-label="下载压缩图">下载压缩图</button>
   </div></div>
 
 {{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}

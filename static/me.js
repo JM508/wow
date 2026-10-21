@@ -21,6 +21,7 @@
   var elShop = document.getElementById("run-shop");
   var elAch  = document.getElementById("run-ach");
   var elMe   = document.getElementById("run-me");
+  var elSet  = document.getElementById("me-set-tab");
   if (!elShop || !elAch || !elMe) return;
 
   /* 游戏作用域：井字棋没有皮肤，皮肤页签整个藏掉。
@@ -32,12 +33,14 @@
   if (SCOPE === "runner") return;
   var HAS_SHOP = SCOPE !== "ttt";
 
-  /* 页签顺序（2026-10-06 用户要求）：个人最前，其余游戏一致 */
-  var ME_TABS = HAS_SHOP ? ["me", "ach", "shop"] : ["me", "ach"];
+  /* 页签顺序（2026-10-06 用户要求）：个人最前，其余游戏一致；
+     2026-10-21 起第四页签「设置」全游戏一致（井字棋也有设置页签，只是没有皮肤）。 */
+  var ME_TABS = HAS_SHOP ? ["me", "ach", "shop", "set"] : ["me", "ach", "set"];
 
   var btnShopX = document.getElementById("run-shop-close");
   var btnAchX  = document.getElementById("run-ach-close");
   var btnMeX   = document.getElementById("run-me-close");
+  var btnSetX  = document.getElementById("me-set-tab-close");
 
   var elMeAvaImg = document.getElementById("me-ava-img");
   var elMeAvaPh  = document.getElementById("me-ava-ph");
@@ -61,9 +64,11 @@
   function shopOpen() { return !!elShop && !elShop.classList.contains("hidden"); }
   function achOpen()  { return !!elAch  && !elAch.classList.contains("hidden"); }
   function meOpen()   { return !!elMe   && !elMe.classList.contains("hidden"); }
+  function setOpen()  { return !!elSet  && !elSet.classList.contains("hidden"); }
   function tabOpen(t) {
     if (t === "shop") return shopOpen();
     if (t === "ach") return achOpen();
+    if (t === "set") return setOpen();
     return meOpen();
   }
   /* 页签高亮：aria-selected 只落在当前打开的那一页上（之前没人管它，
@@ -88,9 +93,16 @@
       elMe.classList.add("hidden");
       elAch.classList.remove("hidden");
       if (ENGINE && ENGINE.open) ENGINE.open();
+    } else if (t === "set") {
+      elShop.classList.add("hidden");
+      elAch.classList.add("hidden");
+      elMe.classList.add("hidden");
+      elSet.classList.remove("hidden");
+      paintSetLogout();
     } else {
       elShop.classList.add("hidden");
       elAch.classList.add("hidden");
+      elSet.classList.add("hidden");
       elMe.classList.remove("hidden");
       renderMe();
       document.dispatchEvent(new CustomEvent("me:open"));
@@ -106,6 +118,9 @@
     } else if (t === "ach") {
       elAch.classList.add("hidden");
       if (ENGINE && ENGINE.close) ENGINE.close();
+    } else if (t === "set") {
+      elSet.classList.add("hidden");
+      document.dispatchEvent(new CustomEvent("me:close"));
     } else {
       elMe.classList.add("hidden");
       document.dispatchEvent(new CustomEvent("me:close"));
@@ -137,7 +152,7 @@
     }
   }
   function open(tab) {
-    var want = (tab === "shop" || tab === "ach") ? tab : "me";
+    var want = (tab === "shop" || tab === "ach" || tab === "set") ? tab : "me";
     if (want === "shop" && !HAS_SHOP) want = "me";   // 井字棋没有皮肤页
     if (tabOpen(want)) return;
     var cur = anyTabOpen();
@@ -241,7 +256,7 @@
     }
     if (elMeSub) {
       elMeSub.textContent = isLogged
-        ? "已登录 · 头像、昵称与成绩跟账号走，换设备也在"
+        ? "已登录"
         : "未登录 · 头像只存在本机，成绩以「访客 N」自动上传";
     }
     /* 改名只对登录用户开放；访客走自动编号 */
@@ -294,6 +309,15 @@
     renderMeAch();
   }
 
+  /* 设置页签：退出登录按钮只在登录后出现（meplus.js 负责真正的退出动作） */
+  function paintSetLogout() {
+    var btn = document.getElementById("me-set-logout");
+    var hint = document.getElementById("me-set-logout-hint");
+    var on = logged();
+    if (btn) btn.classList.toggle("hidden", !on);
+    if (hint) hint.classList.toggle("hidden", on);
+  }
+
   /* ═══════════ 改名（排行榜取名入口挪进个人中心） ═══════════ */
   function saveNick() {
     if (!CLOUD || !CLOUD.setNick) return;
@@ -323,9 +347,11 @@
   if (btnShopX) btnShopX.addEventListener("click", function () { closeTab("shop"); });
   if (btnAchX)  btnAchX.addEventListener("click", function () { closeTab("ach"); });
   if (btnMeX)   btnMeX.addEventListener("click", function () { closeTab("me"); });
+  if (btnSetX)  btnSetX.addEventListener("click", function () { closeTab("set"); });
   elShop.addEventListener("click", function (e) { if (e.target === elShop) closeTab("shop"); });
   elAch.addEventListener("click", function (e) { if (e.target === elAch) closeTab("ach"); });
   elMe.addEventListener("click", function (e) { if (e.target === elMe) closeTab("me"); });
+  if (elSet) elSet.addEventListener("click", function (e) { if (e.target === elSet) closeTab("set"); });
   document.addEventListener("keydown", function (e) {
     if (e.key !== "Escape") return;
     var cur = anyTabOpen();
@@ -362,9 +388,12 @@
     if (meOpen()) renderRegion();
   });
 
-  /* 登录态变化：重画「个人」页 */
+  /* 登录态变化：重画「个人」页与「设置」页的退出按钮 */
   if (CLOUD && CLOUD.onAuthChange) {
-    CLOUD.onAuthChange(function () { if (meOpen()) renderMe(); });
+    CLOUD.onAuthChange(function () {
+      if (meOpen()) renderMe();
+      if (setOpen()) paintSetLogout();
+    });
   }
 
   global.MeCenter = {

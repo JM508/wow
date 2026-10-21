@@ -417,15 +417,19 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   outline-offset: 2px;
 }
 
-/* 卡片单元：卡片本体 + 右上角下载按钮（按钮不能套在 button 里，所以多一层） */
+/* 卡片单元：卡片本体 + 右上角下载按钮组（原图 / 压缩，按钮不能套在 button 里，所以多一层） */
 .wp-cell { position: relative; }
 .wp-pic { display: block; }
-/* 首屏可见的下载入口：小药丸，带体积；触控目标不小于 32px */
-.wp-dl {
+/* 首屏可见的下载入口：小药丸组；触控目标不小于 32px */
+.wp-dls {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 2;
+  display: inline-flex;
+  gap: 4px;
+}
+.wp-dl {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
@@ -507,14 +511,70 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   color: #111;
 }
 
-.wp-empty, .wp-note {
+.wp-empty {
   font-size: 12px;
   line-height: 1.7;
   /* a11y：说明文字从 --secondary 灰提到 --primary，保证 4.5:1 对比（Lighthouse color-contrast） */
   color: var(--primary, #1f1f1f);
 }
-.wp-note { margin-top: 18px; }
-.wp-note a { text-decoration: underline; }
+
+/* ── 版权公告弹窗 ── */
+.wp-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(8, 9, 12, 0.72);
+  backdrop-filter: blur(4px);
+}
+.wp-notice[hidden] { display: none; }
+.wp-notice-card {
+  max-width: 640px;
+  max-height: 84vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 24px;
+  color: var(--primary, #1f1f1f);
+  background: var(--theme, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.55);
+}
+.wp-notice-title { font-size: 16px; }
+.wp-notice-body p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.wp-notice-body a { text-decoration: underline; }
+.wp-notice-keep {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.wp-notice-keep input { width: 15px; height: 15px; cursor: pointer; }
+.wp-notice-ok {
+  align-self: flex-end;
+  min-height: 36px;
+  padding: 6px 18px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: #3b82f6;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.wp-notice-ok:hover { background: #2f6fe0; }
+.wp-notice-ok[disabled] { opacity: 0.55; cursor: default; }
 
 /* ── 灯箱 ── */
 .wp-lb {
@@ -775,3 +835,35 @@ html.a11y-hc .set-card { border-color: var(--primary, #000); }
 /* 页脚文字对比度（a11y）：主题默认 --secondary 灰在两套主题下都摸不到 4.5:1，
    提到 --primary（Lighthouse color-contrast 全站通用项） */
 footer.footer { color: var(--primary, #1f1f1f); }
+
+/* ── SW 新版本提示条（sw-reg.js 检测到升级时插入）── */
+.sw-update-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px;
+  font-size: 13px;
+  color: var(--primary, #1f1f1f);
+  background: var(--theme, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 999px;
+  box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.5);
+}
+.sw-update-btn {
+  min-height: 30px;
+  padding: 4px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: #3b82f6;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sw-update-btn:hover { background: #2f6fe0; }

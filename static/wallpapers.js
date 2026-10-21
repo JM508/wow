@@ -13,7 +13,13 @@
   var items = [].slice.call(grid.querySelectorAll(".wp-item"));
   var tabs = [].slice.call(document.querySelectorAll(".wp-tab"));
 
+  /* 渲染失败提示：模板没渲染出卡片（数据/构建异常）时，把空态换成明确的错误文案 */
+  if (!items.length && empty) {
+    empty.textContent = "壁纸加载失败，请刷新重试；若多次失败请通过版权投诉邮箱联系我们。";
+  }
+
   /* 占位底色：图片解码前先铺一层主色，避免大图区域一片白 */
+  var brokenCount = 0;
   items.forEach(function (el) {
     var c = el.getAttribute("data-wp-color");
     if (c) el.style.backgroundColor = c;
@@ -25,7 +31,14 @@
     if (!img) return;
     if (img.complete && img.naturalWidth) { el.classList.add("is-ready"); return; }
     img.addEventListener("load", function () { el.classList.add("is-ready"); });
-    img.addEventListener("error", function () { el.classList.add("is-ready", "is-broken"); });
+    img.addEventListener("error", function () {
+      el.classList.add("is-ready", "is-broken");
+      brokenCount++;
+      if (brokenCount === items.length && empty) {
+        empty.textContent = "壁纸图片加载失败，请检查网络后刷新重试。";
+        empty.hidden = false;
+      }
+    });
   });
 
   /* ── 筛选 ── */
@@ -69,8 +82,21 @@
   var btnPrev = document.getElementById("wp-lb-prev");
   var btnNext = document.getElementById("wp-lb-next");
   var btnDl = document.getElementById("wp-lb-dl");
+  var btnDlZip = document.getElementById("wp-lb-dl-zip");
   var lastFocus = null;
   var pos = -1;
+
+  /* 取某张卡的下载地址：orig=原图（有专属 jpg 用 jpg，否则 1920 宽 webp）；zip=640 压缩 webp */
+  function urlOf(el, kind) {
+    if (kind === "orig") {
+      return el.getAttribute("data-wp-orig") || el.getAttribute("data-wp-full");
+    }
+    return el.getAttribute("data-wp-thumb") || el.getAttribute("data-wp-full");
+  }
+  function extOf(url) {
+    var m = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(url || "");
+    return m ? m[1] : "webp";
+  }
 
   function list() { return visible(); }
 
@@ -80,18 +106,21 @@
     pos = (idx + arr.length) % arr.length;
     var el = arr[pos];
     var full = el.getAttribute("data-wp-full");
-    var title = el.getAttribute("data-wp-title") || "";
+    var title = el.getAttribute("data-wp-title") || "未命名壁纸";
     var kb = el.getAttribute("data-wp-kb") || "";
+    var okb = el.getAttribute("data-wp-origkb") || "";
     lbImg.src = full;
     lbImg.alt = title + " 壁纸";
     lbCap.textContent = title;
     lbDim.textContent = (el.getAttribute("data-wp-size") || "").replace("x", " × ") + " · " +
       (pos + 1) + " / " + arr.length;
     if (btnDl) {
-      btnDl.textContent = kb ? "下载 · " + kb + "KB" : "下载";
-      /* a11y：accessible name 必须包含可见文本「下载 · NKB」，否则 Lighthouse
-         label-content-name-mismatch 扣分 */
-      btnDl.setAttribute("aria-label", "下载 · " + kb + "KB" + (title ? "，" + title + " 大图" : ""));
+      btnDl.textContent = okb ? "下载原图 · " + okb + "KB" : "下载原图";
+      btnDl.setAttribute("aria-label", "下载原图" + (okb ? " · " + okb + "KB" : "") + "，" + title);
+    }
+    if (btnDlZip) {
+      btnDlZip.textContent = kb ? "下载压缩图 · " + kb + "KB" : "下载压缩图";
+      btnDlZip.setAttribute("aria-label", "下载压缩图" + (kb ? " · " + kb + "KB" : "") + "，" + title);
     }
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;
@@ -103,7 +132,7 @@
      跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名在不同系统乱码。*/
   function saveUrl(url, slug, btn) {
     if (!url) return;
-    var name = "wow-wallpaper-" + (slug || "wallpaper") + ".webp";
+    var name = "wow-wallpaper-" + (slug || "wallpaper") + "." + extOf(url);
     var old = btn ? btn.textContent : "";
     if (btn) { btn.disabled = true; btn.textContent = "下载中"; }
     var done = function () { if (btn) { btn.disabled = false; btn.textContent = old; } };
@@ -126,11 +155,12 @@
     });
   }
 
-  function download() {
+  function download(kind) {
     var arr = list();
     if (!arr.length || pos < 0) return;
     var el = arr[pos];
-    saveUrl(el.getAttribute("data-wp-full"), el.getAttribute("data-wp-key"), btnDl);
+    var btn = kind === "orig" ? btnDl : btnDlZip;
+    saveUrl(urlOf(el, kind), el.getAttribute("data-wp-key"), btn);
   }
 
   function open(el) {
@@ -154,20 +184,22 @@
     el.addEventListener("click", function () { open(el); });
   });
 
-  /* 卡片右上角的下载按钮：不进灯箱，直接下这张大图（首屏可见的下载入口） */
+  /* 卡片右上角的下载按钮：原图 / 压缩图两个入口，不进灯箱直接下 */
   items.forEach(function (el) {
     var cell = cellOf(el);
-    var btn = cell && cell.querySelector ? cell.querySelector(".wp-dl") : null;
-    if (!btn) return;
-    btn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      saveUrl(el.getAttribute("data-wp-full"), el.getAttribute("data-wp-key"), btn);
+    var btns = cell && cell.querySelectorAll ? cell.querySelectorAll(".wp-dl") : [];
+    [].forEach.call(btns, function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        saveUrl(urlOf(el, btn.getAttribute("data-wp-kind")), el.getAttribute("data-wp-key"), btn);
+      });
     });
   });
   btnX.addEventListener("click", close);
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
-  if (btnDl) btnDl.addEventListener("click", download);
+  if (btnDl) btnDl.addEventListener("click", function () { download("orig"); });
+  if (btnDlZip) btnDlZip.addEventListener("click", function () { download("zip"); });
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
@@ -209,6 +241,7 @@
       if (!btnPrev.hidden) order.push(btnPrev);
       if (!btnNext.hidden) order.push(btnNext);
       if (btnDl) order.push(btnDl);
+      if (btnDlZip) order.push(btnDlZip);
       var at = order.indexOf(document.activeElement);
       var next = e.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : (at === order.length - 1 ? 0 : at + 1);
       order[next].focus();
@@ -217,6 +250,39 @@
   });
 
   applyTag("all");
+
+  /* ── 版权公告 ──
+     首页点「壁纸」进来即弹出；5 秒倒计时后「我已知晓」才可点；
+     勾选「不再出现」后写入 localStorage，之后不再弹。 */
+  var notice = document.getElementById("wp-notice");
+  var noticeOk = document.getElementById("wp-notice-ok");
+  var noticeKeep = document.getElementById("wp-notice-keep");
+  var NOTICE_KEY = "wp-notice-ack-v1";
+  if (notice && noticeOk) {
+    var acked = false;
+    try { acked = localStorage.getItem(NOTICE_KEY) === "1"; } catch (e) { /* 隐私模式下照常弹 */ }
+    if (!acked) {
+      notice.hidden = false;
+      var left = 5;
+      var timer = setInterval(function () {
+        left--;
+        if (left <= 0) {
+          clearInterval(timer);
+          noticeOk.disabled = false;
+          noticeOk.textContent = "我已知晓";
+        } else {
+          noticeOk.textContent = "我已知晓（" + left + "）";
+        }
+      }, 1000);
+      noticeOk.addEventListener("click", function () {
+        if (noticeOk.disabled) return;
+        if (noticeKeep && noticeKeep.checked) {
+          try { localStorage.setItem(NOTICE_KEY, "1"); } catch (e) { /* 写不进就每次都弹 */ }
+        }
+        notice.hidden = true;
+      });
+    }
+  }
 
   /* 供测试与探针读取状态 */
   window.__wpState = function () {
@@ -228,6 +294,7 @@
       visible: arr.map(function (el) { return el.getAttribute("data-wp-key"); }),
       lightbox: !lb.hidden,
       current: cur,
+      notice: !!(notice && !notice.hidden),
     };
   };
 })();

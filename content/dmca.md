@@ -3,6 +3,8 @@ date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = '版权与侵权投诉'
 description = 'Wow 娱乐小站尊重版权：素材来源说明与侵权投诉（通知-删除）处理流程。'
+backHref = '/'
+backLabel = '返回首页'
 weight = 4
 +++
 

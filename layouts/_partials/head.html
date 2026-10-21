@@ -158,56 +158,8 @@
     {{- end }}
 </noscript>
 
-{{- /* theme-toggle is enabled */}}
-{{- if (not site.Params.disableThemeToggle) }}
-{{- /* theme is light */}}
-{{- if (eq site.Params.defaultTheme "light") }}
-<script>
-    if (localStorage.getItem("pref-theme") === "dark") {
-        document.querySelector("html").dataset.theme = 'dark';
-    }
-
-</script>
-{{- /* theme is dark */}}
-{{- else if (eq site.Params.defaultTheme "dark") }}
-<script>
-    /* 主题偏好为「会话级」：手动切浅色只在当前浏览有效，重开浏览器恢复默认黑。
-       顺带清除旧版写在 localStorage 里的永久记忆，让老访客也回归默认黑。 */
-    (function () {
-        try { localStorage.removeItem("pref-theme"); } catch (e) {}
-        try {
-            if (sessionStorage.getItem("pref-theme") === "light") {
-                document.querySelector("html").dataset.theme = 'light';
-            }
-        } catch (e) {}
-    })();
-</script>
-{{- else }}
-{{- /* theme is auto */}}
-<script>
-    if (localStorage.getItem("pref-theme") === "dark") {
-        document.querySelector("html").dataset.theme = 'dark';
-    } else if (localStorage.getItem("pref-theme") === "light") {
-       document.querySelector("html").dataset.theme = 'light';
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.querySelector("html").dataset.theme = 'dark';
-    } else {
-        document.querySelector("html").dataset.theme = 'light';
-    }
-
-</script>
-{{- end }}
-{{- /* theme-toggle is disabled and theme is auto */}}
-{{- else if (and (ne site.Params.defaultTheme "light") (ne site.Params.defaultTheme "dark"))}}
-<script>
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.querySelector("html").dataset.theme = 'dark';
-    } else {
-        document.querySelector("html").dataset.theme = 'light';
-    }
-
-</script>
-{{- end }}
+{{- /* 主题初始化：原内联脚本已被 CSP 拦截，2026-10-21 起全部删除，
+       由 static/theme.js（head 内同步加载）在首帧前完成初始化。 */}}
 
 {{- /* Service Worker（离线可玩）：版本号跟随 assetVer，发新版自动换缓存 */}}
 {{- with site.Params.assetVer }}

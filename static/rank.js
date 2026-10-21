@@ -80,8 +80,17 @@
     var ch = name ? name.slice(0, 1) : "?";
     var h = 0;
     for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
-    return "<span class='rank-ava rank-ava-ph' style='background:hsl(" + h + ",52%,46%)' aria-hidden='true'>" +
+    /* CSP style-src 'self' 拦 inline style：先带 data-h 注入，插进 DOM 后用 CSSOM 上色 */
+    return "<span class='rank-ava rank-ava-ph' data-h='" + h + "' aria-hidden='true'>" +
       esc(ch) + "</span>";
+  }
+
+  function paintPlaceholderAvatars(scope) {
+    if (!scope || !scope.querySelectorAll) return;
+    var nodes = scope.querySelectorAll(".rank-ava-ph[data-h]");
+    for (var i = 0; i < nodes.length; i++) {
+      nodes[i].style.background = "hsl(" + nodes[i].getAttribute("data-h") + ",52%,46%)";
+    }
   }
 
   function renderRows(rows, mineSet) {
@@ -107,6 +116,7 @@
         "</li>";
     }
     elList.innerHTML = html;
+    paintPlaceholderAvatars(elList);
     if (elList.start !== undefined) elList.start = 1;
   }
 

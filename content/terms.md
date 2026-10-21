@@ -3,6 +3,8 @@ date = '2026-10-17T20:00:00+08:00'
 draft = false
 title = '服务条款'
 description = '使用 Wow 娱乐小站前请阅读：免费娱乐服务、账号责任、行为规范与知识产权说明。'
+backHref = '/'
+backLabel = '返回首页'
 weight = 2
 +++
 

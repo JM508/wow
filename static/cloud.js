@@ -375,7 +375,20 @@
     return /成绩校验未通过|提交太频繁/.test(String(err.message || ""));
   }
 
+  /* 进行中锁（2026-10-21）：网络慢时防止上一笔还没回来又发第二笔（双击 / 重试风暴）。
+     在飞的提交直接返回 skipped，调用方按「没超榜」处理；结束即解锁。 */
+  var submitInflight = false;
   function scoreSubmit(entry) {
+    if (submitInflight) {
+      return Promise.resolve({ data: null, error: null, skipped: true, busy: true });
+    }
+    var d = db();
+    if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
+    submitInflight = true;
+    return scoreSubmitGo(entry)["finally"](function () { submitInflight = false; });
+  }
+
+  function scoreSubmitGo(entry) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
     var guest = !user();
