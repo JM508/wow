@@ -241,6 +241,13 @@
     modalDepth = Math.max(0, modalDepth - 1);
     if (modalDepth === 0 && S && !S.over && S.placed) startTimer();
   });
+  /* 切后台停表：浏览器只节流不暂停 setInterval，秒数照加，
+     挂机时间会混进成绩并被提交到排行榜（2026-10-21 审查补） */
+  document.addEventListener("visibilitychange", function () {
+    if (!S || S.over || !S.placed) return;
+    if (document.hidden) stopTimer();
+    else if (modalDepth === 0) startTimer();
+  });
 
   function updateMineCounter() {
     /* 超插旗时夹在 0：显示 -5 会让人以为出了 bug（经典扫雷允许负数，但这里宁可收敛） */

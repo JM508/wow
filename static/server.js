@@ -120,7 +120,7 @@ if (!PARSED) {
 }
 
 /* 与 static/_headers 一致的缓存策略 */
-const IMMUTABLE_EXT = new Set(['.js', '.css', '.webp', '.png', '.svg', '.ico', '.woff2', '.gif', '.mp3']);
+const IMMUTABLE_EXT = new Set(['.js', '.css', '.webp', '.png', '.jpg', '.jpeg', '.svg', '.ico', '.woff2', '.gif', '.mp3']);
 const HOUR_EXT = new Set(['.xml', '.txt', '.webmanifest']);
 
 function cacheControlFor(safePath, ext) {

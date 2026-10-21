@@ -124,7 +124,7 @@
     if (gateDesc) return String(gateDesc);
     if (gate) return "云服务拒绝了这次请求（" + gate + "）";
 
-    if (kind === "network" || status === 0 && kind === "network") {
+    if (kind === "network") {
       return "网络连接失败，请检查网络后重试";
     }
     /* 成绩被服务端校验拦下（触发器 runner_scores_guard 抛的 SQLSTATE WOW01，
@@ -650,11 +650,17 @@
   function scoreNameTaken(nickname) {
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
-    var me = user() ? user().id : "anon";
+    /* owner_id 对 anon/authenticated 都没有 SELECT 权限（2026-10-21 实测 42501），
+       之前查它会整条失败，而调用方只看 r.data，等于查重一直静默失效。
+       改为只查 nickname（两个身份都有该列权限）：要改的名字就是当前名字时
+       直接视为未占用——名字唯一的前提下，榜上与当前同名的行只会是自己那条。 */
+    var want = String(nickname || "").trim();
+    if (!want || want === nickOrDefault()) {
+      return Promise.resolve({ data: false, error: null });
+    }
     return d.from(TABLE_SCORES)
-      .select("owner_id")
-      .eq("nickname", String(nickname || "").trim())
-      .neq("owner_id", me)
+      .select("nickname")
+      .eq("nickname", want)
       .limit(1)
       .then(function (r) {
         if (r.error) return r;
