@@ -25,8 +25,9 @@
   var SECTIONS = {
     runner: [
       { kind: "player", title: "火柴人皮肤" },
-      { kind: "coin", title: "金币皮肤" },
-      { kind: "flag", title: "旗子皮肤", note: "扫雷里插的旗用这里的颜色，全部免费。" }
+      { kind: "coin", title: "金币皮肤" }
+      /* 旗子皮肤 2026-10-21 起从跑酷商店撤下（用户要求）：旗子颜色只在扫雷里用，
+         跑酷页看了会困惑；旗子皮肤仍在扫雷商店（ms）里选。 */
     ],
     ms: [
       { kind: "flag", title: "旗子皮肤", note: "插在雷区上的旗用这里的颜色，全部免费。" },

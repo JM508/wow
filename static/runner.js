@@ -240,14 +240,23 @@
     }
   };
 
+  /* 键名会拼进 innerHTML（按键列表 / 提示文案），兜底分支必须转义：
+     keyNorm 对未知字符串原样放行，若 localStorage 或云端设置被篡改，
+     未转义的 <img onerror> 之类就能从设置面板打出来。 */
+  function keyEsc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
   function keyName(code) {
     if (!code) return "?";
     if (KEY_NAMES[code]) return KEY_NAMES[code];
     if (/^Key[A-Z]$/.test(code)) return code.slice(3);
     if (/^Digit\d$/.test(code)) return code.slice(5);
-    if (/^Numpad/.test(code)) return "小键盘 " + code.slice(6);
+    if (/^Numpad/.test(code)) return "小键盘 " + keyEsc(code.slice(6));
     if (/^F\d{1,2}$/.test(code)) return code;
-    return code.length === 1 ? code.toUpperCase() : code;
+    return keyEsc(code.length === 1 ? code.toUpperCase() : code);
   }
   function keyNorm(code) {
     if (!code) return "";
@@ -1157,21 +1166,24 @@
 
   /* 个人中心：商店 / 成就 / 个人 三个页面共用一个入口（工具条「个人中心」按钮 / 页脚链接 / 面板页签）。
      已经在该页面时什么都不做；从另一个页面切过来时不走定格/恢复（见 meSwitching）。 */
-  var ME_TABS = ["me", "ach", "shop"];   /* 页签顺序（2026-10-06 用户要求）：个人最前 */
+  var ME_TABS = ["me", "ach", "shop", "set"];   /* 页签顺序：个人最前；2026-10-21 起第四页签「设置」 */
 
   function meTabOpen(t) {
     if (t === "shop") return shopOpen();
     if (t === "ach") return achOpen();
+    if (t === "set") return setTabOpen();
     return meOpen();
   }
   function openMeTab(t) {
     if (t === "shop") openShop();
     else if (t === "ach") { if (Ach && Ach.open) Ach.open(); }
+    else if (t === "set") openSetTab();
     else openMePanel();
   }
   function closeMeTab(t) {
     if (t === "shop") closeShop();
     else if (t === "ach") { if (Ach && Ach.close) Ach.close(); }
+    else if (t === "set") closeSetTab();
     else closeMePanel();
   }
   function anyMeTabOpen() {
@@ -1182,7 +1194,7 @@
   function openMe(tab) {
     if (helpVisible) return;                          // 玩法说明开着时先看说明
     /* 2026-10-05 用户要求：个人中心一打开就是「个人」页（不再是商店/成就） */
-    var want = (tab === "shop" || tab === "ach") ? tab : "me";
+    var want = (tab === "shop" || tab === "ach" || tab === "set") ? tab : "me";
     if (meTabOpen(want)) return;                      // 已经停在这个页面
     var cur = anyMeTabOpen();
     if (cur) {                                        // 另一个页面正开着 → 是页签切换
@@ -1202,6 +1214,29 @@
     if (!shopOpen()) return;
     if (window.Shop && window.Shop.close) window.Shop.close(); // close() 会派发 shop:close
     else { elShop.classList.add("hidden"); afterShopClose(); }
+  }
+
+  /* ═══════════ 个人中心「设置」页签（2026-10-21 第四页签）═══════════
+     面板 DOM 在 me-center.html 的 #me-set-tab：显示设置入口 + 本游戏设置 + 退出登录。 */
+  var elSetTab = document.getElementById("me-set-tab");
+  function setTabOpen() { return !!elSetTab && !elSetTab.classList.contains("hidden"); }
+  function openSetTab() {
+    if (!elSetTab || setTabOpen() || helpVisible) return;
+    elSetTab.classList.remove("hidden");
+    paintSetLogout();
+    document.dispatchEvent(new CustomEvent("me:open"));   // 与「个人」页同样定格局面
+  }
+  function closeSetTab() {
+    if (!setTabOpen()) return;
+    elSetTab.classList.add("hidden");
+    document.dispatchEvent(new CustomEvent("me:close"));
+  }
+  function paintSetLogout() {
+    var logged = !!(CLOUD && CLOUD.user && CLOUD.user());
+    var btn = document.getElementById("me-set-logout");
+    var hint = document.getElementById("me-set-logout-hint");
+    if (btn) btn.classList.toggle("hidden", !logged);
+    if (hint) hint.classList.toggle("hidden", logged);
   }
 
   /* ═══════════ 个人中心「个人」页：头像 + 成就进度 ═══════════ */
@@ -1360,7 +1395,7 @@
     }
     if (elMeSub) {
       elMeSub.textContent = logged
-        ? "已登录 · 头像、昵称与成就跟账号走，换设备也在"
+        ? "已登录"
         : "未登录 · 头像只存在本机，成绩以「访客 N」自动上传";
     }
     /* 改名只对登录用户开放；访客走自动编号 */
@@ -2553,7 +2588,7 @@
     if (elSetHint) {
       elSetHint.textContent = captureAct
         ? "请按下新键…（Esc 取消）"
-        : "设置只保存在本机浏览器，换设备需要重设（成就与钱包登录后会同步到云端）。";
+        : "设置只保存在本机浏览器，换设备需要重设；皮肤（含已购与装备）、最高分、昵称、头像与成就登录后都会同步到云端，清缓存也不会丢。";
     }
     renderKeys();
   }
