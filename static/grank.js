@@ -109,16 +109,24 @@
     return { guest: true, name: GUEST_RE.test(g) ? g : "" };
   }
 
-  /* ═══════════ 读取榜单 ═══════════ */
+  /* ═══════════ 读取榜单 ═══════════
+     每日挑战（mode="daily"）只看今天：过了零点就是新的一份榜。 */
+  function dayStartISO() {
+    var d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+  }
+
   function top(mode) {
     var d = cloud().database();
-    return d.from(TABLE)
+    var q = d.from(TABLE)
       .select("nickname, score, region, avatar, created_at")
       .eq("game", GAME)
       .eq("mode", mode)
       .order("score", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(LIMIT);
+    if (mode === "daily") q = q.gte("created_at", dayStartISO());
+    return q;
   }
 
   /* 同一昵称多条成绩：只留最高的一条（榜上按人排名） */
@@ -161,10 +169,11 @@
     var who = me();
     if (!who.name || !ready()) { mineEl.innerHTML = ""; return; }
     var d = cloud().database();
-    d.from(TABLE).select("score, created_at")
+    var q = d.from(TABLE).select("score, created_at")
       .eq("game", GAME).eq("mode", cur.mode).eq("nickname", who.name)
-      .order("score", { ascending: false }).limit(1)
-      .then(function (r) {
+      .order("score", { ascending: false }).limit(1);
+    if (cur.mode === "daily") q = q.gte("created_at", dayStartISO());
+    q.then(function (r) {
         var row = r && r.data && r.data[0];
         if (!row) { mineEl.innerHTML = ""; return; }
         mineEl.innerHTML = "<span class='grank-mine-t'>我的最好成绩：<b>" +
@@ -183,7 +192,10 @@
 
     var i, rows = cur.rows || [];
     if (!rows.length && !cur.loading && !cur.err) {
-      listEl.innerHTML = "<li class='grank-empty'>这个难度还没有人上榜，去拿下第一名吧。</li>";
+      listEl.innerHTML = "<li class='grank-empty'>" +
+        (cur.mode === "daily"
+          ? "今天还没有人在每日挑战上榜，来抢个头名。"
+          : "这个难度还没有人上榜，去拿下第一名吧。") + "</li>";
     } else {
       var html = "";
       for (i = 0; i < rows.length; i++) {
@@ -216,9 +228,24 @@
   /* ═══════════ 提交成绩（得分时调用） ═══════════
      只提交比本人榜上更高的分数：分数没超过就不写库（榜单上每个人只留最高的一条）。
      井字棋是累计积分制，输一局分数会往下掉 —— 掉下去的那次正好被这条规则挡下，
-     榜上留的永远是这个难度赚到过的最高分。 */
+     榜上留的永远是这个难度赚到过的最高分。
+     云不可用 / 网络失败不再丢局：进离线队列（score-queue.js），联网后自动补榜。 */
+  function queueOffline(mode, sc) {
+    var Q = global.ScoreQueue;
+    if (Q) Q.enqueue({
+      kind: "game",
+      dedupe: GAME + ":" + mode,
+      best: sc,
+      data: { game: GAME, mode: mode, score: sc }
+    });
+  }
+
   function submit(mode, score) {
-    if (!ready()) return Promise.resolve({ data: null, error: { kind: "unavailable" } });
+    if (!ready()) {
+      var sc0 = Math.round(Number(score));
+      if (isFinite(sc0) && sc0 !== 0) queueOffline(mode, sc0);
+      return Promise.resolve({ data: null, error: { kind: "unavailable" }, queued: true });
+    }
     var who = me(), sc = Math.round(Number(score));
     if (!isFinite(sc)) sc = 0;
     if (!who.name) return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
@@ -251,7 +278,17 @@
       })
       .then(function (r) {
         if (r && r.skipped) return r;
-        if (!r || r.error) return r || { data: null, error: { kind: "error" } };
+        if (!r || r.error) {
+          /* 网络类失败（断网 / 限流 / 云暂时不可用）：进离线队列，联网后自动补榜；
+             参数类失败（invalid-request 等）重试没有意义，不进队列。 */
+          var k = (r && r.error && r.error.kind) || "error";
+          if (k !== "invalid-request" && k !== "permission-denied" && k !== "not-found") {
+            queueOffline(mode, sc);
+            r = r || { data: null, error: { kind: "error" } };
+            r.queued = true;
+          }
+          return r;
+        }
         if (isOpen() && cur.mode === mode) load(mode);
         return r;
       });
@@ -291,6 +328,16 @@
       if (!b) return;
       load(b.getAttribute("data-mode"));
     });
+  }
+
+  /* 离线队列：注册重发函数 + 启动时先试一轮（断网时入队的旧成绩，回来就补上） */
+  if (global.ScoreQueue) {
+    global.ScoreQueue.register("game", function (e) {
+      var d = e && e.data;
+      if (!d || d.game !== GAME) return { data: null, error: { kind: "invalid-request" } };
+      return submit(d.mode, d.score);
+    });
+    global.ScoreQueue.flush();
   }
 
   global.GameRank = {

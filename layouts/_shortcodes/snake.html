@@ -6,6 +6,7 @@
       <option value="easy" selected>简单</option>
       <option value="mid">中等</option>
       <option value="hard">困难</option>
+      <option value="daily">每日挑战</option>
     </select>
     <span class="snake-stat snake-stat-first">得分 <b id="snake-score">0</b></span>
     <span class="snake-stat snake-combo" id="snake-combo" hidden>连击 <b id="snake-combo-n">×2</b></span>
@@ -28,7 +29,7 @@
 </div>
 
 <!-- ═══ 云端排行榜弹层（GameRank 通用组件，game_scores 表） ═══ -->
-<div id="grank-root" data-game="snake" data-title="贪吃蛇排行榜" data-unit="分" data-modes="easy:简单,mid:中等,hard:困难"></div>
+<div id="grank-root" data-game="snake" data-title="贪吃蛇排行榜" data-unit="分" data-modes="easy:简单,mid:中等,hard:困难,daily:每日挑战"></div>
 <div id="grank-panel" class="grank hidden" role="dialog" aria-modal="true" aria-labelledby="grank-title">
   <div class="grank-box">
     <div class="grank-head">
@@ -39,6 +40,7 @@
       <button type="button" class="grank-tab is-on" role="tab" aria-selected="true" data-mode="easy">简单</button>
       <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="mid">中等</button>
       <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="hard">困难</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="daily">每日挑战</button>
     </div>
     <div class="grank-status" id="grank-status" role="status" aria-live="polite"></div>
     <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
@@ -59,6 +61,7 @@
     <div class="snake-over-actions">
       <button type="button" id="snake-over-btn" class="snake-over-btn">再来一局</button>
       <button type="button" id="snake-over-cancel" class="snake-over-btn snake-over-ghost">取消</button>
+      <button type="button" id="snake-over-share" class="snake-over-btn snake-over-ghost" data-share-card hidden>分享战绩</button>
     </div>
   </div>
 </div>
@@ -74,5 +77,8 @@
 {{/* 成就引擎：本游戏专属成就（蛇），不是跑酷那套 */}}
 <script src="/gameach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/vendor/qrcode.js" defer></script>
+<script src="/share-card.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/score-queue.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/grank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/snake.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

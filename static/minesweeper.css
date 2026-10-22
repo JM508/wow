@@ -247,6 +247,19 @@
 }
 .ms-over-btn:active { transform: scale(0.97); }
 .ms-over-btn:focus-visible { outline: 2px solid var(--secondary, #888888); outline-offset: 2px; }
+/* 「分享战绩」：与「再来一局」并排的次级样式（浅底描边，不抢主按钮） */
+.ms-over-btn.ms-over-share {
+  background: var(--entry, #ffffff);
+  color: var(--primary, #1f1f1f);
+  border: 1px solid var(--border, #dcdcdc);
+  margin-left: 10px;
+}
+[data-theme="dark"] .ms-over-btn.ms-over-share {
+  background: #2a2a2a;
+  color: #e8e8e8;
+  border-color: #3a3a3a;
+}
+.ms-over-btn.ms-over-share:hover { filter: none; background: rgba(128, 138, 152, 0.12); }
 @media (prefers-reduced-motion: reduce) {
   .ms-over-box { animation: none; }
   .ms-cell.open { animation: none; }

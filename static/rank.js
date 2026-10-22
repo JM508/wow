@@ -290,6 +290,21 @@
         }
         /* lastSubmit 只在成功后记账：失败的这局下一回还有机会补传 */
         if (!pending || score > pending.score) pending = stash(entry, score, isGuest, guestName);
+        /* 断网 / 云暂时不可用：再进持久化离线队列，页面关了也不丢（联网自动补榜） */
+        var Q = window.ScoreQueue;
+        if (Q) Q.enqueue({
+          kind: "runner",
+          dedupe: "runner",
+          best: score,
+          data: {
+            score: score,
+            coins: entry && entry.coins,
+            distance: entry && entry.distance,
+            durationMs: entry && entry.durationMs,
+            guest: !!isGuest,
+            guestName: guestName
+          }
+        });
         toast("成绩上传失败：" + CLOUD.describe(r.error));
         return;
       }
@@ -392,6 +407,21 @@
 
   /* 启动：绑定钱包自动回传 + 登录状态下先同步一次 */
   CLOUD.wallet.bindAutoPush();
+  /* 离线队列：注册重发函数 + 启动先试一轮（断网期间入队的成绩，回来就补上） */
+  if (window.ScoreQueue) {
+    window.ScoreQueue.register("runner", function (e) {
+      var d = (e && e.data) || {};
+      if (!(Number(d.score) > 0)) return { data: null, error: { kind: "invalid-request" } };
+      return CLOUD.scores.submit({
+        nickname: d.guest ? d.guestName : undefined,
+        score: d.score,
+        coins: d.coins,
+        distance: d.distance,
+        durationMs: d.durationMs
+      });
+    });
+    window.ScoreQueue.flush();
+  }
   CLOUD.session().then(function (r) {
     if (r && r.data) {
       syncWallet(true);
@@ -409,6 +439,7 @@
     if (id && id !== lastUserId) {
       claimGuestRuns();
       flushPending();
+      if (window.ScoreQueue) window.ScoreQueue.flush();
       if (isOpen()) refresh();
     } else if (!id && lastUserId && isOpen()) {
       refresh();                       // 掉线了，面板如实反映，别停留在「已登录」

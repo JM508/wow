@@ -17,7 +17,8 @@
   var MODES = [
     { id: "easy", label: "初级 9×9" },
     { id: "mid",  label: "中级 16×16" },
-    { id: "hard", label: "高级 30×16" }
+    { id: "hard", label: "高级 30×16" },
+    { id: "daily", label: "每日挑战" }
   ];
 
   var panel = document.getElementById("ms-rank");
@@ -94,15 +95,23 @@
     return { guest: true, name: GUEST_RE.test(g) ? g : "" };
   }
 
-  /* ═══════════ 读取榜单 ═══════════ */
+  /* ═══════════ 读取榜单 ═══════════
+     每日挑战（mode="daily"）只看今天：过了零点就是新的一局新的一份榜。 */
+  function dayStartISO() {
+    var d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString();
+  }
+
   function top(mode) {
     var d = cloud().database();
-    return d.from(TABLE)
+    var q = d.from(TABLE)
       .select("nickname, seconds, region, avatar, created_at")
       .eq("mode", mode)
       .order("seconds", { ascending: true })
       .order("created_at", { ascending: true })
       .limit(LIMIT);
+    if (mode === "daily") q = q.gte("created_at", dayStartISO());
+    return q;
   }
 
   /* 同一昵称多次通关：只留最快的一条（榜上按人排名，不按记录） */
@@ -147,10 +156,11 @@
     var who = me();
     if (!who.name || !ready()) { mineEl.innerHTML = ""; return; }
     var d = cloud().database();
-    d.from(TABLE).select("seconds, created_at")
+    var q = d.from(TABLE).select("seconds, created_at")
       .eq("mode", cur.mode).eq("nickname", who.name)
-      .order("seconds", { ascending: true }).limit(1)
-      .then(function (r) {
+      .order("seconds", { ascending: true }).limit(1);
+    if (cur.mode === "daily") q = q.gte("created_at", dayStartISO());
+    q.then(function (r) {
         var row = r && r.data && r.data[0];
         if (!row) { mineEl.innerHTML = ""; return; }
         mineEl.innerHTML = "<span class='ms-rank-mine-t'>我的最好成绩：<b>" +
@@ -199,9 +209,25 @@
     }
   }
 
-  /* ═══════════ 提交成绩（仅通关时调用） ═══════════ */
+  /* ═══════════ 提交成绩（仅通关时调用） ═══════════
+     云不可用 / 网络失败不再丢局：进离线队列（score-queue.js），联网后自动补榜。
+     best 用负秒数归一成「越大越好」，与队列的去重口径对齐。 */
+  function queueOffline(mode, sec) {
+    var Q = global.ScoreQueue;
+    if (Q) Q.enqueue({
+      kind: "ms",
+      dedupe: mode,
+      best: -sec,
+      data: { mode: mode, seconds: sec }
+    });
+  }
+
   function submit(mode, seconds) {
-    if (!ready()) return Promise.resolve({ data: null, error: { kind: "unavailable" } });
+    if (!ready()) {
+      var sec0 = Math.round(Number(seconds) || 0);
+      if (sec0 > 0) queueOffline(mode, sec0);
+      return Promise.resolve({ data: null, error: { kind: "unavailable" }, queued: true });
+    }
     var who = me(), sec = Math.round(Number(seconds) || 0);
     if (!who.name || sec <= 0) return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
     if (who.guest && !GUEST_RE.test(who.name)) {
@@ -230,7 +256,16 @@
       })
       .then(function (r) {
         if (r && r.skipped) return r;
-        if (!r || r.error) return r || { data: null, error: { kind: "error" } };
+        if (!r || r.error) {
+          /* 网络类失败：进离线队列联网后补榜；参数类失败重试无意义，不进队列 */
+          var k = (r && r.error && r.error.kind) || "error";
+          if (k !== "invalid-request" && k !== "permission-denied" && k !== "not-found") {
+            queueOffline(mode, sec);
+            r = r || { data: null, error: { kind: "error" } };
+            r.queued = true;
+          }
+          return r;
+        }
         /* 提交成功：如果面板开着且正是这个难度，刷新一下 */
         if (isOpen() && cur.mode === mode) load(mode);
         return r;
@@ -272,6 +307,16 @@
       if (!b) return;
       load(b.getAttribute("data-mode"));
     });
+  }
+
+  /* 离线队列：注册重发函数 + 启动时先试一轮 */
+  if (global.ScoreQueue) {
+    global.ScoreQueue.register("ms", function (e) {
+      var d = e && e.data;
+      if (!d || !(Number(d.seconds) > 0)) return { data: null, error: { kind: "invalid-request" } };
+      return submit(d.mode, d.seconds);
+    });
+    global.ScoreQueue.flush();
   }
 
   global.MsRank = {

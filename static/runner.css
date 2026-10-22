@@ -202,6 +202,9 @@
   appearance: none;
 }
 .run-upload-btn:hover { filter: brightness(1.12); }
+/* 结算卡上的「分享战绩」：canvas 海报（背景图 + 分数 + 站点二维码） */
+.run-share-btn { background: #445; }
+.run-share-btn:hover { filter: brightness(1.25); }
 /* 结算卡上的「以后自动上传成绩到排行榜」勾选框（勾上后从下一局起自动上榜） */
 .run-autoup {
   display: flex;

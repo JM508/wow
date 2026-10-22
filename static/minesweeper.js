@@ -6,8 +6,31 @@
   var LEVELS = {
     easy: { cols: 9,  rows: 9,  mines: 10, max: 30 },
     mid:  { cols: 16, rows: 16, mines: 40, max: 30 },
-    hard: { cols: 30, rows: 16, mines: 99, max: 28 }
+    hard: { cols: 30, rows: 16, mines: 99, max: 28 },
+    /* 每日挑战：固定中级规格，按日期种子布雷 —— 全世界今天玩到的是同一片雷区 */
+    daily: { cols: 16, rows: 16, mines: 40, max: 30 }
   };
+
+  /* ── 每日挑战的种子随机源（与 snake.js 同一套实现，两文件各自内联） ──
+     dayKey 取本机日期（YYYY-MM-DD）；FNV-1a 散列成 32 位种子；mulberry32 出 [0,1)。 */
+  function dayKey() {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+  function strSeed(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
 
   var root = document.getElementById("ms-root");
   if (!root) return;
@@ -24,6 +47,18 @@
   var overEl  = document.getElementById("ms-over");          // 失败弹窗
   var overSubEl = document.getElementById("ms-over-s");
   var overBtnEl = document.getElementById("ms-over-btn");
+  var overShareEl = document.getElementById("ms-over-share"); // 失败弹窗「分享战绩」
+
+  /* 难度展示名（分享卡标题用）：取下拉框当前选项的文字，取不到退回 mode id */
+  function modeText() {
+    if (levelEl && levelEl.value === "daily") return "每日挑战";
+    try {
+      if (levelEl && levelEl.selectedOptions && levelEl.selectedOptions[0]) {
+        return String(levelEl.selectedOptions[0].text).split("·")[0].trim();
+      }
+    } catch (e) {}
+    return levelEl ? levelEl.value : "";
+  }
 
   var S = null;          // 当前局面状态
   var timerId = null;
@@ -206,8 +241,14 @@
       pool = [];
       for (var j = 0; j < S.cells.length; j++) if (j !== idx(safeR, safeC)) pool.push(j);
     }
+    /* 每日挑战：洗牌用「日期 + 首点位置」派生的种子 —— 同一天、同一个首点，
+       大家拿到的雷区完全一致；普通模式照旧真随机。（随机源建在循环外，保证序列连续） */
+    var rand = Math.random;
+    if (levelEl.value === "daily") {
+      rand = mulberry32(strSeed(dayKey() + "|ms|" + idx(safeR, safeC)));
+    }
     for (var k = pool.length - 1; k > 0; k--) {         // Fisher–Yates 洗牌
-      var m = Math.floor(Math.random() * (k + 1));
+      var m = Math.floor(rand() * (k + 1));
       var t = pool[k]; pool[k] = pool[m]; pool[m] = t;
     }
     for (var x = 0; x < S.mines && x < pool.length; x++) S.cells[pool[x]].mine = true;
@@ -357,10 +398,23 @@
         (left > 0 ? " ｜ 还差 " + left + " 格就通关" : "");
     }
     overEl.classList.remove("hidden");
+    /* 分享战绩：把这一局的坚持数据写进分享按钮（share-card.js 画海报） */
+    if (overShareEl) {
+      var totalAll = S.cols * S.rows - S.mines;
+      var leftAll = Math.max(0, totalAll - S.opened);
+      overShareEl.setAttribute("data-share-payload", JSON.stringify({
+        t: "扫雷 · " + modeText(),
+        big: seconds + " 秒",
+        lines: ["翻开 " + S.opened + " 格 ｜ 插旗 " + S.flags + " 面",
+          leftAll > 0 ? "还差 " + leftAll + " 格就通关" : "差一步通关"]
+      }));
+      overShareEl.hidden = false;
+    }
     if (overBtnEl) overBtnEl.focus();
   }
   function hideOver() {
     if (overEl) overEl.classList.add("hidden");
+    if (overShareEl) overShareEl.hidden = true;
   }
 
   function checkWin() {
@@ -394,6 +448,19 @@
       again.textContent = "再来一局";
       again.addEventListener("click", newGame);
       msgEl.appendChild(again);
+      /* 通关也能分享：扫雷通关更值得晒（用时越短越强） */
+      var shareBtn = document.createElement("button");
+      shareBtn.type = "button";
+      shareBtn.className = "ms-again";
+      shareBtn.setAttribute("data-share-card", "");
+      shareBtn.setAttribute("data-share-payload", JSON.stringify({
+        t: "扫雷 · " + modeText(),
+        big: S.seconds + " 秒通关",
+        lines: ["全部 " + S.mines + " 颗雷都排掉了",
+          S.flags === flagsAtWin ? "全程没用提示旗" : "用了 " + flagsAtWin + " 面旗"]
+      }));
+      shareBtn.textContent = "分享战绩";
+      msgEl.appendChild(shareBtn);
       var mode = levelEl.value, sec = S.seconds;
       if (window.MsRank) {
         window.MsRank.submit(mode, sec).then(function (r) {

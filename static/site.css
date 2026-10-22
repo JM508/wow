@@ -237,6 +237,28 @@ html.a11y-hc[data-theme="dark"] .games-entry-btn.games-entry-ghost { color: #fff
 .net-status.is-on { display: block; }
 html.has-net-status .header { top: 34px; }   /* 别盖住站点头部（吸顶导航） */
 
+/* ══ 底部「已补回 N 条成绩」提示（score-queue.js 联网补榜时弹出） ══ */
+.sq-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  z-index: 998;
+  transform: translate(-50%, 16px);
+  max-width: min(86vw, 420px);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #eafff0;
+  background: rgba(24, 46, 32, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.sq-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
 /* ══ 背景图模式下的文字可读性（2026-10-05 用户反馈：压在背景上的有些文字看不清）══
    html[data-ag-bg] 时页面底色透明，标题与页脚直接压在背景图上；
    背景 20 张轮换、明暗都有 —— 压图文字加投影勾边；暗色主题下页脚整体调亮。 */

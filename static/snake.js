@@ -36,6 +36,7 @@
   var elOverS = document.getElementById("snake-over-s");
   var elOverBtn = document.getElementById("snake-over-btn");
   var elOverCancel = document.getElementById("snake-over-cancel");
+  var elOverShare = document.getElementById("snake-over-share");
   var btnPause = document.getElementById("snake-pause");
   var dpad = document.getElementById("snake-dpad");
 
@@ -48,6 +49,29 @@
     up: { x: 0, y: -1 }, down: { x: 0, y: 1 },
     left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
   };
+
+  /* ── 每日挑战的种子随机源（与 minesweeper.js 同一套实现，两文件各自内联） ──
+     每日模式的苹果落点由「日期种子」决定：同一天开局，苹果出现的序列一致。
+     普通模式照旧 Math.random。 */
+  function dayKey() {
+    var d = new Date();
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + "-" + (m < 10 ? "0" : "") + m + "-" + (day < 10 ? "0" : "") + day;
+  }
+  function strSeed(s) {
+    var h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  var rng = Math.random;               // 当前局的随机源（reset 时按模式选定）
 
   var ctx = canvas.getContext("2d");
   var cell = 20;                       // 像素 / 格（resize 时按画布宽算）
@@ -131,7 +155,10 @@
     draw();
   }
 
-  function speed() { return SPEEDS[mode] || SPEEDS.easy; }
+  function speed() {
+    if (mode === "daily") return SPEEDS.mid;   // 每日挑战固定中等速度，大家同一条起跑线
+    return SPEEDS[mode] || SPEEDS.easy;
+  }
 
   /* ═══════════ 难度曲线（2026-10-17，第 10 项） ═══════════
      原来一开局就是固定步频，新手第一口苹果就可能撞墙。现在分三层叠：
@@ -190,13 +217,19 @@
     bestAtStart = best;
     elapsedMs = 0;
     eaten = 0;
+    /* 每日挑战：开局按今天的日期定种子，苹果序列今天恒定 */
+    rng = (mode === "daily") ? mulberry32(strSeed(dayKey() + "|snake")) : Math.random;
     tickSpeed();
     placeApple();
     state = "ready";
     hideOver();
     paintHud();
     draw();
-    if (elMsg) elMsg.textContent = "方向键 / WASD 控制，手机上点画布朝点的方向转弯；空格暂停。";
+    if (elMsg) {
+      elMsg.textContent = mode === "daily"
+        ? "每日挑战 " + dayKey() + "：今天的苹果顺序大家都一样，比比谁跑得远。"
+        : "方向键 / WASD 控制，手机上点画布朝点的方向转弯；空格暂停。";
+    }
     if (btnPause) btnPause.textContent = "暂停";
   }
 
@@ -211,7 +244,7 @@
         if (!hit) free.push({ x: x, y: y });
       }
     }
-    apple = free.length ? free[Math.floor(Math.random() * free.length)] : null;
+    apple = free.length ? free[Math.floor(rng() * free.length)] : null;
   }
 
   function setDir(name) {
@@ -398,12 +431,37 @@
     }
     if (elOver) elOver.classList.remove("hidden");
     if (elOverBtn) elOverBtn.focus();
+    /* 分享战绩：把这局的分数 / 连击写进分享按钮，点一下画海报（share-card.js） */
+    if (elOverShare) {
+      fillShare();
+      elOverShare.hidden = false;
+    }
     /* 成就：本局结束（局数 + 各难度最高分） */
     if (window.GameAch) window.GameAch.report({ kind: "over", score: score, len: snake.length, mode: mode });
     submitScore();
   }
 
-  function hideOver() { if (elOver) elOver.classList.add("hidden"); }
+  function hideOver() { if (elOver) elOver.classList.add("hidden"); if (elOverShare) elOverShare.hidden = true; }
+
+  function fillShare() {
+    if (!elOverShare) return;
+    var lab = mode;
+    try {
+      if (elLevel && elLevel.selectedOptions && elLevel.selectedOptions[0]) {
+        lab = elLevel.selectedOptions[0].text;
+      }
+    } catch (e) {}
+    var lines = ["个人最高 " + best + " 分", "吃到 " + eaten + " 个苹果"];
+    if (maxCombo >= COMBO_2) {
+      lines[1] = "最高连击 " + maxCombo + " 连（×" + (maxCombo >= COMBO_3 ? 3 : 2) + "）";
+    }
+    lines.push("本局长度 " + (snake.length + grow) + " 格");
+    elOverShare.setAttribute("data-share-payload", JSON.stringify({
+      t: "贪吃蛇 · " + lab,
+      big: score + " 分",
+      lines: lines
+    }));
+  }
 
   /* 取消结束弹窗：收起并回到待开局状态（棋盘重摆、分数清零，不自动开局） */
   function closeOver() {
@@ -646,7 +704,10 @@
       danger: dangerLevel(),
       stepMs: stepMs,
       eaten: eaten,
-      deaths: deaths
+      deaths: deaths,
+      daily: mode === "daily",
+      dailyKey: mode === "daily" ? dayKey() : "",
+      apple: apple ? (apple.x + "," + apple.y) : ""
     };
   };
   /* 测试钩子：把苹果摆到指定格子（只影响测试，正常玩法不调用） */
