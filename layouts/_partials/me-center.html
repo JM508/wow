@@ -120,9 +120,11 @@
     </div>
     <section class="me-card">
       <span class="me-nick-lab">显示设置</span>
-      <div class="me-acc-row">
-        <span class="me-acc-who">主题、大字号、减少动效、高对比</span>
-        <button type="button" class="me-btn me-btn-main" id="me-set-open">打开设置</button>
+      <div class="me-switches" role="group" aria-label="无障碍选项">
+        <button type="button" class="me-sw" id="me-a11y-big" aria-pressed="false">大字号</button>
+        <button type="button" class="me-sw" id="me-a11y-calm" aria-pressed="false">减少动效</button>
+        <button type="button" class="me-sw" id="me-a11y-hc" aria-pressed="false">高对比</button>
+        <button type="button" class="me-sw" id="me-theme-sw" aria-pressed="false">浅色主题</button>
       </div>
       <button type="button" class="me-btn me-btn-wide" id="me-game-set">打开本游戏设置</button>
       <p class="me-hint">显示设置只记在这台设备上，不影响账号数据。</p>

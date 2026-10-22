@@ -72,8 +72,7 @@
     return meOpen();
   }
   /* 页签高亮：aria-selected 只落在当前打开的那一页上（之前没人管它，
-     导致游戏页上「皮肤」永远高亮 —— 顺手修掉） */
-  function paintTabs() {
+     导致游戏页上「皮肤」永远高亮 —— 顺手修掉） */  function paintTabs() {
     var btns = document.querySelectorAll(".me-tabs .me-tab");
     var cur = anyTabOpen();
     for (var i = 0; i < btns.length; i++) {
@@ -99,12 +98,14 @@
       elMe.classList.add("hidden");
       elSet.classList.remove("hidden");
       paintSetLogout();
+      refreshOnSession(function () { if (setOpen()) paintSetLogout(); });
     } else {
       elShop.classList.add("hidden");
       elAch.classList.add("hidden");
       elSet.classList.add("hidden");
       elMe.classList.remove("hidden");
       renderMe();
+      refreshOnSession(function () { if (meOpen()) renderMe(); });
       document.dispatchEvent(new CustomEvent("me:open"));
       if (CLOUD && CLOUD.avatar && CLOUD.avatar.sync) CLOUD.avatar.sync();
     }
@@ -247,6 +248,12 @@
 
   /* ═══════════ 「个人」页渲染 ═══════════ */
   function logged() { return !!(CLOUD && CLOUD.user && CLOUD.user()); }
+
+  /* 会话是异步查的：页面刚开时 user() 恒空，等它回来再重画一次，
+     避免已登录用户看到「未登录」（2026-10-22 修） */
+  function refreshOnSession(fn) {
+    if (CLOUD && CLOUD.session) CLOUD.session().then(function () { fn(); });
+  }
 
   function renderNick() {
     var isLogged = logged();
