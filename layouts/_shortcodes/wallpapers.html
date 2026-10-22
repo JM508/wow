@@ -91,9 +91,13 @@
                loading="{{ if lt $i 6 }}eager{{ else }}lazy{{ end }}"
                {{- if lt $i 6 }} fetchpriority="high"{{ end }} decoding="async">
         </picture>
-        <span class="wp-size" aria-hidden="true">{{ $dlKb }} KB</span>
+        {{- /* 2026-10-22：文字与标签全部排在图片下方（不压图）。
+               第一行 = 名称（左）+ 下载体积（右），第二行 = 标签。 */}}
         <span class="wp-cap">
-          {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
+          <span class="wp-row">
+            {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
+            <span class="wp-size" aria-hidden="true">{{ $dlKb }} KB</span>
+          </span>
           {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
           <span class="wp-tags">
             {{- range first 3 .tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}

@@ -18,11 +18,13 @@
     empty.textContent = "壁纸加载失败，请刷新重试；若多次失败请通过版权投诉邮箱联系我们。";
   }
 
-  /* 占位底色：图片解码前先铺一层主色，避免大图区域一片白 */
+  /* 占位底色：图片解码前先在图片区铺一层主色，避免大图区域一片白。
+     2026-10-22 起铺在 .wp-pic（只盖图片区），不再铺整卡 —— 说明区保持主题底色。 */
   var brokenCount = 0;
   items.forEach(function (el) {
     var c = el.getAttribute("data-wp-color");
-    if (c) el.style.backgroundColor = c;
+    var pic = el.querySelector(".wp-pic");
+    if (c && pic) pic.style.backgroundColor = c;
   });
 
   /* 图片解码完成后淡入（loading=lazy，长列表里逐个出现） */
