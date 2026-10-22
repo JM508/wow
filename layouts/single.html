@@ -9,7 +9,7 @@
     {{ partial "breadcrumbs.html" . }}
     {{- if not (.Param "hideTitle") }}
     <h1 class="post-title entry-hint-parent">
-      {{ .Title }}
+      <span data-i18n-page="title">{{ .Title }}</span>
       {{- if .Draft }}
       <span class="entry-hint" title="Draft">
         <svg xmlns="http://www.w3.org/2000/svg" height="35" viewBox="0 -960 960 960" fill="currentColor">
@@ -22,7 +22,7 @@
     {{- end }}
     {{- if and .Description (not (.Param "hideDescription")) }}
     <div class="post-description">
-      {{ .Description }}
+      <span data-i18n-page="lead">{{ .Description }}</span>
     </div>
     {{- end }}
     {{- if not (.Param "hideMeta") }}

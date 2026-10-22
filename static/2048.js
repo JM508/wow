@@ -175,6 +175,8 @@
     if (!moved) return false;
     state.grid = newGrid;
     state.score += gain;
+    /* 合并成功才给一下触感；纯滑动不震，避免每滑一下都抖 */
+    if (gain > 0 && window.WowHaptics) window.WowHaptics.play("tap");
     if (state.score > state.best) { state.best = state.score; bestSave(); }
     var fresh = spawn();
     render(fresh, mergedTile);
@@ -200,6 +202,7 @@
   /* ── 结束弹窗 ── */
   function showOver(win) {
     state.over = true;
+    if (window.WowHaptics) window.WowHaptics.play(win ? "win" : "fail");
     if (overTEl) overTEl.textContent = win ? "达成 2048！" : "棋盘满了";
     if (overSEl) {
       overSEl.textContent = (win ? "继续合并还能拿更高分。" : "") +

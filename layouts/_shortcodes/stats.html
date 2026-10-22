@@ -21,7 +21,17 @@
       <h2 class="stats-card-t">成就完成度</h2>
       <div class="stats-rows" data-stat-rows></div>
     </section>
+    <section class="stats-card stats-card-wide" data-stat-card="vitals">
+      <h2 class="stats-card-t">站点性能（近 7 天真实访客）</h2>
+      <div class="stats-rows" data-stat-rows>
+        <div class="stats-row"><span class="stats-k">读取中</span><span class="stats-v">…</span></div>
+      </div>
+    </section>
   </div>
   <p class="stats-note">统计与成就由各游戏页在游玩过程中累计；井字棋三难度的详细胜负见游戏页战绩区。</p>
+  <p class="stats-note">站点性能是全网访客的匿名聚合（p75 越小越好，不区分个人），用来盯住页面有没有变慢。</p>
 </div>
+{{/* 站点性能卡片要走云端聚合接口：SDK 必须在 cloud.js 之前（同其余游戏页口径） */}}
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/stats.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

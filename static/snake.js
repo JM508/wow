@@ -395,6 +395,7 @@
         t0: nowMs()
       });
       if (score > best) { best = score; saveBest(); }
+      if (window.WowHaptics) window.WowHaptics.play("tap");
       eaten += 1;
       /* 吃到 5 个就算上手了：把连败怜悯清零，下一局起速回归正常 */
       if (deaths > 0 && eaten >= EATEN_PER_LEVEL) { deaths = 0; saveDeaths(); }
@@ -412,6 +413,7 @@
 
   function die() {
     state = "over";
+    if (window.WowHaptics) window.WowHaptics.play("fail");
     /* 连败计数：这一局又没撑到 5 个苹果，下一局起步再慢一点（最多 4 连） */
     if (eaten < EATEN_PER_LEVEL && deaths < MERCY_MAX) { deaths += 1; saveDeaths(); }
     draw();

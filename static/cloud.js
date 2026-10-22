@@ -950,6 +950,41 @@
     });
   }
 
+  /* ═══════════ 通用 RPC（2026-10-22） ═══════════
+     给「只返回聚合数据、列不可直读」的函数留一个统一入口，
+     例如站点核心指标汇总 site_vitals_summary（匿名可调、只出 p75 与样本数）。
+     函数名白名单式校验，避免被当成任意 URL 拼接口用。 */
+  function rpcCall(name, body) {
+    var fn = String(name || "");
+    if (!/^[a-z][a-z0-9_]{2,39}$/.test(fn)) {
+      return Promise.resolve({ data: null, error: { kind: "invalid-request", message: "非法的接口名", status: 0 } });
+    }
+    var c = build();
+    if (!c) return Promise.resolve({ data: null, error: envUnavailable() });
+    var hasUser = !!user();
+    var tokP = hasUser && c.auth && c.auth.getAccessToken
+      ? c.auth.getAccessToken().then(function (t) { return t || null; })["catch"](function () { return null; })
+      : Promise.resolve(null);
+    return tokP.then(function (tok) {
+      return fetch(API + "/.cloud/database/rest/rpc/" + fn, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-wb-webapp-access-key": PUBLIC_CONFIG.publishableKey,
+          "Authorization": tok ? "Bearer " + tok : ""
+        },
+        body: JSON.stringify(body || {})
+      }).then(function (r) {
+        if (!r.ok) {
+          return { data: null, error: { kind: "unknown", message: "云端接口暂时不可用（HTTP " + r.status + "）", status: r.status } };
+        }
+        return r.json().then(function (v) { return { data: v, error: null }; });
+      })["catch"](function (e) {
+        return { data: null, error: { kind: "network", message: "网络异常，稍后重试", status: 0, cause: e } };
+      });
+    });
+  }
+
   /* ═══════════ 对外接口 ═══════════ */
   /* 属地预取：页面加载即取一次（fire-and-forget），提交成绩时只读缓存零等待。
      regionLive() 再补上实时检测：换设备立刻重取、回到前台定期复查、变了就广播。 */
@@ -972,6 +1007,8 @@
 
     auth: auth,
     database: db,
+    /* 通用只读 RPC（返回聚合数据的函数用这个，别去拼 fetch） */
+    rpc: rpcCall,
     session: currentSession,
     user: user,
     userId: userId,
