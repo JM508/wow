@@ -7,8 +7,8 @@
         不必再跳 /account/。只有邮箱 + 密码这一条主路径 ——
         验证码登录 / 注册 / 找回密码仍在账号页（要发信、要倒计时，
         塞进弹层容易做半截）。
-     ② 设置入口（2026-10-17 第二批）：主题与无障碍四项开关已搬到
-        独立页 /settings/，这里只留「打开设置」跳转，
+     ② 显示设置（2026-10-22）：主题与大字号 / 减少动效 / 高对比三个开关
+        直接内嵌在个人中心第四页签「设置」里（与 /settings/ 同一套存储），
         外加「打开本游戏设置」派发 game:set-open 开本局玩法面板。
 
    进页面时把 localStorage 里的无障碍偏好应用上（/settings/ 负责写），
@@ -47,15 +47,47 @@
      本文件只负责「进游戏时把已存的设置应用上」，读写都在设置页做。 */
   applyA11y();
 
-  /* ═══════════ ④ 打开本游戏设置 / 打开设置页 ═══════════ */
-  var btnSetOpen = document.getElementById("me-set-open");
-  if (btnSetOpen) {
-    btnSetOpen.addEventListener("click", function () {
-      /* 显示设置已搬到独立页（2026-10-17）；离开前先关掉弹层，
-         从设置页返回时不会撞上一个仍开着的个人中心。 */
-      if (global.MeCenter && global.MeCenter.close) global.MeCenter.close();
-      else document.dispatchEvent(new CustomEvent("me:close"));
-      location.href = "/settings/";
+  /* ═══════════ ④ 显示设置（2026-10-22 应用户要求搬回第四页签内嵌） ═══════════
+     与 /settings/ 页同一套存储：localStorage["wow-a11y-v1"] + sessionStorage["pref-theme"]，
+     只记本机、不上云，两边互相打开都能读到同一份。 */
+  function saveA11y() {
+    try { localStorage.setItem(A11Y_KEY, JSON.stringify(A11Y)); } catch (e) {}
+    applyA11y();
+    paintA11y();
+    document.dispatchEvent(new CustomEvent("a11y:change", { detail: { big: !!A11Y.big, calm: !!A11Y.calm, hc: !!A11Y.hc } }));
+  }
+
+  var btnBig = document.getElementById("me-a11y-big");
+  var btnCalm = document.getElementById("me-a11y-calm");
+  var btnHc = document.getElementById("me-a11y-hc");
+  var btnTheme = document.getElementById("me-theme-sw");
+
+  function paintA11y() {
+    var pairs = [[btnBig, A11Y.big], [btnCalm, A11Y.calm], [btnHc, A11Y.hc]];
+    for (var i = 0; i < pairs.length; i++) {
+      var el = pairs[i][0];
+      if (!el) continue;
+      el.classList.toggle("is-on", !!pairs[i][1]);
+      el.setAttribute("aria-pressed", pairs[i][1] ? "true" : "false");
+    }
+    if (btnTheme) {
+      var light = html.dataset.theme === "light";
+      btnTheme.classList.toggle("is-on", light);
+      btnTheme.setAttribute("aria-pressed", light ? "true" : "false");
+      btnTheme.textContent = light ? "深色主题" : "浅色主题";
+    }
+  }
+
+  if (btnBig) btnBig.addEventListener("click", function () { A11Y.big = !A11Y.big; saveA11y(); });
+  if (btnCalm) btnCalm.addEventListener("click", function () { A11Y.calm = !A11Y.calm; saveA11y(); });
+  if (btnHc) btnHc.addEventListener("click", function () { A11Y.hc = !A11Y.hc; saveA11y(); });
+  if (btnTheme) {
+    btnTheme.addEventListener("click", function () {
+      var to = html.dataset.theme === "light" ? "dark" : "light";
+      html.dataset.theme = to;
+      try { sessionStorage.setItem("pref-theme", to); } catch (e) {}
+      paintA11y();
+      document.dispatchEvent(new CustomEvent("theme:change", { detail: to }));
     });
   }
 
@@ -188,7 +220,11 @@
   if (C() && C().onAuthChange) C().onAuthChange(paintAccount);
 
   applyA11y();
+  paintA11y();
   paintAccount();
+  /* 会话是异步查的：user() 在返回前恒空，等它回来再重画一次，
+     否则已登录用户会看到「未登录」（2026-10-22 修） */
+  if (C() && C().session) C().session().then(function () { paintAccount(); });
 
   /* 对外暴露：游戏脚本想读无障碍状态（例如跑酷要据此关掉屏幕震动）可以问这里 */
   global.WeA11y = {

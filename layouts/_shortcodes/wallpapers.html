@@ -88,12 +88,6 @@
           </span>
         </span>
       </button>
-      <span class="wp-dls">
-        <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}" data-wp-kind="orig"
-                aria-label="下载原图{{ with .title }}，{{ . }}{{ end }}{{ with .orig_kb }}（{{ . }}KB）{{ end }}">原图</button>
-        <button type="button" class="wp-dl" data-wp-dl="{{ .slug }}" data-wp-kind="zip"
-                aria-label="下载压缩图{{ with .title }}，{{ . }}{{ end }}（{{ .kb_thumb }}KB）">压缩</button>
-      </span>
     </div>
     {{- end }}
   </div>

@@ -184,17 +184,6 @@
     el.addEventListener("click", function () { open(el); });
   });
 
-  /* 卡片右上角的下载按钮：原图 / 压缩图两个入口，不进灯箱直接下 */
-  items.forEach(function (el) {
-    var cell = cellOf(el);
-    var btns = cell && cell.querySelectorAll ? cell.querySelectorAll(".wp-dl") : [];
-    [].forEach.call(btns, function (btn) {
-      btn.addEventListener("click", function (e) {
-        e.stopPropagation();
-        saveUrl(urlOf(el, btn.getAttribute("data-wp-kind")), el.getAttribute("data-wp-key"), btn);
-      });
-    });
-  });
   btnX.addEventListener("click", close);
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });

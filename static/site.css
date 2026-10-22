@@ -417,37 +417,9 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   outline-offset: 2px;
 }
 
-/* 卡片单元：卡片本体 + 右上角下载按钮组（原图 / 压缩，按钮不能套在 button 里，所以多一层） */
+/* 卡片单元：卡片本体（下载入口只在灯箱里，2026-10-22 应用户要求撤掉卡片上的按钮组） */
 .wp-cell { position: relative; }
 .wp-pic { display: block; }
-/* 首屏可见的下载入口：小药丸组；触控目标不小于 32px */
-.wp-dls {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  z-index: 2;
-  display: inline-flex;
-  gap: 4px;
-}
-.wp-dl {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 5px 12px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  border-radius: 999px;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-  transition: background-color 0.16s ease, border-color 0.16s ease;
-}
-.wp-dl:hover { background: rgba(0, 0, 0, 0.78); border-color: #fff; }
-.wp-dl:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
-.wp-dl[disabled] { opacity: 0.65; cursor: default; }
 
 /* 统一 16:9 裁切，长宽比差异（1.62~2.28）不会把网格撑歪 */
 .wp-img {
