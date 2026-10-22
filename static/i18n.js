@@ -24,6 +24,7 @@
     "me.tab.set": "Settings",
     "me.nick": "Leaderboard name",
     "me.save": "Save",
+    "games.recent": "Recently played",
     "me.stats": "Stats panel",
     "me.stats.open": "Open stats panel",
     "me.stats.hint": "Play counts, best scores and achievement progress for every game.",
