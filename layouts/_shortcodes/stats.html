@@ -1,0 +1,27 @@
+<div class="stats-root" id="stats-root">
+  <p class="stats-lead">数据全部来自你这台设备的本机存档，不会上传，换设备或清浏览器数据后会归零。</p>
+  <div class="stats-grid">
+    <section class="stats-card" data-stat-card="runner">
+      <h2 class="stats-card-t">火柴人快跑</h2>
+      <div class="stats-rows" data-stat-rows></div>
+    </section>
+    <section class="stats-card" data-stat-card="ms">
+      <h2 class="stats-card-t">扫雷</h2>
+      <div class="stats-rows" data-stat-rows></div>
+    </section>
+    <section class="stats-card" data-stat-card="ttt">
+      <h2 class="stats-card-t">井字棋</h2>
+      <div class="stats-rows" data-stat-rows></div>
+    </section>
+    <section class="stats-card" data-stat-card="snake">
+      <h2 class="stats-card-t">贪吃蛇</h2>
+      <div class="stats-rows" data-stat-rows></div>
+    </section>
+    <section class="stats-card stats-card-wide" data-stat-card="ach">
+      <h2 class="stats-card-t">成就完成度</h2>
+      <div class="stats-rows" data-stat-rows></div>
+    </section>
+  </div>
+  <p class="stats-note">统计与成就由各游戏页在游玩过程中累计；井字棋三难度的详细胜负见游戏页战绩区。</p>
+</div>
+<script src="/stats.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

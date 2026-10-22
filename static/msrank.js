@@ -150,7 +150,7 @@
     });
   }
 
-  /* 我在这个难度的最好成绩（未登录时按访客昵称算） */
+  /* 我在这个难度的最好成绩 + 附近名次（前后各 5 名，未登录时按访客昵称算） */
   function loadMine() {
     if (!mineEl) return;
     var who = me();
@@ -163,9 +163,66 @@
     q.then(function (r) {
         var row = r && r.data && r.data[0];
         if (!row) { mineEl.innerHTML = ""; return; }
+        var best = Math.max(0, Math.round(Number(row.seconds) || 0));
         mineEl.innerHTML = "<span class='ms-rank-mine-t'>我的最好成绩：<b>" +
-          fmtSec(row.seconds) + "</b></span><span class='ms-rank-mine-d'>" + esc(fmtDay(row.created_at)) + "</span>";
+          fmtSec(best) + "</b></span><span class='ms-rank-mine-d'>" + esc(fmtDay(row.created_at)) + "</span>";
+        loadNear(who.name, best);
       });
+  }
+
+  /* ── 附近名次：用时榜是升序（越快越前），严格比我快的 5 条 + 比我慢的 5 条 ── */
+  var NEAR = 5;
+  function nearQuery(cmp, best) {
+    var d = cloud().database();
+    var q = d.from(TABLE)
+      .select("nickname, seconds, region, avatar, created_at")
+      .eq("mode", cur.mode)
+      .order("seconds", { ascending: true }).limit(NEAR + 1);
+    q = cmp === "above" ? q.lt("seconds", best) : q.gt("seconds", best);
+    if (cur.mode === "daily") q = q.gte("created_at", dayStartISO());
+    return q;
+  }
+  function loadNear(myName, best) {
+    nearQuery("above", best).then(function (ra) {
+      var above = dedupe((ra && ra.data) || []).slice(0, NEAR);
+      var exact = above.length < NEAR;
+      var rank = exact ? above.length + 1 : null;
+      nearQuery("below", best).then(function (rb) {
+        var seen = {}, i;
+        for (i = 0; i < above.length; i++) seen[String(above[i].nickname || "")] = true;
+        var belowAll = dedupe((rb && rb.data) || []);
+        var below = [];
+        for (i = 0; i < belowAll.length && below.length < NEAR; i++) {
+          if (!seen[String(belowAll[i].nickname || "")]) below.push(belowAll[i]);
+        }
+        paintNear(myName, best, above, rank, below, exact);
+      });
+    });
+  }
+  function nearRow(r, no, isMe) {
+    return "<li class='ms-rank-row" + (isMe ? " is-me" : "") + "'>" +
+      "<b class='ms-rank-no'>" + (no || "·") + "</b>" +
+      avatarHtml(r) +
+      "<span class='ms-rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) + "</span>" +
+      "<span class='ms-rank-sec'>" + fmtSec(r.seconds) + "</span>" +
+      "</li>";
+  }
+  function paintNear(myName, best, above, rank, below, exact) {
+    var html = "<div class='grank-near-t'>我的名次：" +
+      (rank ? "<b>第 " + rank + " 名</b>" : "<b>5+ 名开外</b>") +
+      (exact && rank === 1 ? "，榜首！" : (exact ? "" : "，继续冲")) + "</div><ul class='grank-near-list'>";
+    var i, no;
+    for (i = 0; i < above.length; i++) {
+      no = rank ? rank - above.length + i : null;
+      html += nearRow(above[i], no, false);
+    }
+    html += nearRow({ nickname: myName, seconds: best, avatar: "", region: "" }, rank, true);
+    for (i = 0; i < below.length; i++) {
+      html += nearRow(below[i], rank ? rank + 1 + i : null, false);
+    }
+    html += "</ul>";
+    var el = document.getElementById("grank-near");
+    if (el) { el.innerHTML = html; paintAvas(el); }
   }
 
   /* ═══════════ 渲染（全量渲染，容器自身滚动） ═══════════ */
