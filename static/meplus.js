@@ -19,6 +19,18 @@
 
   /* 云 SDK 是 defer 加载的，取的时候可能还没就绪 —— 一律懒取，不缓存 */
   function C() { return global.WowCloud || null; }
+  /* me-center partial 在页面里排在 cloud.js 之前，本文件执行时 WowCloud
+     多半还没定义 —— 直接 C() 会读到 null，登录用户也被画成「未登录」，
+     且之后再无重绘。这里等 cloud.js 就绪（defer 脚本按文档序执行，几十毫秒内）
+     再跑一次回调；2 秒仍没等到就放弃（云服务不可用的页面保持默认 UI）。 */
+  function whenCloud(fn) {
+    if (C()) { fn(); return; }
+    var n = 0;
+    var timer = setInterval(function () {
+      if (C()) { clearInterval(timer); fn(); return; }
+      if (++n >= 40) clearInterval(timer);
+    }, 50);
+  }
   var A11Y_KEY = "wow-a11y-v1";
   var html = document.documentElement;
 
@@ -217,14 +229,15 @@
   }
 
   /* 登录态变化（别处登录 / token 失效）时同步这块 UI */
-  if (C() && C().onAuthChange) C().onAuthChange(paintAccount);
-
   applyA11y();
   paintA11y();
   paintAccount();
-  /* 会话是异步查的：user() 在返回前恒空，等它回来再重画一次，
-     否则已登录用户会看到「未登录」（2026-10-22 修） */
-  if (C() && C().session) C().session().then(function () { paintAccount(); });
+  /* 云层就绪后再画一次 + 接上会话查询：user() 在会话回来前恒空，
+     不重绘的话已登录用户会一直看到「未登录」（2026-10-22 修，含加载顺序问题） */
+  whenCloud(function () {
+    if (C().onAuthChange) C().onAuthChange(paintAccount);
+    if (C().session) C().session().then(function () { paintAccount(); })["catch"](function () {});
+  });
 
   /* 对外暴露：游戏脚本想读无障碍状态（例如跑酷要据此关掉屏幕震动）可以问这里 */
   global.WeA11y = {
