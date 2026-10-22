@@ -4,8 +4,12 @@
 
   /* ═══════════════════ 可配置项：只改这一段 ═══════════════════ */
   var CFG = {
-    ver: 1,          // 规则版本号
+    ver: 2,          // 规则版本号（v2：通过后记住 1 小时，localStorage 带过期时间）
     minAge: 18,      // 最低年龄
+
+    /* 通过验证后记住多久（毫秒）：期内刷新/重开浏览器都不再问，
+       过期后重新走一遍「是 + 滑块」。只记在本机 localStorage。 */
+    rememberMs: 60 * 60 * 1000,
 
     title: "年龄验证",
     yesText: "是，我已满 18 周岁",
@@ -85,26 +89,32 @@
   var KEY = "age_ok_v" + CFG.ver;
   var html = document.documentElement;
 
-  /* ---------- 读写状态（仅当前浏览会话，无长期缓存） ---------- */
+  /* ---------- 读写状态：通过后记住 rememberMs（1 小时），过期重新验证 ----------
+     v1 是 sessionStorage（关浏览器就没），v2 起改 localStorage + 过期时间戳：
+     手机上切走再回来、当天重开浏览器都不用再拖一次滑块。 */
   function readStore() {
-    try { return sessionStorage.getItem(KEY) === "1"; } catch (e) { return false; }
+    try {
+      var until = parseInt(localStorage.getItem(KEY), 10);
+      return until > Date.now();
+    } catch (e) { return false; }
   }
   function writeStore() {
-    try { sessionStorage.setItem(KEY, "1"); } catch (e) {}
+    try { localStorage.setItem(KEY, String(Date.now() + CFG.rememberMs)); } catch (e) {}
   }
   function clearStore() {
-    try { sessionStorage.removeItem(KEY); } catch (e) {}
+    try { localStorage.removeItem(KEY); } catch (e) {}
   }
-  // 清理旧版本遗留的键：sessionStorage 旧版本号 + 老版本的 localStorage / Cookie（14 天缓存时期的残留）
+  // 清理旧版本遗留的键：v1 的 sessionStorage / localStorage / Cookie（14 天缓存时期的残留）
   function purgeOld() {
     try {
       for (var i = sessionStorage.length - 1; i >= 0; i--) {
         var k = sessionStorage.key(i);
-        if (k && k.indexOf("age_ok_v") === 0 && k !== KEY) sessionStorage.removeItem(k);
+        if (k && k.indexOf("age_ok_v") === 0) sessionStorage.removeItem(k);
       }
       for (var j = localStorage.length - 1; j >= 0; j--) {
         var lk = localStorage.key(j);
-        if (lk && lk.indexOf("age_ok_v") === 0) localStorage.removeItem(lk);
+        /* 只清旧版本号，别把刚写入的 v2 记住标记删掉 */
+        if (lk && lk.indexOf("age_ok_v") === 0 && lk !== KEY) localStorage.removeItem(lk);
       }
       document.cookie = "age_ok_v1=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
     } catch (e) {}

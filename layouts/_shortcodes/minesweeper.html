@@ -6,6 +6,7 @@
       <option value="easy" selected>初级 9×9 · 10 雷</option>
       <option value="mid">中级 16×16 · 40 雷</option>
       <option value="hard">高级 30×16 · 99 雷</option>
+      <option value="daily">每日挑战 · 今天的雷区大家一样</option>
     </select>
     <div class="ms-stat" title="剩余雷数（总雷数 − 已插旗）">💣 <span id="ms-mines">10</span></div>
     <div class="ms-stat" title="用时（秒）">⏱ <span id="ms-time">0</span></div>
@@ -26,6 +27,7 @@
     <p class="ms-over-t" id="ms-over-t">你碰到炸弹了</p>
     <p class="ms-over-s" id="ms-over-s"></p>
     <button type="button" id="ms-over-btn" class="ms-over-btn">再来一局</button>
+    <button type="button" id="ms-over-share" class="ms-over-btn ms-over-share" data-share-card hidden>分享战绩</button>
   </div>
 </div>
 
@@ -40,6 +42,7 @@
       <button type="button" class="ms-rtab is-on" role="tab" aria-selected="true" data-mode="easy">初级 9×9</button>
       <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="mid">中级 16×16</button>
       <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="hard">高级 30×16</button>
+      <button type="button" class="ms-rtab" role="tab" aria-selected="false" data-mode="daily">每日挑战</button>
     </div>
     <div class="ms-rank-status" id="ms-rank-status" role="status" aria-live="polite"></div>
     <ol class="ms-rank-list ms-rank-list-scroll" id="ms-rank-list" aria-label="排行榜前 100 名"></ol>
@@ -64,4 +67,7 @@
 {{/* 成就引擎：游戏页用 gameach.js（本游戏专属成就），跑酷的 ach.js 只在跑酷页加载（2026-10-06） */}}
 <script src="/gameach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/vendor/qrcode.js" defer></script>
+<script src="/share-card.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/score-queue.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
 <script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

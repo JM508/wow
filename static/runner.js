@@ -1019,6 +1019,20 @@
     } catch (e) {}
   }
 
+  /* 分享卡的 payload（JSON 字符串塞进 data-share-payload，share-card.js 统一代理） */
+  function sharePayload() {
+    return JSON.stringify({
+      t: "火柴人快跑",
+      big: Math.floor(S.score) + " 分",
+      lines: [
+        "跑了 " + Math.floor(S.dist / 100) + " 米",
+        "本局金币 " + S.coins + " 枚",
+        "最高连击 " + S.maxCombo,
+        S.isBest ? "刷新个人最高分（" + Math.floor(S.best) + " 分）" : "个人最高 " + Math.floor(S.best) + " 分"
+      ]
+    });
+  }
+
   /* ═══════════ 本机记录（localStorage，最多 5 条） ═══════════ */
   function loadRecords() {
     try {
@@ -1111,7 +1125,13 @@
             ? "<button type='button' class='run-upload-btn' data-upload-run>上传成绩到排行榜</button>" +
               "<label class='run-autoup'><input type='checkbox' id='run-autoup-check'>" +
               "以后自动上传成绩到排行榜（设置里可以取消）</label>"
-            : ""));
+            : "")) +
+        /* 分享战绩：canvas 海报（背景图 + 分数 + 站点二维码），见 share-card.js。
+           share-card.js 没加载（独立站不引它）就不渲染这个按钮，别给死入口。 */
+        (window.ShareCard
+          ? "<button type='button' class='run-upload-btn run-share-btn' data-share-card data-share-payload='" +
+            sharePayload() + "'>分享战绩</button>"
+          : "");
       elOvBtn.textContent = "再来一局";
       renderRecords();
     } else if (kind === "help") {
