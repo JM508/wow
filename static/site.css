@@ -290,14 +290,17 @@ html[data-ag-bg] .games-entry-btn.games-entry-ghost {
 }
 
 /* ══ 跑酷页底部「键盘 / 手机」按键提示（.run-foot）══
-   2026-10-22 用户要求提示文字改为黑色。暗色主题下 runner.css 给它的底是
-   rgba(255,255,255,0.07)（近乎透明）、文字用 var(--primary)（浅色），
-   压在亮色背景图上几乎看不清。这里统一成亮色底 + 黑字，两主题、压图与否都清晰。
+   2026-10-22 用户要求：① 文字改黑色 ② 去掉提示外面那个底色框。
+   做法：底色一律透明（不再用 runner.css 的浅色芯片）、文字默认为黑；只有
+   「暗色主题 + 没开背景图」时页面本身是深色，才回退成浅色字，避免黑字压黑底看不清。
    注意 extend_head 里 site.css 先于 runner.css 加载，必须用带 html 前缀的
    高优先级选择器才能盖过 runner.css 的同名规则。 */
-html .run-foot { color: #1f1f1f; }
-html[data-theme="dark"] .run-foot { background: rgba(255, 255, 255, 0.88); color: #1f1f1f; }
+html .run-foot { color: #1f1f1f; background: transparent; border-radius: 0; }
 html .run-foot b { color: #1f1f1f; }
+html[data-theme="dark"]:not([data-ag-bg]) .run-foot,
+html[data-theme="dark"]:not([data-ag-bg]) .run-foot b {
+  color: var(--primary, #e6e6e6);
+}
 
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
 .games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }
@@ -428,11 +431,13 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 }
 .wp-tab.is-on .wp-n { background: rgba(255, 255, 255, 0.24); }
 
-/* 网格 */
+/* 网格：卡片高度随图片原始比例走，顶端对齐（等价于 flex 的 align-items: start），
+   短横图卡片不会被拉高去对齐同排的竖图，形成高低错落的瀑布流观感。 */
 .wp-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
+  align-items: start;
 }
 .wp-item {
   position: relative;
@@ -479,13 +484,13 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   backdrop-filter: blur(2px);
 }
 
-/* 统一 16:9 裁切，长宽比差异（1.62~2.28）不会把网格撑歪 */
+/* 图片按原始长宽比自然缩放：宽 100% 铺满卡片，高度 auto。
+   2026-10-22 用户要求不再强制裁切 —— 撤掉原来的 aspect-ratio: 16/9 + object-fit: cover，
+   横图卡片矮、竖图卡片高（<img> 上的 width/height 属性仍是真实比例，加载前不抖）。 */
 .wp-img {
   display: block;
   width: 100%;
   height: auto;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
   opacity: 0;
   transform: scale(1.02);
   transition: opacity 0.28s ease, transform 0.32s ease;
