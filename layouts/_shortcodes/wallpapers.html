@@ -62,6 +62,10 @@
   <div class="wp-grid" id="wp-grid">
     {{- range $i, $e := $items }}
     {{- $thumbH := math.Round (div (mul 640.0 .h) .w) -}}
+    {{- /* 卡片右上角标的体积 = 灯箱「下载原图」那份文件的体积：
+           有专属原图 jpg 用 orig_kb，否则是 1920 宽 webp 的 kb */ -}}
+    {{- $dlKb := .kb -}}
+    {{- with .orig_kb }}{{ $dlKb = . }}{{ end -}}
     {{- /* 首屏 6 张即时加载（LCP 候选），第一张最高优先级；其余懒加载。
            展示层优先进 AVIF，浏览器不支持时回退 WebP（<picture>）；
            下载按钮始终给 WebP 大图，体积直接标在按钮上。 */ -}}
@@ -79,6 +83,7 @@
                loading="{{ if lt $i 6 }}eager{{ else }}lazy{{ end }}"
                {{- if lt $i 6 }} fetchpriority="high"{{ end }} decoding="async">
         </picture>
+        <span class="wp-size" aria-hidden="true">{{ $dlKb }} KB</span>
         <span class="wp-cap">
           {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
           {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
@@ -119,7 +124,6 @@
     <span class="wp-lb-cap" id="wp-lb-cap"></span>
     <span class="wp-lb-dim" id="wp-lb-dim"></span>
     <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载原图">下载原图</button>
-    <button type="button" class="wp-lb-dl" id="wp-lb-dl-zip" aria-label="下载压缩图">下载压缩图</button>
   </div></div>
 
 {{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}

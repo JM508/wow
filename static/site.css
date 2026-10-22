@@ -443,6 +443,23 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-cell { position: relative; }
 .wp-pic { display: block; }
 
+/* 右上角下载体积角标：只展示大小，不可点（下载入口在灯箱里） */
+.wp-size {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  padding: 2px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+}
+
 /* 统一 16:9 裁切，长宽比差异（1.62~2.28）不会把网格撑歪 */
 .wp-img {
   display: block;

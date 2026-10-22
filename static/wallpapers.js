@@ -82,16 +82,12 @@
   var btnPrev = document.getElementById("wp-lb-prev");
   var btnNext = document.getElementById("wp-lb-next");
   var btnDl = document.getElementById("wp-lb-dl");
-  var btnDlZip = document.getElementById("wp-lb-dl-zip");
   var lastFocus = null;
   var pos = -1;
 
-  /* 取某张卡的下载地址：orig=原图（有专属 jpg 用 jpg，否则 1920 宽 webp）；zip=640 压缩 webp */
-  function urlOf(el, kind) {
-    if (kind === "orig") {
-      return el.getAttribute("data-wp-orig") || el.getAttribute("data-wp-full");
-    }
-    return el.getAttribute("data-wp-thumb") || el.getAttribute("data-wp-full");
+  /* 取某张卡的下载地址：orig=原图（有专属 jpg 用 jpg，否则 1920 宽 webp） */
+  function urlOf(el) {
+    return el.getAttribute("data-wp-orig") || el.getAttribute("data-wp-full");
   }
   function extOf(url) {
     var m = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(url || "");
@@ -115,12 +111,9 @@
     lbDim.textContent = (el.getAttribute("data-wp-size") || "").replace("x", " × ") + " · " +
       (pos + 1) + " / " + arr.length;
     if (btnDl) {
-      btnDl.textContent = okb ? "下载原图 · " + okb + "KB" : "下载原图";
-      btnDl.setAttribute("aria-label", "下载原图" + (okb ? " · " + okb + "KB" : "") + "，" + title);
-    }
-    if (btnDlZip) {
-      btnDlZip.textContent = kb ? "下载压缩图 · " + kb + "KB" : "下载压缩图";
-      btnDlZip.setAttribute("aria-label", "下载压缩图" + (kb ? " · " + kb + "KB" : "") + "，" + title);
+      var size = okb || kb;
+      btnDl.textContent = size ? "下载原图 · " + size + "KB" : "下载原图";
+      btnDl.setAttribute("aria-label", "下载原图" + (size ? " · " + size + "KB" : "") + "，" + title);
     }
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;
@@ -155,12 +148,11 @@
     });
   }
 
-  function download(kind) {
+  function download() {
     var arr = list();
     if (!arr.length || pos < 0) return;
     var el = arr[pos];
-    var btn = kind === "orig" ? btnDl : btnDlZip;
-    saveUrl(urlOf(el, kind), el.getAttribute("data-wp-key"), btn);
+    saveUrl(urlOf(el), el.getAttribute("data-wp-key"), btnDl);
   }
 
   function open(el) {
@@ -187,8 +179,7 @@
   btnX.addEventListener("click", close);
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
-  if (btnDl) btnDl.addEventListener("click", function () { download("orig"); });
-  if (btnDlZip) btnDlZip.addEventListener("click", function () { download("zip"); });
+  if (btnDl) btnDl.addEventListener("click", download);
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
@@ -230,7 +221,6 @@
       if (!btnPrev.hidden) order.push(btnPrev);
       if (!btnNext.hidden) order.push(btnNext);
       if (btnDl) order.push(btnDl);
-      if (btnDlZip) order.push(btnDlZip);
       var at = order.indexOf(document.activeElement);
       var next = e.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : (at === order.length - 1 ? 0 : at + 1);
       order[next].focus();
