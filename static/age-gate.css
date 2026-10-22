@@ -268,31 +268,39 @@
     content: "";
     position: absolute;
     inset: 0;
-    /* 白天蒙版：灰蓝（--ag-tint 由 age-gate.js 注入）。
-       ⚠️ 这层是白天「背景发白」的唯一来源：加白混合 = 提亮 + 去饱和，
-       浓度（--ag-dim）与颜色深浅（--ag-tint）共同决定发白程度 */
-    background: var(--ag-tint, #bcc6d4);
-    opacity: var(--ag-dim, 0.30);
+    /* 压图蒙版（2026-10-22 改版）：
+       不再整屏铺一层均匀半透明黑，改成竖向分段渐变 ——
+       顶部（站名 + 大标题 + 入口按钮）与底部（页脚）提亮，中下部留空，
+       人物脸部所在的画面中心保持原本的亮度与清晰度。
+       因为压图文字是深色的，文字区做的是「提亮」而不是压暗：
+       压暗会把黑字吃掉，反而更看不清。 */
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.92) 0%,
+      rgba(255, 255, 255, 0.84) 12%,
+      rgba(255, 255, 255, 0.60) 24%,
+      rgba(255, 255, 255, 0.28) 36%,
+      rgba(255, 255, 255, 0.08) 46%,
+      rgba(255, 255, 255, 0) 54%,
+      rgba(255, 255, 255, 0) 72%,
+      rgba(255, 255, 255, 0.44) 86%,
+      rgba(255, 255, 255, 0.84) 100%
+    );
+    opacity: 1;
   }
-  /* 两个主题都用灰蓝蒙版补饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
+  /* 两个主题都补一点饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
      「看背景图」模式要求显示真原图，也关闭） */
   [data-theme="light"] #ag-bg,
   [data-theme="dark"] #ag-bg,
   html[data-ag="pending"] #ag-bg { filter: saturate(var(--ag-sat, 1)); }
   html[data-ag-view="1"] #ag-bg { filter: none; }
-  /* 夜间蒙版 2026-10-22 起与白天同色（灰蓝）：压图文字已统一为黑字，
-     原黑色蒙版会把壁纸压得太暗、黑字反而看不清。浓度仍独立控制（--ag-dim-dark） */
-  [data-theme="dark"] #ag-bg::after {
-    background: var(--ag-tint, #bcc6d4);
-    opacity: var(--ag-dim-dark, var(--ag-dim, 0.4));
-  }
-  /* 验证遮罩显示期间一律用白天蒙版（与上面的「验证=白天模式」一致） */
+  /* 验证遮罩显示期间仍是均匀灰蓝（这一屏只有验证卡，没有压图文字要照顾） */
   html[data-ag="pending"] #ag-bg::after {
     background: var(--ag-tint, #bcc6d4);
     opacity: var(--ag-dim, 0.30);
   }
-  /* 通过验证后由白天切回夜间时不硬跳，蒙版缓缓过渡 */
-  #ag-bg::after { transition: background-color 0.45s ease, opacity 0.45s ease; }
+  /* 蒙版切换只过渡透明度：渐变色不可插值，硬切会闪 */
+  #ag-bg::after { transition: opacity 0.45s ease; }
   /* 让正文容器透明，露出背景图（卡片仍保留自己的底色） */
   html[data-ag-bg] body,
   html[data-ag-bg] .list { background: transparent !important; }

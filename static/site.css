@@ -261,20 +261,26 @@ html.has-net-status .header { top: 34px; }   /* 别盖住站点头部（吸顶�
 
 /* ══ 背景图模式下的文字可读性 ══
    html[data-ag-bg] 时页面底色透明，标题与页脚直接压在背景图上。
-   2026-10-22 用户要求：黑暗模式里面的字也变成黑色 —— 壁纸本身是亮色的，
-   白字压亮图反而发虚。两个主题统一按白天口径：深色文字 + 白色勾边；
-   夜间蒙版同步由黑色改为灰蓝（见 age-gate.css），保证黑字压得住。
-   关掉背景图（data-ag-bg 移除）后自动回到主题默认配色，不受影响。 */
+   2026-10-22 用户要求：黑暗模式里面的字也变成黑色 —— 壁纸是亮色的，白字压亮图反而发虚。
+   两个主题统一深色文字；文字底下的可读性交给 age-gate.css 的分段渐变蒙版，
+   不再用白色发光（发光会让黑字看起来发白、白天模式尤其明显）。 */
 html[data-ag-bg] .first-entry h1,
 html[data-ag-bg] .header .logo,
+html[data-ag-bg] .header .logo a,
 html[data-ag-bg] .footer,
 html[data-ag-bg] .footer-repo {
   color: #1f1f1f;
-  text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5);
+  text-shadow: none;
+}
+/* 页头右侧的主题切换图标走 currentColor，白蒙版上必须转深色 */
+html[data-ag-bg] .theme-toggle,
+html[data-ag-bg] .logo-switches a {
+  color: #1f1f1f;
 }
 html[data-ag-bg] .footer a,
 html[data-ag-bg] .footer-repo a {
   color: #444444;
+  text-shadow: none;
 }
 /* 首页两个入口按钮同样转深色（暗色主题下 var(--primary) 是浅灰，压亮图看不清） */
 html[data-ag-bg] .games-entry-btn,
