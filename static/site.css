@@ -302,6 +302,23 @@ html[data-theme="dark"]:not([data-ag-bg]) .run-foot b {
   color: var(--primary, #e6e6e6);
 }
 
+/* 「最近在玩」角标：lastplay.js 在 /games/ 对应游戏名后面插入的小胶囊（2026-10-22）。
+   挂在 .games-name 内部保持同行；自带底色，白字在压图黑字方案下也清晰。 */
+.games-recent {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2fbf8f, #2ea7c9);
+  vertical-align: 2px;
+  white-space: nowrap;
+}
+.games-row:hover .games-recent { color: #ffffff; }
+
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
 .games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }
 .games-snake:hover { background: linear-gradient(135deg, #37a352, #7bc043); box-shadow: 0 12px 26px -12px rgba(55, 163, 82, 0.9); }
