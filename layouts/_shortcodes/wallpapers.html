@@ -3,6 +3,14 @@
      CSP 是 style-src 'self'，所以这里不写任何内联 style，占位底色由 JS 用 CSSOM 赋值。 */ -}}
 {{- $d := site.Data.wallpapers -}}
 {{- $items := $d.items -}}
+{{- /* 排列顺序：横屏在前、竖屏在后（ratio < 1 记为竖屏）。
+       2026-10-22 用户要求：桌面端竖屏图放到后面，手机端横屏放在前面 ——
+       两个说法用同一个顺序就能满足。以后加竖屏图不用改代码，这里按 ratio 自动分流，
+       各自组内保持 yaml 里的原始顺序。 */ -}}
+{{- $land := slice -}}
+{{- $port := slice -}}
+{{- range $items }}{{ if ge .ratio 1.0 }}{{ $land = $land | append . }}{{ else }}{{ $port = $port | append . }}{{ end }}{{ end -}}
+{{- $ordered := $land | append $port -}}
 {{- $anime := 0 -}}
 {{- range $items }}{{ if in .tags "二次元" }}{{ $anime = add $anime 1 }}{{ end }}{{ end -}}
 {{- $games := sub (len $items) $anime -}}
@@ -60,7 +68,7 @@
   </div>
 
   <div class="wp-grid" id="wp-grid">
-    {{- range $i, $e := $items }}
+    {{- range $i, $e := $ordered }}
     {{- $thumbH := math.Round (div (mul 640.0 .h) .w) -}}
     {{- /* 卡片右上角标的体积 = 灯箱「下载原图」那份文件的体积：
            有专属原图 jpg 用 orig_kb，否则是 1920 宽 webp 的 kb */ -}}
