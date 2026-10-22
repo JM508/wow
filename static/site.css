@@ -259,25 +259,28 @@ html.has-net-status .header { top: 34px; }   /* 别盖住站点头部（吸顶�
 }
 .sq-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
 
-/* ══ 背景图模式下的文字可读性（2026-10-05 用户反馈：压在背景上的有些文字看不清）══
-   html[data-ag-bg] 时页面底色透明，标题与页脚直接压在背景图上；
-   背景 20 张轮换、明暗都有 —— 压图文字加投影勾边；暗色主题下页脚整体调亮。 */
+/* ══ 背景图模式下的文字可读性 ══
+   html[data-ag-bg] 时页面底色透明，标题与页脚直接压在背景图上。
+   2026-10-22 用户要求：黑暗模式里面的字也变成黑色 —— 壁纸本身是亮色的，
+   白字压亮图反而发虚。两个主题统一按白天口径：深色文字 + 白色勾边；
+   夜间蒙版同步由黑色改为灰蓝（见 age-gate.css），保证黑字压得住。
+   关掉背景图（data-ag-bg 移除）后自动回到主题默认配色，不受影响。 */
 html[data-ag-bg] .first-entry h1,
 html[data-ag-bg] .header .logo,
 html[data-ag-bg] .footer,
 html[data-ag-bg] .footer-repo {
+  color: #1f1f1f;
   text-shadow: 0 1px 3px rgba(255, 255, 255, 0.7), 0 0 10px rgba(255, 255, 255, 0.5);
 }
-html[data-theme="dark"][data-ag-bg] .first-entry h1,
-html[data-theme="dark"][data-ag-bg] .header .logo,
-html[data-theme="dark"][data-ag-bg] .footer,
-html[data-theme="dark"][data-ag-bg] .footer-repo {
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.6);
-  color: #f2f2f2;
+html[data-ag-bg] .footer a,
+html[data-ag-bg] .footer-repo a {
+  color: #444444;
 }
-html[data-theme="dark"][data-ag-bg] .footer a,
-html[data-theme="dark"][data-ag-bg] .footer-repo a {
-  color: #ffffff;
+/* 首页两个入口按钮同样转深色（暗色主题下 var(--primary) 是浅灰，压亮图看不清） */
+html[data-ag-bg] .games-entry-btn,
+html[data-ag-bg] .games-entry-btn.games-entry-ghost {
+  color: #1f1f1f;
+  border-color: rgba(30, 30, 30, 0.6);
 }
 
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */

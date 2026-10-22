@@ -274,14 +274,16 @@
     background: var(--ag-tint, #bcc6d4);
     opacity: var(--ag-dim, 0.30);
   }
-  /* 白天给背景图补一点饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
-     夜间是加黑压暗、不失真，不需要补；「看背景图」模式要求显示真原图，也关闭） */
+  /* 两个主题都用灰蓝蒙版补饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
+     「看背景图」模式要求显示真原图，也关闭） */
   [data-theme="light"] #ag-bg,
+  [data-theme="dark"] #ag-bg,
   html[data-ag="pending"] #ag-bg { filter: saturate(var(--ag-sat, 1)); }
   html[data-ag-view="1"] #ag-bg { filter: none; }
-  /* 夜间模式用黑色蒙版，浓度独立控制（--ag-dim-dark） */
+  /* 夜间蒙版 2026-10-22 起与白天同色（灰蓝）：压图文字已统一为黑字，
+     原黑色蒙版会把壁纸压得太暗、黑字反而看不清。浓度仍独立控制（--ag-dim-dark） */
   [data-theme="dark"] #ag-bg::after {
-    background: #000000;
+    background: var(--ag-tint, #bcc6d4);
     opacity: var(--ag-dim-dark, var(--ag-dim, 0.4));
   }
   /* 验证遮罩显示期间一律用白天蒙版（与上面的「验证=白天模式」一致） */
