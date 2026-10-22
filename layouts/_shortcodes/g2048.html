@@ -1,0 +1,71 @@
+<!-- 2048 小游戏：样式与逻辑均为外链静态文件（CSP 纯同源白名单，禁内联脚本） -->
+<!-- 排行榜复用 GameRank 通用组件（game_scores 表，game=2048）；个人中心由 me.js 驱动 -->
+<div id="g2048-root" aria-label="2048">
+  <div class="g2048-bar">
+    <select id="g2048-level" aria-label="模式">
+      <option value="easy" selected>经典</option>
+      <option value="daily">每日挑战</option>
+    </select>
+    <span class="g2048-stat">得分 <b id="g2048-score">0</b></span>
+    <span class="g2048-stat">最高 <b id="g2048-best">0</b></span>
+    <button type="button" id="g2048-new" class="g2048-btn g2048-btn-primary">新局</button>
+  </div>
+  <div class="g2048-bar">
+    <button type="button" id="g2048-me-open" class="g2048-btn" data-open-me title="个人中心：成就、昵称与头像">个人中心</button>
+    <button type="button" id="g2048-rank-open" class="g2048-btn" data-grank-open title="排行榜：经典与每日挑战的最佳分数">排行榜</button>
+    <span class="g2048-hint" id="g2048-msg" role="status" aria-live="polite">方向键 / WASD / 滑动来移动方块</span>
+  </div>
+  <div id="g2048-board" class="g2048-board" role="grid" aria-label="2048 棋盘">
+    <div class="g2048-cells" aria-hidden="true">
+      <span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span>
+      <span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span>
+      <span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span>
+      <span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span><span class="g2048-cell"></span>
+    </div>
+    <div id="g2048-tiles" class="g2048-tiles"></div>
+    <div id="g2048-over" class="g2048-over hidden" role="alertdialog" aria-modal="true" aria-labelledby="g2048-over-t" aria-describedby="g2048-over-s">
+      <div class="g2048-over-box">
+        <p class="g2048-over-t" id="g2048-over-t">游戏结束</p>
+        <p class="g2048-over-s" id="g2048-over-s"></p>
+        <div class="g2048-over-actions">
+          <button type="button" id="g2048-over-btn" class="g2048-btn g2048-btn-primary">再来一局</button>
+          <button type="button" id="g2048-over-cancel" class="g2048-btn">取消</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 云端排行榜弹层（GameRank 通用组件，game_scores 表） ═══ -->
+<div id="grank-root" data-game="2048" data-title="2048 排行榜" data-unit="分" data-modes="easy:经典,daily:每日挑战"></div>
+<div id="grank-panel" class="grank hidden" role="dialog" aria-modal="true" aria-labelledby="grank-title">
+  <div class="grank-box">
+    <div class="grank-head">
+      <strong id="grank-title">2048 排行榜</strong>
+      <button type="button" class="grank-x" id="grank-close" title="关闭排行榜" aria-label="关闭排行榜">✕</button>
+    </div>
+    <div class="grank-tabs" id="grank-tabs" role="tablist" aria-label="模式">
+      <button type="button" class="grank-tab is-on" role="tab" aria-selected="true" data-mode="easy">经典</button>
+      <button type="button" class="grank-tab" role="tab" aria-selected="false" data-mode="daily">每日挑战</button>
+    </div>
+    <div class="grank-status" id="grank-status" role="status" aria-live="polite"></div>
+    <ol class="grank-list" id="grank-list" aria-label="排行榜前 100 名"></ol>
+    <div class="grank-mine" id="grank-mine"></div>
+    <div class="grank-near" id="grank-near"></div>
+    <p class="grank-foot">
+      榜上按<b>最佳分数</b>排名（同名只留最高的一条）；
+      未登录以「访客 N」上榜，登录后可在个人中心用自己的昵称，成绩跟着账号走。
+    </p>
+  </div>
+</div>
+
+<!-- ═══ 个人中心（共用 DOM）：2048 页由 me.js 驱动 ═══ -->
+{{ partial "me-center.html" . }}
+
+{{/* 云 SDK 必须在 cloud.js 之前（cloud.js 的 build() 依赖 window.WorkBuddyCloud） */}}
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/score-queue.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/grank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/2048.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>

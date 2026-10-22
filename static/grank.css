@@ -135,3 +135,21 @@
 @media (prefers-reduced-motion: reduce) {
   .grank-box { animation: none; }
 }
+
+/* ── 附近名次（2026-10-22）：我前后各 5 名的窗口 ── */
+.grank-near { margin-top: 10px; }
+.grank-near-t { font-size: 13px; color: var(--secondary, #5b6470); margin-bottom: 6px; }
+.grank-near-t b { color: var(--primary, #1f1f1f); }
+.grank-near-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.grank-near-list .grank-row { padding: 7px 10px; font-size: 13px; }
+.grank-near-list .grank-row.is-me {
+  background: rgba(59, 130, 246, 0.10);
+}
+.grank-near-list .grank-row.is-me .grank-name { font-weight: 700; }
