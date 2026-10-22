@@ -924,3 +924,61 @@ footer.footer { color: var(--primary, #1f1f1f); }
   transition: width 0.4s ease;
 }
 .games-2048:hover { background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 12px 26px -12px rgba(245, 158, 11, 0.9); }
+
+/* ═══ PWA 安装条（static/pwa.js 动态插入） ═══
+   贴底显示、安全区留白；样式全在类里，JS 只建节点不写内联样式（CSP） */
+.pwa-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  background: var(--entry, #fff);
+  color: var(--primary, #1f2937);
+  box-shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.pwa-txt { flex: 1 1 auto; min-width: 0; }
+.pwa-btn {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.pwa-btn:hover { background: #2563eb; }
+.pwa-x {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--secondary, #6b7280);
+  font-size: 14px;
+  cursor: pointer;
+}
+.pwa-x:hover { background: var(--code-bg, #f3f4f6); }
+@media (min-width: 720px) {
+  .pwa-bar { left: 50%; right: auto; transform: translateX(-50%); width: 460px; }
+}
+
+/* ═══ 触屏输入优化（2026-10-22） ═══
+   · touch-action: manipulation 去掉双击缩放带来的 300ms 点击延迟
+   · 关掉 iOS 的点击高亮灰块（我们自己有 tapfx 涟漪） */
+.ms-cell, .ttt-cell, .snake-dpad button, #snake-dpad button,
+.run-btn, .ms-btn, .ttt-btn, .me-btn, .me-sw, .shop-buy, .g2048-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#snake-canvas, #ms-board, .ttt-board { touch-action: manipulation; }

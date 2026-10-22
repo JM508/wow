@@ -355,6 +355,7 @@
     boomCell.el.classList.add("boom");
     boomCell.el.innerHTML = mineSvg();
     boomSound(1, 1);
+    if (window.WowHaptics) window.WowHaptics.play("fail");
 
     others.forEach(function (cell, i) {
       setTimeout(function () {
@@ -433,6 +434,7 @@
       updateMineCounter();
       msgEl.textContent = "扫雷成功！用时 " + S.seconds + " 秒。";
       msgEl.className = "ms-msg win";
+      if (window.WowHaptics) window.WowHaptics.play("win");
       /* 成就：本局通关（难度、用时、插旗数、翻开格数） */
       if (window.GameAch) {
         window.GameAch.report({

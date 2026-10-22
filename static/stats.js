@@ -157,9 +157,68 @@
     }
   }
 
+  /* ── 站点性能（近 7 天真实访客的 p75，来自云端聚合 RPC） ──
+     数据是全网匿名聚合，不是本机数据；取不到就如实说「暂时取不到」，
+     不能假装成 0 或「一切正常」（这卡的意义就是发现变慢）。 */
+  var VITAL_ORDER = [
+    ["LCP", "最大内容绘制"], ["INP", "交互延迟"], ["CLS", "布局偏移"],
+    ["FCP", "首次内容绘制"], ["TTFB", "首字节"]
+  ];
+  var VITAL_GOOD = { LCP: 2500, INP: 200, CLS: 0.1, FCP: 1800, TTFB: 800 };
+
+  function fmtVital(metric, v) {
+    var n = Number(v);
+    if (!isFinite(n)) return "—";
+    if (metric === "CLS") return n.toFixed(3);
+    if (n < 1000) return Math.round(n) + " 毫秒";
+    return (n / 1000).toFixed(2) + " 秒";
+  }
+
+  function loadVitals() {
+    var card = document.querySelector("[data-stat-card='vitals']");
+    if (!card) return;
+    var rows = card.querySelector("[data-stat-rows]");
+    if (!rows) return;
+    var C = window.WowCloud;
+    if (!C || !C.rpc) {
+      rows.innerHTML = row("状态", "云服务暂不可用，稍后刷新再看");
+      return;
+    }
+    C.rpc("site_vitals_summary", { p_days: 7 }).then(function (r) {
+      var list = r && !r.error && r.data;
+      if (!list || !list.length) {
+        rows.innerHTML = row("状态", r && r.error ? "暂时取不到（" + (r.error.message || "网络异常") + "）" : "还没有采集到数据");
+        return;
+      }
+      var byMetric = {};
+      for (var i = 0; i < list.length; i++) {
+        var it = list[i] || {};
+        if (!it.metric) continue;
+        (byMetric[it.metric] = byMetric[it.metric] || []).push(it);
+      }
+      var html = "";
+      VITAL_ORDER.forEach(function (pair) {
+        var arr = byMetric[pair[0]];
+        if (!arr) return;
+        var parts = [];
+        arr.sort(function (a, b) { return a.device === "mobile" ? -1 : 1; });
+        for (var j = 0; j < arr.length; j++) {
+          var d = arr[j];
+          parts.push((d.device === "mobile" ? "手机 " : "电脑 ") + fmtVital(pair[0], d.p75) +
+            "（" + num(d.samples) + " 次，良好 " + num(d.good_pct) + "%）");
+        }
+        html += row(pair[1], parts.join("｜"));
+      });
+      rows.innerHTML = html || row("状态", "还没有采集到数据");
+    })["catch"](function () {
+      rows.innerHTML = row("状态", "暂时取不到，稍后刷新再看");
+    });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", render);
+    document.addEventListener("DOMContentLoaded", function () { render(); loadVitals(); });
   } else {
     render();
+    loadVitals();
   }
 })();

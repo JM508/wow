@@ -38,6 +38,7 @@ var PRECACHE = [
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
   '/net-status.js', '/score-queue.js', '/share-card.js', '/vendor/qrcode.js',
   '/tapfx.js', '/meplus.js', '/wallpapers.js', '/settings.js',
+  '/haptics.js', '/pwa.js', '/i18n.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
   '/site.webmanifest',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',

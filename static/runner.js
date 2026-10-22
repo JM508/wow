@@ -980,6 +980,8 @@
     puff(CFG.PX, P.y - 20, 18, "#8d98a6", 1.4);
     sparkle(CFG.PX, P.y - 34, 12, dangerColor());
     Sfx.crash();
+    /* 触感：撞死时短震一下（haptics.js 会自己看「减少动效」和用户开关） */
+    if (window.WowHaptics) window.WowHaptics.play("hit");
 
     var score = Math.floor(S.score);
     S.isBest = score > S.best;

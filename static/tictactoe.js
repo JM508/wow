@@ -341,6 +341,7 @@
     if (window.GameAch) {
       window.GameAch.report({ kind: w.p === ME ? "win" : (w.p === AI ? "lose" : "draw"), mode: mode });
     }
+    if (window.WowHaptics) window.WowHaptics.play(w.p === ME ? "win" : (w.p === AI ? "hit" : "tap"));
     var pts = points(mode), pd = POINTS[mode] || 1;
     var txt = w.p === ME ? "你赢了！" : (w.p === AI ? "电脑赢了" : "平局");
     var tipTxt = w.p === ME ? "本局 +" + pd + " 分"
@@ -389,6 +390,7 @@
     history.push({ before: board.slice(), idx: i, who: ME });
     board[i] = ME;
     paintCell(i);
+    if (window.WowHaptics) window.WowHaptics.play("tap");
     var w = winInfo(board);
     if (w) { settle(w); return; }
     lock = true;
