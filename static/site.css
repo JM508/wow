@@ -289,6 +289,16 @@ html[data-ag-bg] .games-entry-btn.games-entry-ghost {
   border-color: rgba(30, 30, 30, 0.6);
 }
 
+/* ══ 跑酷页底部「键盘 / 手机」按键提示（.run-foot）══
+   2026-10-22 用户要求提示文字改为黑色。暗色主题下 runner.css 给它的底是
+   rgba(255,255,255,0.07)（近乎透明）、文字用 var(--primary)（浅色），
+   压在亮色背景图上几乎看不清。这里统一成亮色底 + 黑字，两主题、压图与否都清晰。
+   注意 extend_head 里 site.css 先于 runner.css 加载，必须用带 html 前缀的
+   高优先级选择器才能盖过 runner.css 的同名规则。 */
+html .run-foot { color: #1f1f1f; }
+html[data-theme="dark"] .run-foot { background: rgba(255, 255, 255, 0.88); color: #1f1f1f; }
+html .run-foot b { color: #1f1f1f; }
+
 /* 合集页第三行：井字棋 hover 品牌色（2026-10-05 新游戏） */
 .games-ttt:hover { background: linear-gradient(135deg, #2fbf8f, #2ea7c9); box-shadow: 0 12px 26px -12px rgba(47, 191, 143, 0.9); }
 .games-snake:hover { background: linear-gradient(135deg, #37a352, #7bc043); box-shadow: 0 12px 26px -12px rgba(55, 163, 82, 0.9); }
