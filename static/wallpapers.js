@@ -11,7 +11,23 @@
   var grid = document.getElementById("wp-grid");
   var empty = document.getElementById("wp-empty");
   var items = [].slice.call(grid.querySelectorAll(".wp-item"));
-  var tabs = [].slice.call(document.querySelectorAll(".wp-tab"));
+  /* 只收「分类」页签（带 data-wp-tag）；「最多下载」是排序开关，不算分类，
+     混进来会让 applyTag(null) 把所有卡片藏掉 */
+  var tabs = [].slice.call(document.querySelectorAll(".wp-tab[data-wp-tag]"));
+
+  /* ── 收藏与下载计数（2026-10-23）：只记本机 localStorage，不上云 ──
+     favs = slug 数组（按收藏先后）；dlCounts = slug -> 次数 */
+  var FAV_KEY = "wow-wp-fav-v1";
+  var DL_KEY = "wow-wp-dl-v1";
+  function loadJson(k, fb) {
+    try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? fb : v; }
+    catch (e) { return fb; }
+  }
+  function saveJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  var favs = loadJson(FAV_KEY, []);
+  var dlCounts = loadJson(DL_KEY, {});
+  function slugOf(el) { return el.getAttribute("data-wp-key"); }
+  function isFav(slug) { return favs.indexOf(slug) >= 0; }
 
   /* 渲染失败提示：模板没渲染出卡片（数据/构建异常）时，把空态换成明确的错误文案 */
   if (!items.length && empty) {
@@ -56,7 +72,8 @@
     var shown = 0;
     items.forEach(function (el) {
       var tags = (el.getAttribute("data-wp-tags") || "").split(",");
-      var hit = tag === "all" || tags.indexOf(tag) >= 0;
+      var hit = tag === "all" ||
+        (tag === "fav" ? isFav(slugOf(el)) : tags.indexOf(tag) >= 0);
       var c = cellOf(el);
       if (c) c.hidden = !hit;
       el.hidden = !hit;
@@ -75,6 +92,37 @@
     b.addEventListener("click", function () { applyTag(b.getAttribute("data-wp-tag")); });
   });
 
+  /* ── 最多下载排序：按本机下载次数从多到少，同次数保持原顺序 ── */
+  var sortBtn = document.getElementById("wp-sort-dl");
+  var sortOn = false;
+  var cells = [];
+  items.forEach(function (el) {
+    var c = cellOf(el);
+    if (c && cells.indexOf(c) < 0) cells.push(c);
+  });
+  cells.forEach(function (c, i) { c.setAttribute("data-wp-idx", String(i)); });
+  function byOrigIdx(a, b) {
+    return Number(a.getAttribute("data-wp-idx")) - Number(b.getAttribute("data-wp-idx"));
+  }
+  function sortByDl() {
+    cells.slice().sort(function (a, b) {
+      var da = dlCounts[a.getAttribute("data-wp-cell")] || 0;
+      var db = dlCounts[b.getAttribute("data-wp-cell")] || 0;
+      return da !== db ? db - da : byOrigIdx(a, b);
+    }).forEach(function (c) { grid.appendChild(c); });
+  }
+  function restoreOrder() {
+    cells.slice().sort(byOrigIdx).forEach(function (c) { grid.appendChild(c); });
+  }
+  if (sortBtn) {
+    sortBtn.addEventListener("click", function () {
+      sortOn = !sortOn;
+      sortBtn.classList.toggle("is-on", sortOn);
+      sortBtn.setAttribute("aria-pressed", sortOn ? "true" : "false");
+      if (sortOn) sortByDl(); else restoreOrder();
+    });
+  }
+
   /* ── 灯箱 ── */
   var lb = document.getElementById("wp-lb");
   var lbImg = document.getElementById("wp-lb-img");
@@ -84,6 +132,9 @@
   var btnPrev = document.getElementById("wp-lb-prev");
   var btnNext = document.getElementById("wp-lb-next");
   var btnDl = document.getElementById("wp-lb-dl");
+  var btnDl2 = document.getElementById("wp-lb-dl2");
+  var btnLbFav = document.getElementById("wp-lb-fav");
+  var lbFavTxt = document.getElementById("wp-lb-fav-txt");
   var lastFocus = null;
   var pos = -1;
 
@@ -107,27 +158,65 @@
     var title = el.getAttribute("data-wp-title") || "未命名壁纸";
     var kb = el.getAttribute("data-wp-kb") || "";
     var okb = el.getAttribute("data-wp-origkb") || "";
+    var key = slugOf(el);
     lbImg.src = full;
     lbImg.alt = title + " 壁纸";
     lbCap.textContent = title;
     lbDim.textContent = (el.getAttribute("data-wp-size") || "").replace("x", " × ") + " · " +
-      (pos + 1) + " / " + arr.length;
+      (pos + 1) + " / " + arr.length +
+      (dlCounts[key] ? " · 已下载 " + dlCounts[key] + " 次" : "");
     if (btnDl) {
-      var size = okb || kb;
-      btnDl.textContent = size ? "下载原图 · " + size + "KB" : "下载原图";
-      btnDl.setAttribute("aria-label", "下载原图" + (size ? " · " + size + "KB" : "") + "，" + title);
+      btnDl.textContent = "下载 JPG";
+      btnDl.setAttribute("aria-label", "下载 JPG 格式壁纸（本机转码），" + title);
     }
+    if (btnDl2) {
+      var size = okb || kb;
+      btnDl2.textContent = size ? "WebP · " + size + "KB" : "WebP";
+      btnDl2.setAttribute("aria-label", "下载 WebP 原图" + (size ? " · " + size + "KB" : "") + "，" + title);
+    }
+    paintLbFav();
     var multi = arr.length > 1;
     btnPrev.hidden = !multi;
     btnNext.hidden = !multi;
   }
 
   /* ── 下载 ──
-     和首页「下载背景图」同一条路径：fetch 拿 blob 再生 a[download]，
-     跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名在不同系统乱码。*/
-  function saveUrl(url, slug, btn) {
+     两条路径：
+     ① 下载 JPG（主按钮）：fetch 拿 webp 后用 canvas 本机转成 JPEG —— 27/28 张
+        没有专属 jpg 原图（原图是 8000px 级别的 3-70MB 大图，不能上站），
+        转码在本机完成、不增加流量；转不了（老浏览器）就回退下载 webp 文件。
+     ② 下载 WebP（副按钮）：直接存 1920 宽 webp，体积最小。
+     跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名乱码。 */
+  function toJpeg(blob) {
+    if (typeof createImageBitmap !== "function" ||
+        !global.HTMLCanvasElement || !HTMLCanvasElement.prototype.toBlob) {
+      return Promise.reject(new Error("no-convert"));
+    }
+    return createImageBitmap(blob).then(function (bmp) {
+      var c = document.createElement("canvas");
+      c.width = bmp.width;
+      c.height = bmp.height;
+      c.getContext("2d").drawImage(bmp, 0, 0);
+      if (bmp.close) bmp.close();
+      return new Promise(function (res, rej) {
+        c.toBlob(function (b) { b ? res(b) : rej(new Error("toBlob")); }, "image/jpeg", 0.92);
+      });
+    });
+  }
+
+  function saveBlob(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.parentNode.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
+  }
+
+  function saveUrl(url, slug, btn, wantJpg, key) {
     if (!url) return;
-    var name = "wow-wallpaper-" + (slug || "wallpaper") + "." + extOf(url);
+    var alreadyJpg = /\.jpe?g$/i.test(url);
     var old = btn ? btn.textContent : "";
     if (btn) { btn.disabled = true; btn.textContent = "下载中"; }
     var done = function () { if (btn) { btn.disabled = false; btn.textContent = old; } };
@@ -135,15 +224,16 @@
       if (!r.ok) throw new Error("http " + r.status);
       return r.blob();
     }).then(function (blob) {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.parentNode.removeChild(a);
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 4000);
-      done();
-    }).catch(function () {
+      var conv = (wantJpg && !alreadyJpg)
+        ? toJpeg(blob)["catch"](function () { return null; })
+        : Promise.resolve(null);
+      return conv.then(function (jb) {
+        var ext = jb ? "jpg" : (alreadyJpg ? "jpg" : extOf(url));
+        saveBlob(jb || blob, "wow-wallpaper-" + (slug || "wallpaper") + "." + ext);
+        if (key) addDl(key);
+        done();
+      });
+    })["catch"](function () {
       done();
       var w = window.open(url, "_blank");
       if (!w) location.href = url;
@@ -154,7 +244,14 @@
     var arr = list();
     if (!arr.length || pos < 0) return;
     var el = arr[pos];
-    saveUrl(urlOf(el), el.getAttribute("data-wp-key"), btnDl);
+    saveUrl(urlOf(el), slugOf(el), btnDl, true, slugOf(el));
+  }
+
+  function downloadWebp() {
+    var arr = list();
+    if (!arr.length || pos < 0) return;
+    var el = arr[pos];
+    saveUrl(el.getAttribute("data-wp-full"), slugOf(el), btnDl2, false, slugOf(el));
   }
 
   function open(el) {
@@ -182,10 +279,81 @@
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
   if (btnDl) btnDl.addEventListener("click", download);
+  if (btnDl2) btnDl2.addEventListener("click", downloadWebp);
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
   });
+
+  /* ── 收藏（只记本机）：卡片右上角星标 + 灯箱按钮，同一份数据 ── */
+  var favN = document.getElementById("wp-n-fav");
+  var favBtns = [].slice.call(document.querySelectorAll(".wp-fav"));
+  function paintLbFav() {
+    if (!btnLbFav) return;
+    var arr = list();
+    var el = arr[pos];
+    var on = !!(el && isFav(slugOf(el)));
+    btnLbFav.classList.toggle("is-fav", on);
+    btnLbFav.setAttribute("aria-pressed", on ? "true" : "false");
+    if (lbFavTxt) lbFavTxt.textContent = on ? "已收藏" : "收藏";
+  }
+  function paintFav() {
+    favBtns.forEach(function (b) {
+      var on = isFav(b.getAttribute("data-wp-fav"));
+      b.classList.toggle("is-fav", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    if (favN) favN.textContent = String(favs.length);
+    if (lb && !lb.hidden) paintLbFav();
+  }
+  function toggleFav(slug) {
+    var i = favs.indexOf(slug);
+    if (i >= 0) favs.splice(i, 1); else favs.push(slug);
+    saveJson(FAV_KEY, favs);
+    paintFav();
+    /* 正看着「收藏」页签时取消收藏，卡片要当场移出列表 */
+    if (current === "fav") applyTag("fav");
+  }
+  favBtns.forEach(function (b) {
+    b.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggleFav(b.getAttribute("data-wp-fav"));
+    });
+  });
+  if (btnLbFav) {
+    btnLbFav.addEventListener("click", function () {
+      var arr = list();
+      if (!arr.length || pos < 0) return;
+      toggleFav(slugOf(arr[pos]));
+    });
+  }
+
+  /* ── 下载计数（只记本机）：卡片「已下载 N」徽标 + 灯箱计数 + 排序依据 ── */
+  var dlBadges = null;
+  function paintDl() {
+    if (!dlBadges) {
+      dlBadges = [];
+      items.forEach(function (el) {
+        var b = el.querySelector(".wp-dl-n");
+        if (b) dlBadges.push([el, b]);
+      });
+    }
+    dlBadges.forEach(function (pair) {
+      var n = dlCounts[slugOf(pair[0])] || 0;
+      pair[1].hidden = n <= 0;
+      pair[1].textContent = n > 0 ? "已下载 " + n : "";
+    });
+  }
+  function addDl(key) {
+    dlCounts[key] = (dlCounts[key] || 0) + 1;
+    saveJson(DL_KEY, dlCounts);
+    paintDl();
+    if (lb && !lb.hidden) show(pos);   /* 灯箱计数同步刷新 */
+    if (sortOn) sortByDl();
+  }
+
+  paintFav();
+  paintDl();
 
   /* 灯箱里左右滑动切图（触屏） */
   var tx = 0, ty = 0;
@@ -218,11 +386,13 @@
     else if (e.key === "ArrowLeft") { show(pos - 1); e.preventDefault(); }
     else if (e.key === "ArrowRight") { show(pos + 1); e.preventDefault(); }
     else if (e.key === "Tab") {
-      /* 焦点留在灯箱内：按钮循环（关闭 → 上一张 → 下一张 → 下载） */
+      /* 焦点留在灯箱内：按钮循环（关闭 → 翻页 → 收藏 → 下载 JPG → 下载 WebP） */
       var order = [btnX];
       if (!btnPrev.hidden) order.push(btnPrev);
       if (!btnNext.hidden) order.push(btnNext);
+      if (btnLbFav) order.push(btnLbFav);
       if (btnDl) order.push(btnDl);
+      if (btnDl2) order.push(btnDl2);
       var at = order.indexOf(document.activeElement);
       var next = e.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : (at === order.length - 1 ? 0 : at + 1);
       order[next].focus();
@@ -276,6 +446,9 @@
       lightbox: !lb.hidden,
       current: cur,
       notice: !!(notice && !notice.hidden),
+      favs: favs.slice(),
+      dl: JSON.parse(JSON.stringify(dlCounts)),
+      sortOn: sortOn,
     };
   };
 })();

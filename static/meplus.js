@@ -143,8 +143,11 @@
     if (elGuest) elGuest.classList.toggle("hidden", on);
     if (elOn) elOn.classList.toggle("hidden", !on);
     if (on && elWho) {
+      var u = (C().user && C().user()) || {};
       var n = (C().nick && C().nick()) || (C().nickOrDefault && C().nickOrDefault()) || "玩家";
-      elWho.textContent = "已登录 · " + n;
+      /* 2026-10-23：把邮箱也亮出来 —— 用户反馈登录后「看不出云账号在哪」，
+         只显示昵称时和未登录几乎没差别；带上邮箱身份一目了然。 */
+      elWho.textContent = "已登录 · " + n + (u.email ? " · " + u.email : "");
     }
     /* 设置页签最下方的退出按钮：登录后才出现（个人中心的第四页签共用这块 UI） */
     var setLogout = document.getElementById("me-set-logout");
@@ -233,10 +236,14 @@
   paintA11y();
   paintAccount();
   /* 云层就绪后再画一次 + 接上会话查询：user() 在会话回来前恒空，
-     不重绘的话已登录用户会一直看到「未登录」（2026-10-22 修，含加载顺序问题） */
+     不重绘的话已登录用户会一直看到「未登录」（2026-10-22 修，含加载顺序问题）。
+     2026-10-23 再加两拍兜底重绘：会话/榜单是异步链，任何一步竞态
+     都不能让账号栏停在旧状态（用户反馈登录后账号栏会整块消失/停错）。 */
   whenCloud(function () {
     if (C().onAuthChange) C().onAuthChange(paintAccount);
     if (C().session) C().session().then(function () { paintAccount(); })["catch"](function () {});
+    setTimeout(paintAccount, 1200);
+    setTimeout(paintAccount, 3200);
   });
 
   /* 对外暴露：游戏脚本想读无障碍状态（例如跑酷要据此关掉屏幕震动）可以问这里 */
