@@ -208,6 +208,12 @@
       else if (how === "cancelled") b.textContent = old;
       else b.textContent = "没能分享，再试一次";
       setTimeout(function () { b.textContent = old; }, 2600);
+    })["catch"](function () {
+      /* 画卡 / 取 blob / toBlob 任一环节抛错都要把按钮放开，
+         否则 disabled 与「生成中…」永久卡住（2026-10-23 修）。 */
+      b.disabled = false;
+      b.textContent = "没能分享，再试一次";
+      setTimeout(function () { b.textContent = old; }, 2600);
     });
   });
 
