@@ -189,7 +189,7 @@
      跨域/取不到时兜底新标签打开；文件名用 slug，避免中文名乱码。 */
   function toJpeg(blob) {
     if (typeof createImageBitmap !== "function" ||
-        !global.HTMLCanvasElement || !HTMLCanvasElement.prototype.toBlob) {
+        !window.HTMLCanvasElement || !HTMLCanvasElement.prototype.toBlob) {
       return Promise.reject(new Error("no-convert"));
     }
     return createImageBitmap(blob).then(function (bmp) {
