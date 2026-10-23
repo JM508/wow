@@ -112,6 +112,12 @@
 
   var ZH_CACHE = null;
 
+  /* 动态插入的元素（如合集页的「最近在玩」角标由 lastplay.js 后插）赶不上首次
+     remember()，缓存里没有它的键；切回中文时会按空串写空。给这类键留一份中文原文。 */
+  var ZH_FALLBACK = {
+    "games.recent": "最近在玩"
+  };
+
   function remember() {
     if (ZH_CACHE) return;
     ZH_CACHE = { text: {}, page: {} };
@@ -130,7 +136,9 @@
     var els = document.querySelectorAll("[data-i18n]");
     for (var i = 0; i < els.length; i++) {
       var k = els[i].getAttribute("data-i18n");
-      els[i].textContent = en ? (EN[k] || ZH_CACHE.text[k] || "") : (ZH_CACHE.text[k] || "");
+      els[i].textContent = en
+        ? (EN[k] || ZH_CACHE.text[k] || ZH_FALLBACK[k] || "")
+        : (ZH_CACHE.text[k] || ZH_FALLBACK[k] || "");
     }
 
     var pg = PAGES[norm(location.pathname)];

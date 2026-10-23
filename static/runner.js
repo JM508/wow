@@ -1023,6 +1023,8 @@
 
   /* 分享卡的 payload（JSON 字符串塞进 data-share-payload，share-card.js 统一代理） */
   function sharePayload() {
+    /* 属性值用单引号包裹，先把 JSON 里的单引号转成实体，
+       免得以后文案/昵称里出现 ' 把属性提前截断（2026-10-23）。 */
     return JSON.stringify({
       t: "火柴人快跑",
       big: Math.floor(S.score) + " 分",
@@ -1032,7 +1034,7 @@
         "最高连击 " + S.maxCombo,
         S.isBest ? "刷新个人最高分（" + Math.floor(S.best) + " 分）" : "个人最高 " + Math.floor(S.best) + " 分"
       ]
-    });
+    }).replace(/'/g, "&#39;");
   }
 
   /* ═══════════ 本机记录（localStorage，最多 5 条） ═══════════ */
