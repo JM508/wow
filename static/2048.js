@@ -60,7 +60,7 @@
 
   /* ── 状态 ──
      grid: 16 长度数组，null 或 { id, v, r, c }（r/c 用于动画定位） */
-  var state = { grid: [], score: 0, best: 0, over: false, won: false, uid: 0, rand: null, busy: false };
+  var state = { grid: [], score: 0, best: 0, over: false, won: false, winShown: false, uid: 0, rand: null, busy: false };
 
   function bestLoad() {
     try { return Math.max(0, parseInt(localStorage.getItem(KEY_BEST) || "0", 10) || 0); } catch (e) { return 0; }
@@ -180,11 +180,13 @@
     if (state.score > state.best) { state.best = state.score; bestSave(); }
     var fresh = spawn();
     render(fresh, mergedTile);
-    if (state.won) {
-      showOver(true);
+    /* 先判「真的走不动了」，再判「刚达成 2048」——否则达成那一刻棋盘还有空位也会
+       被当成结束。达成 2048 只是弹个提示，本局继续（文案就写着能拿更高分）。 */
+    if (!canMove()) {
+      showOver(false);
       return true;
     }
-    if (!canMove()) showOver(false);
+    if (state.won && !state.winShown) showOver(true);
     return true;
   }
   function canMove() {
@@ -199,9 +201,13 @@
     return false;
   }
 
-  /* ── 结束弹窗 ── */
+  /* ── 结束弹窗 ──
+     win=true 是「达成 2048」的中途提示，不是结束：state.over 必须留 false，
+     否则点「知道了」只藏弹层、棋盘却被 move() 的 state.over 守卫锁死（2026-10-23 修）。
+     winShown 保证同局只提示一次，继续合并不会每步都弹。 */
   function showOver(win) {
-    state.over = true;
+    state.over = !win;
+    if (win) state.winShown = true;
     if (window.WowHaptics) window.WowHaptics.play(win ? "win" : "fail");
     if (overTEl) overTEl.textContent = win ? "达成 2048！" : "棋盘满了";
     if (overSEl) {
@@ -229,6 +235,7 @@
     state.score = 0;
     state.over = false;
     state.won = false;
+    state.winShown = false;
     state.rand = isDaily() ? mulberry32(fnv1a("g2048|" + dayKey())) : Math.random;
     var a = spawn(), b = spawn();
     hideOver();
@@ -282,7 +289,7 @@
     move: move,
     state: function () {
       return {
-        score: state.score, best: state.best, over: state.over,
+        score: state.score, best: state.best, over: state.over, winShown: state.winShown,
         grid: state.grid.map(function (t) { return t ? t.v : 0; }),
         daily: isDaily(), dailyKey: isDaily() ? dayKey() : ""
       };

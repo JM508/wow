@@ -426,6 +426,9 @@
     /* 个人中心里的登录框、改名框是输入区：在那儿敲 1-9 是打字，不是落子 */
     var t = e.target;
     if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+    /* 难度下拉框（#ttt-level）也有自己的键盘语义：1-9 是数字快选、方向键切换选项。
+       不挡住它，焦点会被抢到棋盘格上，纯键盘用户选不了难度（2026-10-23 修）。 */
+    if (t && (t.tagName === "SELECT" || (t.closest && t.closest("select")))) return;
     if (window.MeCenter && window.MeCenter.isOpen && window.MeCenter.isOpen()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     var k = e.key;

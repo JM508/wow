@@ -370,8 +370,17 @@
     try { document.dispatchEvent(new Event("wallet:change")); } catch (e) {}
   }
 
+  /* 各品类各自命名空间。原先 mine / snake 都落 "p:"，与火柴人皮肤共用，
+     而雷皮肤的 classic / gold 恰好与火柴人 id 重名 —— 现价 0 时不出事，
+     一旦给雷/蛇上收费同名款就会「买 A 白送 B」。这里拆开（2026-10-23）。
+     历史数据无需迁移：雷/蛇皮肤一直是免费品，isOwned() 对 price 0 直接返回 true，
+     buy() 永远走不到写档那步，所以旧存档里不存在 m:/s: 之外的雷蛇记录。 */
   function ownedKey(kind, id) {
-    return (kind === "coin" ? "c:" : kind === "flag" ? "f:" : "p:") + id;
+    return (kind === "coin" ? "c:"
+      : kind === "flag" ? "f:"
+      : kind === "mine" ? "m:"
+      : kind === "snake" ? "s:"
+      : "p:") + id;
   }
   function getOwned() {
     var raw = lsGet(KEY_OWNED), arr = null;

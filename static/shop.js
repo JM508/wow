@@ -364,11 +364,21 @@
     fire("shop:close");
   }
 
-  /* ── 调试入口：?grant=2000 直接给钱包加金币（方便一次看完所有皮肤） ── */
+  /* ── 调试入口：?grant=2000 直接给钱包加金币（方便一次看完所有皮肤） ──
+     只在本地打开时生效。线上域名一律忽略：否则任何访客在跑酷页 URL 后加
+     ?grant=99999 就能给本机钱包无限充值（2026-10-23 收紧）。
+     钱包只存本机、不上云、不影响排行榜，但仍不该留公开入口。 */
+  function isDevHost() {
+    var h = location.hostname;
+    return location.protocol === "file:" || !h ||
+      h === "localhost" || h === "127.0.0.1" || h === "::1";
+  }
   var m = /[?&]grant=(\d+)/.exec(location.search);
-  if (m) {
+  if (m && isDevHost()) {
     Skins.addWallet(parseInt(m[1], 10) || 0);
     try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  } else if (m) {
+    try { history.replaceState(null, "", location.pathname); } catch (e) {}  /* 顺手清掉参数，别留在地址栏传播 */
   }
 
   /* 页面里直接嵌着（没有弹层）时立即渲染；否则等 open() */
