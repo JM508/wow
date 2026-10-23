@@ -65,6 +65,14 @@
     <button type="button" class="wp-tab" data-wp-tag="竖屏" aria-pressed="false">
       竖屏<span class="wp-n">{{ $portrait }}</span>
     </button>
+    {{- /* 收藏与最多下载（2026-10-23）：数据只记本机 localStorage，不上云 */}}
+    <button type="button" class="wp-tab" data-wp-tag="fav" aria-pressed="false">
+      收藏<span class="wp-n" id="wp-n-fav">0</span>
+    </button>
+    <button type="button" class="wp-tab" id="wp-sort-dl" aria-pressed="false"
+            title="按本机下载次数从多到少排；下载次数只记在这台设备上">
+      最多下载
+    </button>
   </div>
 
   <div class="wp-grid" id="wp-grid">
@@ -96,6 +104,8 @@
         <span class="wp-cap">
           <span class="wp-row">
             {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
+            {{- /* 下载次数徽标（本机计数），下载过才显示，wallpapers.js 填充 */}}
+            <span class="wp-dl-n" hidden></span>
             <span class="wp-size" aria-hidden="true">{{ $dlKb }} KB</span>
           </span>
           {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
@@ -104,6 +114,12 @@
             {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
           </span>
         </span>
+      </button>
+      {{- /* 收藏星标：放在卡片 button 外面（按钮不能套按钮），悬浮在图片右上角。
+             状态由 wallpapers.js 按 localStorage 里的收藏清单画。 */}}
+      <button type="button" class="wp-fav" data-wp-fav="{{ .slug }}"
+              aria-pressed="false" aria-label="收藏{{ with .title }}「{{ . }}」{{ else }}这张壁纸{{ end }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
       </button>
     </div>
     {{- end }}
@@ -135,7 +151,13 @@
   <div class="wp-lb-bar">
     <span class="wp-lb-cap" id="wp-lb-cap"></span>
     <span class="wp-lb-dim" id="wp-lb-dim"></span>
-    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载原图">下载原图</button>
+    <button type="button" class="wp-lb-fav" id="wp-lb-fav" aria-pressed="false" aria-label="收藏这张壁纸">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="wp-lb-fav-txt">收藏</span>
+    </button>
+    {{- /* 主按钮给 JPG（27/28 张没有 jpg 原图，由浏览器本机把 webp 转成 JPG，不增流量）；
+           副按钮给体积最小的 1920 宽 WebP 原图。 */}}
+    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载 JPG">下载 JPG</button>
+    <button type="button" class="wp-lb-dl2" id="wp-lb-dl2" aria-label="下载 WebP 原图">WebP</button>
   </div></div>
 
 {{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}

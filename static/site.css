@@ -491,6 +491,47 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   line-height: 1.5;
   color: var(--secondary, #888888);
 }
+/* 下载次数徽标（2026-10-23，本机计数）：下载过才显示，排在体积左边 */
+.wp-dl-n {
+  flex: none;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--secondary, #888888);
+}
+
+/* 收藏星标（2026-10-23）：悬浮在图片右上角。放在 .wp-item 外面（按钮不套按钮），
+   心形用内联 SVG（CSP 不受限），收藏后填充品牌粉。 */
+.wp-fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  background: rgba(15, 20, 28, 0.45);
+  backdrop-filter: blur(2px);
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.wp-fav svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 1.8;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+.wp-fav:hover { transform: scale(1.08); background: rgba(15, 20, 28, 0.6); }
+.wp-fav.is-fav svg { fill: #ff5d7e; stroke: #ff5d7e; }
+.wp-fav:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
 
 /* 图片按原始长宽比自然缩放：宽 100% 铺满卡片，高度 auto。
    2026-10-22 用户要求不再强制裁切 —— 撤掉原来的 aspect-ratio: 16/9 + object-fit: cover，
@@ -713,6 +754,52 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-lb-dl:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
 .wp-lb-dl[disabled] { opacity: 0.6; cursor: default; }
 
+/* 灯箱收藏按钮（2026-10-23）：与卡片星标同一份数据 */
+.wp-lb-fav {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.wp-lb-fav svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.8;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+.wp-lb-fav:hover { background: rgba(255, 255, 255, 0.24); }
+.wp-lb-fav.is-fav { border-color: rgba(255, 93, 126, 0.65); }
+.wp-lb-fav.is-fav svg { fill: #ff5d7e; stroke: #ff5d7e; }
+.wp-lb-fav:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
+
+/* 灯箱 WebP 副按钮：幽灵样式，主推 JPG */
+.wp-lb-dl2 {
+  flex: none;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.wp-lb-dl2:hover { background: rgba(255, 255, 255, 0.14); }
+.wp-lb-dl2:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
+.wp-lb-dl2[disabled] { opacity: 0.6; cursor: default; }
+
 /* 小屏：两列改一列不划算，缩到两列、灯箱按钮缩小让出画面 */
 @media (max-width: 520px) {
   .wp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
@@ -725,13 +812,17 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 /* 减少动效：关掉图片缩放与卡片抬升 */
 html.a11y-calm .wp-item,
 html.a11y-calm .wp-img,
-html.a11y-calm .wp-tab { transition: none !important; }
+html.a11y-calm .wp-tab,
+html.a11y-calm .wp-fav,
+html.a11y-calm .wp-lb-fav { transition: none !important; }
 html.a11y-calm .wp-item:hover { transform: none; }
 html.a11y-calm .wp-item:hover .wp-img { transform: none; }
+html.a11y-calm .wp-fav:hover { transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  .wp-item, .wp-img, .wp-tab { transition: none; }
+  .wp-item, .wp-img, .wp-tab, .wp-fav { transition: none; }
   .wp-item:hover { transform: none; }
   .wp-item:hover .wp-img { transform: none; }
+  .wp-fav:hover { transform: none; }
 }
 
 /* ══ 设置页（/settings/，2026-10-17）══
