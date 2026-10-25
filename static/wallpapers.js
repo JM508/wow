@@ -132,7 +132,6 @@
   var btnPrev = document.getElementById("wp-lb-prev");
   var btnNext = document.getElementById("wp-lb-next");
   var btnDl = document.getElementById("wp-lb-dl");
-  var btnDl2 = document.getElementById("wp-lb-dl2");
   var btnLbFav = document.getElementById("wp-lb-fav");
   var lbFavTxt = document.getElementById("wp-lb-fav-txt");
   var lastFocus = null;
@@ -169,11 +168,6 @@
     if (btnDl) {
       btnDl.textContent = "下载 JPG";
       btnDl.setAttribute("aria-label", "下载 JPG 格式壁纸（本机转码），" + title);
-    }
-    if (btnDl2) {
-      var size = okb || kb;
-      btnDl2.textContent = size ? "WebP · " + size + "KB" : "WebP";
-      btnDl2.setAttribute("aria-label", "下载 WebP 原图" + (size ? " · " + size + "KB" : "") + "，" + title);
     }
     paintLbFav();
     var multi = arr.length > 1;
@@ -248,13 +242,6 @@
     saveUrl(urlOf(el), slugOf(el), btnDl, true, slugOf(el));
   }
 
-  function downloadWebp() {
-    var arr = list();
-    if (!arr.length || pos < 0) return;
-    var el = arr[pos];
-    saveUrl(el.getAttribute("data-wp-full"), slugOf(el), btnDl2, false, slugOf(el));
-  }
-
   function open(el) {
     lastFocus = el;
     lb.hidden = false;
@@ -280,7 +267,6 @@
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
   if (btnDl) btnDl.addEventListener("click", download);
-  if (btnDl2) btnDl2.addEventListener("click", downloadWebp);
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
@@ -393,7 +379,6 @@
       if (!btnNext.hidden) order.push(btnNext);
       if (btnLbFav) order.push(btnLbFav);
       if (btnDl) order.push(btnDl);
-      if (btnDl2) order.push(btnDl2);
       var at = order.indexOf(document.activeElement);
       var next = e.shiftKey ? (at <= 0 ? order.length - 1 : at - 1) : (at === order.length - 1 ? 0 : at + 1);
       order[next].focus();

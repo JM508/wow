@@ -793,23 +793,6 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-lb-fav.is-fav svg { fill: #ff5d7e; stroke: #ff5d7e; }
 .wp-lb-fav:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
 
-/* 灯箱 WebP 副按钮：幽灵样式，主推 JPG */
-.wp-lb-dl2 {
-  flex: none;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-.wp-lb-dl2:hover { background: rgba(255, 255, 255, 0.14); }
-.wp-lb-dl2:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
-.wp-lb-dl2[disabled] { opacity: 0.6; cursor: default; }
-
 /* 小屏：两列改一列不划算，缩到两列、灯箱按钮缩小让出画面 */
 @media (max-width: 520px) {
   .wp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
