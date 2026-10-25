@@ -13,7 +13,12 @@
 {{- $ordered := $land | append $port -}}
 {{- $anime := 0 -}}
 {{- range $items }}{{ if in .tags "二次元" }}{{ $anime = add $anime 1 }}{{ end }}{{ end -}}
-{{- $games := sub (len $items) $anime -}}
+{{- $dang := 0 -}}
+{{- range $items }}{{ if in .tags "党政" }}{{ $dang = add $dang 1 }}{{ end }}{{ end -}}
+{{- $renwu := 0 -}}
+{{- range $items }}{{ if in .tags "人物" }}{{ $renwu = add $renwu 1 }}{{ end }}{{ end -}}
+{{- $games := 0 -}}
+{{- range $items }}{{ if in .tags "游戏" }}{{ $games = add $games 1 }}{{ end }}{{ end -}}
 {{- $portrait := 0 -}}
 {{- range $items }}{{ if lt .ratio 1.0 }}{{ $portrait = add $portrait 1 }}{{ end }}{{ end -}}
 
@@ -46,7 +51,7 @@
 <div class="wp-root" id="wp-root">
   <div class="wp-head">
     <strong class="wp-title">壁纸</strong>
-    <span class="wp-sub">游戏原画与二次元壁纸，共 {{ len $items }} 张</span>
+    <span class="wp-sub">共 {{ len $items }} 张，点击分类筛选</span>
   </div>
 
   <div class="wp-bar" role="group" aria-label="壁纸分类">
@@ -58,6 +63,12 @@
     </button>
     <button type="button" class="wp-tab" data-wp-tag="二次元" aria-pressed="false">
       二次元<span class="wp-n">{{ $anime }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="党政" aria-pressed="false">
+      党政<span class="wp-n">{{ $dang }}</span>
+    </button>
+    <button type="button" class="wp-tab" data-wp-tag="人物" aria-pressed="false">
+      人物<span class="wp-n">{{ $renwu }}</span>
     </button>
     <button type="button" class="wp-tab" data-wp-tag="横屏" aria-pressed="false">
       横屏<span class="wp-n">{{ sub (len $items) $portrait }}</span>

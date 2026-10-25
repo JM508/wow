@@ -155,12 +155,13 @@
     pos = (idx + arr.length) % arr.length;
     var el = arr[pos];
     var full = el.getAttribute("data-wp-full");
-    var title = el.getAttribute("data-wp-title") || "未命名壁纸";
+    /* 2026-10-25 去掉全部壁纸名字：标题位改用标签串（如「人物 / 竖屏」），没有名字概念 */
+    var title = (el.getAttribute("data-wp-tags") || "").split(",").filter(Boolean).join(" / ") || "壁纸";
     var kb = el.getAttribute("data-wp-kb") || "";
     var okb = el.getAttribute("data-wp-origkb") || "";
     var key = slugOf(el);
     lbImg.src = full;
-    lbImg.alt = title + " 壁纸";
+    lbImg.alt = "壁纸大图" + (title !== "壁纸" ? "（" + title + "）" : "");
     lbCap.textContent = title;
     lbDim.textContent = (el.getAttribute("data-wp-size") || "").replace("x", " × ") + " · " +
       (pos + 1) + " / " + arr.length +

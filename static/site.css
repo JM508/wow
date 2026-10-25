@@ -500,7 +500,9 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 }
 
 /* 收藏星标（2026-10-23）：悬浮在图片右上角。放在 .wp-item 外面（按钮不套按钮），
-   心形用内联 SVG（CSP 不受限），收藏后填充品牌粉。 */
+   心形用内联 SVG（CSP 不受限），收藏后填充品牌粉。
+   2026-10-25 用户反馈图上的黑色圆底突兀：默认整体隐藏，悬停卡片 / 已收藏 / 键盘聚焦时才出现；
+   触屏没有悬停态，收藏走灯箱里的收藏按钮。 */
 .wp-fav {
   position: absolute;
   top: 8px;
@@ -519,7 +521,15 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   backdrop-filter: blur(2px);
   -webkit-appearance: none;
   appearance: none;
-  transition: transform 0.12s ease, background 0.15s ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease, visibility 0.15s;
+}
+.wp-cell:hover .wp-fav,
+.wp-fav.is-fav,
+.wp-fav:focus-visible {
+  opacity: 1;
+  visibility: visible;
 }
 .wp-fav svg {
   width: 17px;
