@@ -10,6 +10,9 @@
 /.git-rewrite/
 /.git-filter-repo/
 
+# ── 构建脚本临时备份（set-version.sh 失败兜底产生，勿提交） ──
+*.bak
+
 # ── 操作系统 / 编辑器 ──────────────────────────────────────────
 .DS_Store
 Thumbs.db

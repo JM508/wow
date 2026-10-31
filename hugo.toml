@@ -11,9 +11,10 @@ enableRobotsTXT = true
   env = "production"
   description = "Wow 娱乐小站：扫雷、火柴人快跑、井字棋、贪吃蛇，打开即玩，无需下载。"
   keywords = ["小游戏", "在线游戏", "扫雷", "火柴人快跑", "井字棋", "贪吃蛇", "免费游戏"]
-  # 自定义静态资源（/site.css /age-gate.js /runner.js 等）的缓存穿透版本号：
-  # 改了 JS/CSS 记得把这里换个新值（配合 _headers 里对 /*.js / *.css 的一年强缓存）
-  assetVer = "v20261031ah"
+  # 缓存穿透版本号：所有静态资源按 ?v=<assetVer> 引用并配一年强缓存。
+  # 该值由 scripts/set-version.sh 在构建时自动替换为当前 commit SHA（或 tag），
+  # 每次部署天然唯一，无需手动维护 —— 不要在这里手写版本（占位符 devbuild 仅作兜底）。
+  assetVer = "devbuild"
   # 站点仓库（首页页脚展示）
   githubUrl = "https://github.com/JM508/wow"
   # 首页入口：「小游戏」主按钮 + 「壁纸」次级按钮，竖排（壁纸在小游戏下面）
