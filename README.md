@@ -44,7 +44,7 @@ bash scripts/build.sh   # 注入 commit SHA 版本号 -> hugo 重建 -> 还原 h
 2. 所有引用带版本号、改版先升号，再重建。规范构建入口是 `bash scripts/build.sh`（它会先注入版本号）。
 3. CSP 为纯同源白名单（`script-src 'self'`，无 unsafe-inline / 无哈希）：**禁止内联 `<script>` 与 `style=""` 属性**，动态样式一律走 CSSOM（`el.style.x = ...`）。改 `static/_headers` 的 CSP 时必须同步 `layouts/_partials/head.html` 里的 meta 兜底。
 4. 主题初始化在 `static/theme.js`（head 同步加载），默认跟随系统 `prefers-color-scheme`，手动切换仅记住当前会话。
-5. **Cloudflare Pages 构建命令**设为 `bash ./scripts/set-version.sh && hugo --gc --cleanDestinationDir`；**环境变量 `HUGO_VERSION = 0.167.0`** 需在 Cloudflare 控制台 **Pages 项目 → Settings → Environment variables → Production 作用域** 显式添加，锁定 Hugo 版本，避免 CF 默认版本漂移造成与本地构建不一致（Free/Pro 默认不一定带该版本）。
+5. **Cloudflare Pages 构建命令**设为 `bash ./scripts/set-version.sh && hugo --gc --cleanDestinationDir`；**环境变量 `HUGO_VERSION = 0.167.0`** 需在 Cloudflare 控制台 **Pages 项目 → Settings → Environment variables → Production 作用域** 显式添加，锁定 Hugo 版本，避免 CF 默认版本漂移造成与本地构建不一致（Free/Pro 默认不一定带该版本）。改完构建命令/环境变量后**必须触发一次新部署（控制台 Deployments 页点 Retry，或推一个新提交）才会生效**；若线上仍看到 `?v=devbuild`，说明新构建命令未真正应用到 Production 作用域。
 6. 镜像域（WorkBuddy）用 `workbuddy_sites_deploy` 发布本地 `repo/public` 构建产物（Windows/CRLF），与 CF Pages（Linux/LF）产物经归一化后逐字节一致。
 7. **Service Worker 自研、不引入 Workbox**：`static/sw.js` 已覆盖 App Shell（首页 / 各游戏页 / 法务页预缓存）与核心游戏资源（各游戏 JS/CSS、云 SDK、vendor），策略为「导航网络优先 + 版本化资源缓存优先 + 其余 SWR + 云请求直连」，并跟随 `assetVer` 自动换缓存。现有覆盖已满足离线可玩，故不引入 Workbox。
 
