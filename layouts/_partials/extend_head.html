@@ -10,7 +10,7 @@
      ══════════════════════════════════════════════════════════════════════ -->
 <!-- 自定义静态资源统一带 ?v= 版本号：配合 _headers 对 /*.js、/*.css 的一年强缓存，
      版本号变化即缓存穿透（值在 hugo.toml 的 params.assetVer） -->
-{{- $v := printf "?v=%s" (site.Params.assetVer | default "1") }}
+{{- $v := printf "?v=%s" (partialCached "assetVer.html" . "v" | default "1") }}
 <script src="/theme.js{{ $v }}"></script>
 <link rel="stylesheet" href="/site.css{{ $v }}">
 <link rel="stylesheet" href="/age-gate.css{{ $v }}">

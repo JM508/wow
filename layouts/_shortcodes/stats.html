@@ -32,6 +32,6 @@
   <p class="stats-note">站点性能是全网访客的匿名聚合（p75 越小越好，不区分个人），用来盯住页面有没有变慢。</p>
 </div>
 {{/* 站点性能卡片要走云端聚合接口：SDK 必须在 cloud.js 之前（同其余游戏页口径） */}}
-<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/stats.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/stats.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>

@@ -154,4 +154,4 @@
 </div>
 
 {{- /* 只在壁纸页加载筛选脚本；卡片本身是带 href 的链接，点一下进独立详情页 */ -}}
-<script src="/wallpapers.js?v={{ site.Params.assetVer }}" defer></script>
+<script src="/wallpapers.js?v={{ partialCached "assetVer.html" . "v" }}" defer></script>

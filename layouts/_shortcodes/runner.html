@@ -178,13 +178,13 @@
   </div>
 </div>
 
-<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/score-queue.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/rank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/ach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/score-queue.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/rank.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/ach.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
 <script src="/vendor/qrcode.js" defer></script>
-<script src="/share-card.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/runner.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/share-card.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/runner.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>

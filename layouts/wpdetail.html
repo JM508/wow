@@ -43,5 +43,5 @@
   </div>
 </article>
 
-<script src="/wp-detail.js?v={{ site.Params.assetVer }}" defer></script>
+<script src="/wp-detail.js?v={{ partialCached "assetVer.html" . "v" }}" defer></script>
 {{- end }}

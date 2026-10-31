@@ -39,3 +39,8 @@ enableRobotsTXT = true
 # 显式清空 exec 白名单，避免主题或依赖拿到不必要的执行权限。
 [security.exec]
   allow = []
+
+# assetVer 版本注入：模板 partial（layouts/_partials/assetVer.html）构建期读取
+# 构建平台注入的 commit SHA 环境变量，需在此放行（含 Hugo 默认的 HUGO_/CI）。
+[security.funcs]
+  getenv = ['^HUGO_', '^CI$', '^CF_PAGES_COMMIT_SHA$', '^GITHUB_SHA$', '^WOW_ASSET_SHA$']

@@ -162,7 +162,7 @@
        由 static/theme.js（head 内同步加载）在首帧前完成初始化。 */}}
 
 {{- /* Service Worker（离线可玩）：版本号跟随 assetVer，发新版自动换缓存 */}}
-{{- with site.Params.assetVer }}
+{{- with partialCached "assetVer.html" . "v" }}
 <script defer src="/sw-reg.js?v={{ . }}"></script>
 <script defer src="/net-status.js?v={{ . }}"></script>
 <script defer src="/tapfx.js?v={{ . }}"></script>

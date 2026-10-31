@@ -155,4 +155,4 @@
 </div>
 
 <!-- 账号登录 / 无障碍 / 主题 / 打开本游戏设置：四游戏页共用（2026-10-17 新增） -->
-<script defer src="/meplus.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}"></script>
+<script defer src="/meplus.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}"></script>

@@ -77,4 +77,4 @@
   </p>
 </div>
 
-<script src="/settings.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/settings.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# 构建前把 hugo.toml 的 assetVer 占位符替换为当前 commit SHA（或 tag）。
-# 这样每次部署的版本号天然唯一，彻底杜绝手动遗忘 / 漏升。
+# 【可选/兼容保留】构建前把 hugo.toml 的 assetVer 占位符替换为当前 commit SHA。
+# 当前首选机制是模板 partial（layouts/_partials/assetVer.html）在构建期直接读
+# CF_PAGES_COMMIT_SHA / GITHUB_SHA / WOW_ASSET_SHA 环境变量，用默认 hugo 命令即可注入，
+# 本脚本仅为兼容已配置「set-version.sh && hugo」构建命令的环境而保留，二者可叠加（值一致）。
 #
 # 版本载体优先级：
 #   1. Cloudflare Pages 注入的环境变量 CF_PAGES_COMMIT_SHA（原生构建环境）

@@ -1,0 +1,10 @@
+{{- /* 资源版本号：优先取构建平台自动注入的 commit SHA，回退 hugo.toml 的 assetVer。
+       Cloudflare Pages 原生构建自动导出 CF_PAGES_COMMIT_SHA，因此用默认 hugo 命令
+       即可注入版本号，无需自定义构建命令；GitHub Actions 自动导出 GITHUB_SHA；
+       本地由 scripts/build.sh 导出 WOW_ASSET_SHA。全部缺失时用 hugo.toml 兜底。 */ -}}
+{{- $ver := "" -}}
+{{- with getenv "CF_PAGES_COMMIT_SHA" }}{{ $ver = . }}{{ end -}}
+{{- if not $ver }}{{ with getenv "GITHUB_SHA" }}{{ $ver = . }}{{ end }}{{ end -}}
+{{- if not $ver }}{{ with getenv "WOW_ASSET_SHA" }}{{ $ver = . }}{{ end }}{{ end -}}
+{{- if not $ver }}{{ $ver = site.Params.assetVer }}{{ end -}}
+{{- return $ver -}}

@@ -58,17 +58,17 @@
 <!-- ═══ 个人中心（三游戏共用 DOM）：跑酷页由 runner.js 驱动，这里由 me.js 驱动 ═══ -->
 {{ partial "me-center.html" . }}
 
-<script src="/minesweeper.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/minesweeper.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
 {{/* 云 SDK 必须在 cloud.js 之前：cloud.js 的 build() 依赖 window.WorkBuddyCloud，
      缺了它 msrank.js 会判定「云服务不可用」而拒绝加载榜单（2026-10-05 用户报障） */}}
-<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/cloud.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/skins.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/shop.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/vendor/workbuddy-cloud-sdk.global.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/cloud.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/skins.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/shop.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
 {{/* 成就引擎：游戏页用 gameach.js（本游戏专属成就），跑酷的 ach.js 只在跑酷页加载（2026-10-06） */}}
-<script src="/gameach.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/me.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/gameach.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/me.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
 <script src="/vendor/qrcode.js" defer></script>
-<script src="/share-card.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/score-queue.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
-<script src="/msrank.js{{ with site.Params.assetVer }}?v={{ . }}{{ end }}" defer></script>
+<script src="/share-card.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/score-queue.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
+<script src="/msrank.js{{ with partialCached "assetVer.html" . "v" }}?v={{ . }}{{ end }}" defer></script>
