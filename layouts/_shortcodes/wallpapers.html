@@ -1,5 +1,6 @@
 {{- /* 壁纸页：读 data/wallpapers.yaml 渲染筛选栏 + 网格。
-     图片卡是 <button>，键盘也能打开；灯箱与筛选逻辑在 /wallpapers.js。
+     图片卡是可点击的 <a href="/wallpapers/<slug>/">，点一下进入独立详情页（网址变化，仿图库站）；
+     筛选逻辑在 /wallpapers.js。
      CSP 是 style-src 'self'，所以这里不写任何内联 style，占位底色由 JS 用 CSSOM 赋值。 */ -}}
 {{- $d := site.Data.wallpapers -}}
 {{- $items := $d.items -}}
@@ -97,12 +98,10 @@
            展示层优先进 AVIF，浏览器不支持时回退 WebP（<picture>）；
            下载按钮始终给 WebP 大图，体积直接标在按钮上。 */ -}}
     <div class="wp-cell" data-wp-cell="{{ .slug }}">
-      <button type="button" class="wp-item" data-wp-key="{{ .slug }}"
-              data-wp-tags="{{ delimit .tags "," }}" data-wp-full="{{ .full }}"
-              data-wp-thumb="{{ .thumb }}" data-wp-orig="{{ with .orig }}{{ . }}{{ end }}"
-              data-wp-title="{{ .title }}" data-wp-color="{{ .color }}"
-              data-wp-kb="{{ .kb }}" data-wp-origkb="{{ with .orig_kb }}{{ . }}{{ end }}"
-              data-wp-size="{{ .w }}x{{ .h }}" aria-label="{{ with .title }}{{ . }} {{ end }}{{ delimit .tags " " }}，查看大图">
+      <a class="wp-item" href="/wallpapers/{{ .slug }}/" data-wp-key="{{ .slug }}"
+         data-wp-tags="{{ delimit .tags "," }}" data-wp-color="{{ .color }}"
+         data-wp-size="{{ .w }}x{{ .h }}"
+         aria-label="{{ delimit .tags " " }}，查看详情">
         <picture class="wp-pic">
           <source srcset="{{ replace .thumb ".webp" ".avif" }}" type="image/avif">
           <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
@@ -125,8 +124,8 @@
             {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
           </span>
         </span>
-      </button>
-      {{- /* 收藏星标：放在卡片 button 外面（按钮不能套按钮），悬浮在图片右上角。
+      </a>
+      {{- /* 收藏星标：放在卡片 <a> 外面（链接不套按钮），悬浮在图片右上角。
              状态由 wallpapers.js 按 localStorage 里的收藏清单画。 */}}
       <button type="button" class="wp-fav" data-wp-fav="{{ .slug }}"
               aria-pressed="false" aria-label="收藏{{ with .title }}「{{ . }}」{{ else }}这张壁纸{{ end }}">
@@ -154,26 +153,5 @@
   </div>
 </div>
 
-<div class="wp-lb" id="wp-lb" hidden role="dialog" aria-modal="true" aria-label="壁纸大图">
-  <button type="button" class="wp-lb-x" id="wp-lb-x" aria-label="关闭（Esc）">×</button>
-  <button type="button" class="wp-lb-nav wp-lb-prev" id="wp-lb-prev" aria-label="上一张（←）">‹</button>
-  <img class="wp-lb-img" id="wp-lb-img" alt="">
-  <button type="button" class="wp-lb-nav wp-lb-next" id="wp-lb-next" aria-label="下一张（→）">›</button>
-  <div class="wp-lb-bar">
-    <span class="wp-lb-cap" id="wp-lb-cap"></span>
-    <span class="wp-lb-dim" id="wp-lb-dim"></span>
-    <button type="button" class="wp-lb-fav" id="wp-lb-fav" aria-pressed="false" aria-label="收藏这张壁纸">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="wp-lb-fav-txt">收藏</span>
-    </button>
-    {{- /* 主按钮：本机把 webp 转成 JPG 下载，不增流量。
-           2026-10-31：按钮文案去掉「JPG」字样，只显示「下载」。 */}}
-    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载这张壁纸">下载</button>
-    {{- /* 「高清原图」按钮：已备好、暂不上线（hidden + 注释）。
-           上线时去掉 hidden 并把 assetVer 升一版即可。
-    <button type="button" class="wp-lb-dl wp-lb-hd" id="wp-lb-hd" hidden
-            aria-label="下载高清原图">下载高清原图</button>
-    */ -}}
-  </div></div>
-
-{{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}
+{{- /* 只在壁纸页加载筛选脚本；卡片本身是带 href 的链接，点一下进独立详情页 */ -}}
 <script src="/wallpapers.js?v={{ site.Params.assetVer }}" defer></script>

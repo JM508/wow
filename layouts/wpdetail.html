@@ -6,7 +6,7 @@
 {{- $prev := .Params.wpPrev -}}
 {{- $next := .Params.wpNext -}}
 <article class="post-single wp-detail" data-wpd-slug="{{ $slug }}"
-         data-wpd-full="{{ .Params.wpFull }}" data-wpd-kb="{{ .Params.wpKb }}"
+         data-wpd-full="{{ .Params.wpFull }}" data-wpd-orig="{{ .Params.wpOrig }}" data-wpd-kb="{{ .Params.wpKb }}"
          data-wpd-w="{{ .Params.wpW }}" data-wpd-h="{{ .Params.wpH }}"
          data-wpd-color="{{ .Params.wpColor }}">
   <header class="wpd-top">
@@ -25,6 +25,12 @@
     </span>
     <span class="wpd-meta">{{ .Params.wpW }} × {{ .Params.wpH }} · {{ .Params.wpKb }} KB</span>
     <button type="button" class="wp-lb-dl wpd-dl" id="wpd-dl" aria-label="下载这张壁纸">下载</button>
+    {{- /* 「高清原图」按钮：已备好、暂不上线（hidden + 注释）。
+           上线时去掉 hidden 并把 assetVer 升一版即可。 */}}
+    {{- /*
+    <button type="button" class="wp-lb-dl wpd-dl wpd-hd" id="wpd-hd" hidden
+            aria-label="下载高清原图">下载高清原图</button>
+    */ -}}
   </div>
 
   <nav class="wpd-nav" aria-label="壁纸翻页">

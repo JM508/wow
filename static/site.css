@@ -483,6 +483,8 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   padding: 0;
   overflow: hidden;
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
   background: var(--tertiary, #ececec);
   border: 1px solid var(--border, #e0e0e0);
   border-radius: 14px;
@@ -695,148 +697,19 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-notice-ok:hover { background: #2f6fe0; }
 .wp-notice-ok[disabled] { opacity: 0.55; cursor: default; }
 
-/* ── 灯箱 ── */
-.wp-lb {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: flex;
-  /* 2026-10-31：壁纸贴顶（原先垂直居中会在图片上方留一条空黑区） */
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 10px;
-  background: rgba(8, 9, 12, 0.94);
-  backdrop-filter: blur(6px);
-}
-.wp-lb[hidden] { display: none; }
-
-.wp-lb-img {
-  max-width: 94vw;
-  /* 顶部贴齐后给底部操作条留出高度，别让大图顶到底栏下面 */
-  max-height: calc(100vh - 92px);
-  width: auto;
-  height: auto;
-  border-radius: 8px;
-  box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.9);
-  /* 点击大图跳详情页（wallpapers.js 绑定；键盘用户用焦点 + Enter） */
-  cursor: pointer;
-}
-
-.wp-lb-x {
-  position: absolute;
-  top: 14px;
-  right: 16px;
-  width: 40px;
-  height: 40px;
-  font-size: 24px;
-  line-height: 1;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.12);
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.wp-lb-x:hover { background: rgba(255, 255, 255, 0.24); }
-
-.wp-lb-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 64px;
-  font-size: 30px;
-  line-height: 1;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
-.wp-lb-nav:hover { background: rgba(255, 255, 255, 0.22); }
-.wp-lb-nav[hidden] { display: none; }
-.wp-lb-prev { left: 12px; }
-.wp-lb-next { right: 12px; }
-
-.wp-lb-bar {
-  position: absolute;
-  left: 50%;
-  bottom: 14px;
-  transform: translateX(-50%);
-  max-width: 92vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px 12px;
-  padding: 7px 16px;
-  font-size: 13px;
-  color: #fff;
-  white-space: nowrap;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 999px;
-}
-.wp-lb-dim { color: rgba(255, 255, 255, 0.62); font-size: 12px; }
-
-/* 灯箱里的下载按钮：与首页「下载背景图」同一条路径（fetch blob → a[download]） */
-.wp-lb-dl {
-  flex: none;
-  padding: 4px 14px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #111;
-  background: #fff;
-  border: none;
-  border-radius: 999px;
-  cursor: pointer;
-}
-.wp-lb-dl:hover { background: rgba(255, 255, 255, 0.85); }
-.wp-lb-dl:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
-.wp-lb-dl[disabled] { opacity: 0.6; cursor: default; }
-
-/* 灯箱收藏按钮（2026-10-23）：与卡片星标同一份数据 */
-.wp-lb-fav {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-.wp-lb-fav svg {
-  width: 13px;
-  height: 13px;
-  fill: none;
-  stroke: #fff;
-  stroke-width: 1.8;
-  transition: fill 0.15s ease, stroke 0.15s ease;
-}
-.wp-lb-fav:hover { background: rgba(255, 255, 255, 0.24); }
-.wp-lb-fav.is-fav { border-color: rgba(255, 93, 126, 0.65); }
-.wp-lb-fav.is-fav svg { fill: #ff5d7e; stroke: #ff5d7e; }
-.wp-lb-fav:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
 
 /* 小屏：两列改一列不划算，缩到两列、灯箱按钮缩小让出画面 */
 @media (max-width: 520px) {
   .wp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .wp-cap { padding: 6px 9px 8px; font-size: 12px; gap: 5px; }
   .wp-tag { font-size: 10px; padding: 1px 6px; }
-  .wp-lb-nav { width: 34px; height: 52px; font-size: 22px; }
-  .wp-lb-img { max-width: 100vw; max-height: 78vh; border-radius: 0; }
 }
 
 /* 减少动效：关掉图片缩放与卡片抬升 */
 html.a11y-calm .wp-item,
 html.a11y-calm .wp-img,
 html.a11y-calm .wp-tab,
-html.a11y-calm .wp-fav,
-html.a11y-calm .wp-lb-fav { transition: none !important; }
+html.a11y-calm .wp-fav { transition: none !important; }
 html.a11y-calm .wp-item:hover { transform: none; }
 html.a11y-calm .wp-item:hover .wp-img { transform: none; }
 html.a11y-calm .wp-fav:hover { transform: none; }
