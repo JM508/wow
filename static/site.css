@@ -289,6 +289,30 @@ html[data-ag-bg] .games-entry-btn.games-entry-ghost {
   border-color: rgba(30, 30, 30, 0.6);
 }
 
+/* ══ 暗色模式压图（2026-10-31）：蒙版已改黑色渐变，压图文字同步翻成浅色 ══
+   白天的白蒙版 + 黑字、夜里的黑蒙版 + 白字，两套各自成立；中间不加过渡。 */
+html[data-theme="dark"][data-ag-bg] .first-entry h1,
+html[data-theme="dark"][data-ag-bg] .header .logo,
+html[data-theme="dark"][data-ag-bg] .header .logo a,
+html[data-theme="dark"][data-ag-bg] .footer,
+html[data-theme="dark"][data-ag-bg] .footer-repo {
+  color: #f2f2f2;
+  text-shadow: none;
+}
+html[data-theme="dark"][data-ag-bg] .theme-toggle,
+html[data-theme="dark"][data-ag-bg] .logo-switches a {
+  color: #f2f2f2;
+}
+html[data-theme="dark"][data-ag-bg] .footer a,
+html[data-theme="dark"][data-ag-bg] .footer-repo a {
+  color: #cfcfcf;
+}
+html[data-theme="dark"][data-ag-bg] .games-entry-btn,
+html[data-theme="dark"][data-ag-bg] .games-entry-btn.games-entry-ghost {
+  color: #f2f2f2;
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
 /* ══ 跑酷页底部「键盘 / 手机」按键提示（.run-foot）══
    2026-10-22 用户要求：① 文字改黑色 ② 去掉提示外面那个底色框。
    做法：底色一律透明（不再用 runner.css 的浅色芯片）、文字默认为黑；只有
@@ -677,8 +701,10 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   inset: 0;
   z-index: 90;
   display: flex;
-  align-items: center;
+  /* 2026-10-31：壁纸贴顶（原先垂直居中会在图片上方留一条空黑区） */
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 10px;
   background: rgba(8, 9, 12, 0.94);
   backdrop-filter: blur(6px);
 }
@@ -686,11 +712,14 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 
 .wp-lb-img {
   max-width: 94vw;
-  max-height: 84vh;
+  /* 顶部贴齐后给底部操作条留出高度，别让大图顶到底栏下面 */
+  max-height: calc(100vh - 92px);
   width: auto;
   height: auto;
   border-radius: 8px;
   box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.9);
+  /* 点击大图跳详情页（wallpapers.js 绑定；键盘用户用焦点 + Enter） */
+  cursor: pointer;
 }
 
 .wp-lb-x {
@@ -1116,3 +1145,40 @@ footer.footer { color: var(--primary, #1f1f1f); }
   -webkit-tap-highlight-color: transparent;
 }
 #snake-canvas, #ms-board, .ttt-board { touch-action: manipulation; }
+
+/* ══ 壁纸详情页（/wallpapers/<slug>/，2026-10-31）══
+   仿图库站的跳转结构：列表 → 独立页（URL 变化），页内大图 + 标签 + 下载 + 翻页 */
+.wp-detail { max-width: 980px; margin: 0 auto; padding: 0 14px 28px; }
+.wpd-top { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 10px; }
+.wpd-back { font-size: 13px; color: var(--secondary, #555); text-decoration: none; }
+.wpd-back:hover { color: var(--primary, #1f1f1f); text-decoration: underline; }
+.wpd-title { font-size: 20px; margin: 0; }
+.wpd-figure { margin: 0; display: flex; justify-content: center; }
+.wpd-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.55);
+}
+.wpd-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin: 12px 2px 4px;
+  font-size: 13px;
+}
+.wpd-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.wpd-meta { color: var(--secondary, #777); font-size: 12px; }
+.wpd-bar .wpd-dl { margin-left: auto; }
+.wpd-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 0 4px;
+  font-size: 14px;
+}
+.wpd-nav-a { text-decoration: none; color: var(--primary, #1f1f1f); padding: 6px 2px; }
+.wpd-nav-a:hover { text-decoration: underline; }
+.wpd-nav-a.is-off { opacity: 0.4; pointer-events: none; }
+.wpd-note { font-size: 12px; color: var(--secondary, #777); }

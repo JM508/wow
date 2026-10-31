@@ -52,20 +52,6 @@
     box-shadow: 0 18px 50px -12px rgba(0, 0, 0, 0.18), 0 4px 14px -6px rgba(0, 0, 0, 0.10);
   }
 
-  #ag-root .ag-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 60px;
-    height: 60px;
-    margin: 0 auto 18px;
-    font-size: 30px;
-    line-height: 1;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ff5f6d, #ffc371);
-    box-shadow: 0 8px 22px -8px rgba(255, 95, 109, 0.7);
-  }
-
   #ag-root .ag-title {
     margin: 0 0 10px;
     font-size: 21px;
@@ -82,13 +68,7 @@
     color: var(--primary, #1f1f1f);
   }
 
-  #ag-root .ag-desc {
-    margin: 0 0 26px;
-    font-size: 14px;
-    line-height: 1.75;
-    color: var(--secondary, #6b6b6b);
-  }
-  #ag-root .ag-desc b, #ag-root .ag-question b { color: var(--primary, #1f1f1f); }
+  #ag-root .ag-question b { color: var(--primary, #1f1f1f); }
 
   #ag-root .ag-actions { display: flex; flex-direction: column; gap: 10px; }
 
@@ -174,14 +154,6 @@
     border-radius: 9px;
   }
   #ag-root .ag-err[hidden] { display: none; }
-
-  /* 隐私说明：验证只在本机完成、不收集任何信息 */
-  #ag-root .ag-note {
-    margin: 14px 2px 0;
-    font-size: 12px;
-    line-height: 1.7;
-    color: var(--secondary, #9a9a9a);
-  }
 
   /* 极窄屏：轨道矮一点、提示字号缩一档，别把滑块挤得失手 */
   @media (max-width: 360px) {
@@ -287,6 +259,22 @@
       rgba(255, 255, 255, 0.84) 100%
     );
     opacity: 1;
+  }
+  /* 暗色模式压图（2026-10-31）：蒙版改黑色渐变（压暗），
+     文字配色由 site.css 的 html[data-theme="dark"][data-ag-bg] 规则翻成浅色 */
+  html[data-theme="dark"] #ag-bg::after {
+    background: linear-gradient(
+      to bottom,
+      rgba(8, 9, 12, 0.94) 0%,
+      rgba(8, 9, 12, 0.86) 12%,
+      rgba(8, 9, 12, 0.62) 24%,
+      rgba(8, 9, 12, 0.30) 36%,
+      rgba(8, 9, 12, 0.10) 46%,
+      rgba(8, 9, 12, 0) 54%,
+      rgba(8, 9, 12, 0) 72%,
+      rgba(8, 9, 12, 0.48) 86%,
+      rgba(8, 9, 12, 0.88) 100%
+    );
   }
   /* 两个主题都补一点饱和度，抵消加白混合造成的发灰（--ag-sat 由 age-gate.js 注入；
      「看背景图」模式要求显示真原图，也关闭） */

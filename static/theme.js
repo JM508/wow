@@ -18,16 +18,33 @@
 
   var html = document.documentElement;
 
-  /* ── 1) 主题初始化（对应 head.html 的内联脚本，defaultTheme = "dark"）──
+  /* ── 1) 主题初始化（对应 head.html 的内联脚本）──
      必须在任何渲染发生前执行：本文件同步加载于 <head>
-     默认暗色；手动切浅色只记住「当前浏览会话」（sessionStorage），
-     重开浏览器恢复黑色，不做永久记忆。
-     旧版把偏好写在 localStorage，这里顺带清掉，让老访客也回归默认黑。 */
+     2026-10-31 起默认跟随系统：设备开暗色模式 → 站点黑，设备关 → 站点白，
+     系统切换时实时跟随（手动切过则尊重手动选择，仅记住当前浏览会话）。
+     旧版把偏好写在 localStorage，这里顺带清掉。 */
   try {
     localStorage.removeItem("pref-theme");
     var pref = sessionStorage.getItem("pref-theme");
     if (pref === "light") html.dataset.theme = "light";
-    else html.dataset.theme = "dark";
+    else if (pref === "dark") html.dataset.theme = "dark";
+    else html.dataset.theme = window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch (e) {}
+  /* 系统主题变化时实时跟随（无手动选择才跟，避免盖掉用户手选） */
+  try {
+    if (window.matchMedia) {
+      var mq = window.matchMedia("(prefers-color-scheme: dark)");
+      var onSys = function (e) {
+        try {
+          if (!sessionStorage.getItem("pref-theme")) {
+            html.dataset.theme = e.matches ? "dark" : "light";
+          }
+        } catch (err) {}
+      };
+      if (mq.addEventListener) mq.addEventListener("change", onSys);
+      else if (mq.addListener) mq.addListener(onSys);
+    }
   } catch (e) {}
 
   /* ── 2) CSP 探测（历史遗留说明）──

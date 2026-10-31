@@ -1,0 +1,38 @@
+{{- /* ════════════════════════════════════════════════════════════════════
+     内容适配器（Hugo content adapter）
+     从 data/wallpapers.yaml 为每张壁纸生成详情页 /wallpapers/<slug>/
+     仿图库站点的「点开壁纸 → 进入独立页」跳转结构。
+     数据源由 _make_wallpapers.py / _add_wp_zip.py 生成，本文件不维护图片清单。
+     ══════════════════════════════════════════════════════════════════ */ -}}
+{{- $items := hugo.Data.wallpapers.items -}}
+{{- $n := len $items -}}
+{{- range $i, $e := $items -}}
+  {{- $prev := "" -}}
+  {{- $next := "" -}}
+  {{- if gt $i 0 -}}{{- with index $items (sub $i 1) -}}{{- $prev = .slug -}}{{- end -}}{{- end -}}
+  {{- if lt (add $i 1) $n -}}{{- with index $items (add $i 1) -}}{{- $next = .slug -}}{{- end -}}{{- end -}}
+  {{- $desc := printf "高清壁纸（%s），原始尺寸 %d × %d 像素，可下载 JPG 格式。" (delimit $e.tags " / ") $e.w $e.h -}}
+  {{- $ctx := dict
+      "path" (printf "wallpapers/%s" $e.slug)
+      "kind" "page"
+      "layout" "wpdetail"
+      "title" (printf "壁纸 %s" $e.slug)
+      "description" $desc
+      "date" (time "2026-10-31T09:00:00+08:00")
+      "params" (dict
+        "wpSlug" $e.slug
+        "wpFull" $e.full
+        "wpThumb" $e.thumb
+        "wpKb" $e.kb
+        "wpW" $e.w
+        "wpH" $e.h
+        "wpColor" $e.color
+        "wpTags" $e.tags
+        "wpPrev" $prev
+        "wpNext" $next
+        "hideDescription" true
+        "hideMeta" true
+      )
+  -}}
+  {{- $.AddPage $ctx -}}
+{{- end -}}

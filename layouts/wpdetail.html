@@ -1,0 +1,41 @@
+{{- define "main" }}
+{{- /* 壁纸详情页：大图 + 标签 + 尺寸/体积 + 下载（本机转 JPG）+ 上/下一张。
+       由 content/_content.gotmpl 从 data/wallpapers.yaml 逐张生成。 */}}
+{{- $slug := .Params.wpSlug -}}
+{{- $tags := .Params.wpTags -}}
+{{- $prev := .Params.wpPrev -}}
+{{- $next := .Params.wpNext -}}
+<article class="post-single wp-detail" data-wpd-slug="{{ $slug }}"
+         data-wpd-full="{{ .Params.wpFull }}" data-wpd-kb="{{ .Params.wpKb }}"
+         data-wpd-w="{{ .Params.wpW }}" data-wpd-h="{{ .Params.wpH }}"
+         data-wpd-color="{{ .Params.wpColor }}">
+  <header class="wpd-top">
+    <a class="wpd-back" href="/wallpapers/">← 返回壁纸列表</a>
+    <h1 class="post-title wpd-title">{{ .Title }}</h1>
+  </header>
+
+  <figure class="wpd-figure">
+    <img id="wpd-img" class="wpd-img" src="{{ .Params.wpFull }}" width="{{ .Params.wpW }}" height="{{ .Params.wpH }}"
+         alt="{{ delimit $tags " " }}壁纸（{{ $slug }}）" decoding="async" fetchpriority="high">
+  </figure>
+
+  <div class="wpd-bar">
+    <span class="wpd-tags">
+      {{- range $tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
+    </span>
+    <span class="wpd-meta">{{ .Params.wpW }} × {{ .Params.wpH }} · {{ .Params.wpKb }} KB</span>
+    <button type="button" class="wp-lb-dl wpd-dl" id="wpd-dl" aria-label="下载这张壁纸">下载</button>
+  </div>
+
+  <nav class="wpd-nav" aria-label="壁纸翻页">
+    {{- with $prev }}<a class="wpd-nav-a" href="/wallpapers/{{ . }}/">‹ 上一张</a>{{ else }}<span class="wpd-nav-a is-off">‹ 上一张</span>{{ end -}}
+    {{- with $next }}<a class="wpd-nav-a" href="/wallpapers/{{ . }}/">下一张 ›</a>{{ else }}<span class="wpd-nav-a is-off">下一张 ›</span>{{ end -}}
+  </nav>
+
+  <div class="post-content md-content wpd-note">
+    <p>壁纸版权归原作者所有，仅供个人设备背景展示，请勿用于商业用途。完整版权说明见<a href="/wallpapers/">壁纸页</a>。</p>
+  </div>
+</article>
+
+<script src="/wp-detail.js?v={{ site.Params.assetVer }}" defer></script>
+{{- end }}

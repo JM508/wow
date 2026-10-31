@@ -78,12 +78,8 @@
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
-  CFG.desc = "本站内容可能包含仅适合成年人浏览的娱乐内容。请确认您已年满 <b>" +
-             CFG.minAge + " 周岁</b>；选「是」后需通过一次人机验证，" +
-             "未满 " + CFG.minAge + " 周岁请选择「否」。";
+  /* 2026-10-31：按站点要求移除说明文案（desc / captchaDesc / captchaNote 不再渲染） */
   CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
-  CFG.captchaDesc = "按住下方滑块，把它拖到轨道最右端即可通过验证。";
-  CFG.captchaNote = "验证只在本机浏览器内完成：不填任何个人信息，也不上传、不保存。";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -278,8 +274,8 @@
 
   /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「滑块人机验证」 ---------- */
   function cardHtml(inner) {
+    /* 2026-10-31：界面不放表情徽标 */
     return '<div class="ag-card">' +
-        '<div class="ag-badge" aria-hidden="true">🔞</div>' +
         inner +
         '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
         '<p class="ag-foot">' + CFG.foot + '</p>' +
@@ -303,7 +299,6 @@
     el.innerHTML = cardHtml(
         '<h1 class="ag-title" id="ag-title">' + CFG.title + '</h1>' +
         '<p class="ag-question" id="ag-text">' + CFG.question + '</p>' +
-        '<p class="ag-desc">' + CFG.desc + '</p>' +
         '<div class="ag-actions">' +
           '<button type="button" class="ag-btn ag-yes" id="ag-yes">' + CFG.yesText + '</button>' +
           '<button type="button" class="ag-btn ag-no" id="ag-no">' + CFG.noText + '</button>' +
@@ -338,7 +333,6 @@
     el.setAttribute("aria-labelledby", "ag-title");
     el.innerHTML = cardHtml(
         '<h1 class="ag-title" id="ag-title">' + CFG.captchaTitle + '</h1>' +
-        '<p class="ag-desc" id="ag-text">' + CFG.captchaDesc + '</p>' +
         '<p class="ag-err" id="ag-err" role="alert" hidden></p>' +
         '<div class="ag-slider" id="ag-slider">' +
           '<div class="ag-slider-fill" id="ag-slider-fill" aria-hidden="true"></div>' +
@@ -350,8 +344,7 @@
         '</div>' +
         '<div class="ag-actions">' +
           '<button type="button" class="ag-btn ag-no" id="ag-back">' + CFG.backText + '</button>' +
-        '</div>' +
-        '<p class="ag-note">' + CFG.captchaNote + '</p>');
+        '</div>');
 
     var track = el.querySelector("#ag-slider");
     var knob  = el.querySelector("#ag-slider-knob");

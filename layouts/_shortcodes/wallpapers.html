@@ -165,8 +165,14 @@
     <button type="button" class="wp-lb-fav" id="wp-lb-fav" aria-pressed="false" aria-label="收藏这张壁纸">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg><span id="wp-lb-fav-txt">收藏</span>
     </button>
-    {{- /* 主按钮给 JPG（绝大多数没有 jpg 原图，由浏览器本机把 webp 转成 JPG，不增流量）。 */}}
-    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载 JPG">下载 JPG</button>
+    {{- /* 主按钮：本机把 webp 转成 JPG 下载，不增流量。
+           2026-10-31：按钮文案去掉「JPG」字样，只显示「下载」。 */}}
+    <button type="button" class="wp-lb-dl" id="wp-lb-dl" aria-label="下载这张壁纸">下载</button>
+    {{- /* 「高清原图」按钮：已备好、暂不上线（hidden + 注释）。
+           上线时去掉 hidden 并把 assetVer 升一版即可。
+    <button type="button" class="wp-lb-dl wp-lb-hd" id="wp-lb-hd" hidden
+            aria-label="下载高清原图">下载高清原图</button>
+    */ -}}
   </div></div>
 
 {{- /* 只在壁纸页加载筛选/灯箱脚本 */ -}}

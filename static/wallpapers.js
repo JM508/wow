@@ -166,8 +166,8 @@
       (pos + 1) + " / " + arr.length +
       (dlCounts[key] ? " · 已下载 " + dlCounts[key] + " 次" : "");
     if (btnDl) {
-      btnDl.textContent = "下载 JPG";
-      btnDl.setAttribute("aria-label", "下载 JPG 格式壁纸（本机转码），" + title);
+      btnDl.textContent = "下载";
+      btnDl.setAttribute("aria-label", "下载这张壁纸（JPG 格式，本机转码），" + title);
     }
     paintLbFav();
     var multi = arr.length > 1;
@@ -267,6 +267,21 @@
   btnPrev.addEventListener("click", function () { show(pos - 1); });
   btnNext.addEventListener("click", function () { show(pos + 1); });
   if (btnDl) btnDl.addEventListener("click", download);
+
+  /* 点击灯箱大图 → 跳到该壁纸的详情页（URL 变化，仿图库站点结构） */
+  lbImg.style.cursor = "pointer";
+  lbImg.setAttribute("role", "link");
+  lbImg.setAttribute("tabindex", "0");
+  var goDetail = function () {
+    var arr = list();
+    if (pos < 0 || !arr[pos]) return;
+    var slug = slugOf(arr[pos]);
+    if (slug) location.href = "/wallpapers/" + slug + "/";
+  };
+  lbImg.addEventListener("click", goDetail);
+  lbImg.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); goDetail(); }
+  });
   lb.addEventListener("click", function (e) {
     /* 点空白处（不是图片/按钮/说明条）关闭 */
     if (e.target === lb) close();
