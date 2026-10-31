@@ -42,9 +42,7 @@ var PRECACHE = [
   '/vendor/workbuddy-cloud-sdk.global.js',
   '/site.webmanifest',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
-  '/img/seia-duck.webp', '/img/seia-runner.webp',
   '/img/sprite-bottle.webp',
-  '/img/zhang-duck.webp', '/img/zhang-runner.webp',
   '/favicon.ico', '/icon-192.png', '/icon-512.png', '/icon-512-maskable.png'
 ].map(ver);
 

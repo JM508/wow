@@ -95,18 +95,6 @@
       desc: "合金灰外壳，一根闪灯天线，围巾换成数据线。",
       ink: "#93a1b5", inkNight: "#cfe0f5", scarf: "#2fe0a0", eye: "#2fe0a0",
       headFill: "#cfd8e4", headFillNight: "#dbe6f5", deco: "antenna", decoColor: "#2fe0a0"
-    },
-    {
-      id: "seia", name: "圣娅", price: 2888, tag: "限定",
-      desc: "来自碧蓝档案的百合园圣娅",
-      sprite: { run: "seia-runner", duck: "seia-duck" },
-      runH: 78, duckH: 34
-    },
-    {
-      id: "zxf", name: "张雪峰", price: 1888, tag: "限定",
-      desc: "白衬衫加眼镜，一手话筒一手规划，冲就完事了。",
-      sprite: { run: "zhang-runner", duck: "zhang-duck" },
-      runH: 78, duckH: 34
     }
   ];
 
