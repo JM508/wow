@@ -5,6 +5,11 @@
 /.hugo_build.lock
 /hugo_stats.json
 
+# ── Git 内部临时目录 ───────────────────────────────────────────
+# filter-branch / filter-repo 的工作目录，不属于仓库内容
+/.git-rewrite/
+/.git-filter-repo/
+
 # ── 操作系统 / 编辑器 ──────────────────────────────────────────
 .DS_Store
 Thumbs.db

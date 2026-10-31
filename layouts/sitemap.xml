@@ -12,5 +12,9 @@
     <priority>{{ .Sitemap.Priority }}</priority>{{ end }}{{ if .IsTranslated }}{{ range .AllTranslations }}
     <xhtml:link rel="alternate" hreflang="{{ .Language.LanguageCode }}" href="{{ .Permalink }}"/>{{ end }}
     {{ end }}
-  </url>{{ end }}{{ end }}
+  </url>{{ end }}{{ end }}{{ range hugo.Data.wallpapers.items }}
+  <url>
+    <loc>{{ printf "%swallpapers/%s/" site.BaseURL .slug }}</loc>
+    <lastmod>2026-10-31T09:00:00+08:00</lastmod>
+  </url>{{ end }}
 </urlset>
