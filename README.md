@@ -48,10 +48,6 @@ hugo --gc --cleanDestinationDir   # 产物输出到 public/
 - 图片体积预算（static 下单张图 > 600KB 拒绝）
 - 调试参数门禁（生产 JS 除 shop.js 的本地限定 `?grant=` 外不得出现调试入口）
 
-## 相关说明
-
-- 火柴人快跑的核心脚本（runner.js / shop.js / skins.js / ach.js 等）历史上曾在独立仓库维护并通过 Action 同步；该仓库已于 2026-10 下旬删除，`static/` 下这些文件即唯一源，直接在本仓库修改即可。
-
 ## 许可与版权
 
 - 站点代码与本仓库结构：站点运营者所有
