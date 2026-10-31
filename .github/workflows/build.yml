@@ -1,0 +1,46 @@
+name: Hugo 构建与门禁
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.167.0"
+          extended: false
+
+      - name: 构建（--gc 清缓存，hugo.toml 已开 minify）
+        run: hugo --gc --cleanDestinationDir
+
+      - name: 图片体积预算（单张图片不超过 600KB）
+        run: |
+          overs=$(find static -type f \( -name '*.webp' -o -name '*.png' -o -name '*.jpg' -o -name '*.avif' \) -size +600k)
+          if [ -n "$overs" ]; then
+            echo "以下图片超过 600KB 预算："
+            echo "$overs"
+            exit 1
+          fi
+
+      - name: 调试参数门禁（生产 JS 只允许 shop.js 的本地限定 grant）
+        run: |
+          hits=$(grep -rln '[?&]grant=' static --include='*.js' | grep -v '^static/shop.js$' || true)
+          if [ -n "$hits" ]; then
+            echo "以下 JS 含调试参数入口：$hits"
+            exit 1
+          fi
+          grep -q 'localhost\|127.0.0.1\|::1' static/shop.js || { echo "shop.js 缺少本地限定"; exit 1; }
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: public
+          path: public/
