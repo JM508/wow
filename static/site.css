@@ -481,49 +481,33 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   display: block;
   width: 100%;
   padding: 0;
-  overflow: hidden;
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  background: var(--tertiary, #ececec);
-  border: 1px solid var(--border, #e0e0e0);
+  /* 2026-11-01 用户要求：外壳底色完全透明，不要灰/黑框。
+     边框也一并去掉，只留图片本身 + 圆角。 */
+  background: transparent;
+  border: 0;
   border-radius: 14px;
   -webkit-appearance: none;
   appearance: none;
-  transition: transform 0.14s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.14s ease;
 }
-.wp-item:hover {
-  transform: translateY(-3px);
-  border-color: transparent;
-  box-shadow: 0 18px 34px -18px rgba(0, 0, 0, 0.6);
-}
+.wp-item:hover { transform: translateY(-2px); }
 .wp-item:focus-visible {
   outline: 2px solid #4f8cff;
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
-/* 卡片单元：卡片本体（下载入口只在灯箱里，2026-10-22 应用户要求撤掉卡片上的按钮组） */
-.wp-cell { position: relative; }
+/* 卡片单元：只放图片与收藏星标。
+   content-visibility: auto 让浏览器跳过离屏卡片的布局/绘制 —— 89 张卡的长列表
+   首屏渲染成本大幅下降；contain-intrinsic-size 给一个占位高度避免滚动条跳动。 */
+.wp-cell {
+  position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: 260px 420px;
+}
 .wp-pic { display: block; }
-
-/* 2026-10-22 用户要求：卡片改为「上图片、下文字」，文字和标签不再压在图上。
-   图片（.wp-img）宽 100% 高 auto 按原比例缩放；名称 / 体积 / 标签全部排在图片下方正常文档流里。
-   体积列在名称行右端（margin-left:auto），只展示不可点（下载入口在灯箱里）。 */
-.wp-size {
-  margin-left: auto;
-  flex: none;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--secondary, #888888);
-}
-/* 下载次数徽标（2026-10-23，本机计数）：下载过才显示，排在体积左边 */
-.wp-dl-n {
-  flex: none;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--secondary, #888888);
-}
 
 /* 收藏星标（2026-10-23）：悬浮在图片右上角。放在 .wp-item 外面（按钮不套按钮），
    心形用内联 SVG（CSP 不受限），收藏后填充品牌粉。
@@ -544,18 +528,20 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   border-radius: 999px;
   cursor: pointer;
   background: rgba(15, 20, 28, 0.45);
-  backdrop-filter: blur(2px);
   -webkit-appearance: none;
   appearance: none;
   opacity: 0;
   visibility: hidden;
   transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease, visibility 0.15s;
 }
+/* backdrop-filter 只在真正显示时才加：89 张卡各挂一个模糊层会拖累合成，
+   而默认态本来就是 visibility:hidden，没必要提前承担这份成本。 */
 .wp-cell:hover .wp-fav,
 .wp-fav.is-fav,
 .wp-fav:focus-visible {
   opacity: 1;
   visibility: visible;
+  backdrop-filter: blur(2px);
 }
 .wp-fav svg {
   width: 17px;
@@ -569,54 +555,23 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-fav.is-fav svg { fill: #ff5d7e; stroke: #ff5d7e; }
 .wp-fav:focus-visible { outline: 2px solid #4f8cff; outline-offset: 2px; }
 
-/* 图片按原始长宽比自然缩放：宽 100% 铺满卡片，高度 auto。
-   2026-10-22 用户要求不再强制裁切 —— 撤掉原来的 aspect-ratio: 16/9 + object-fit: cover，
-   横图卡片矮、竖图卡片高（<img> 上的 width/height 属性仍是真实比例，加载前不抖）。 */
+/* 图片完整显示，绝不裁剪（2026-11-01 用户要求）：
+   宽 100% + 高 auto 按原始比例缩放，object-fit: contain 兜底；
+   圆角由图片自身 border-radius 提供，父级不再 overflow: hidden（裁切会切掉边角）。
+   去掉原来的 scale 放大过渡：89 张卡各建合成层是长列表卡顿的来源之一。 */
 .wp-img {
   display: block;
   width: 100%;
   height: auto;
+  object-fit: contain;
+  border-radius: 14px;
   opacity: 0;
-  transform: scale(1.02);
-  transition: opacity 0.28s ease, transform 0.32s ease;
+  transition: opacity 0.18s ease;
 }
-.wp-item.is-ready .wp-img { opacity: 1; transform: scale(1); }
-.wp-item:hover .wp-img { transform: scale(1.04); }
+.wp-item.is-ready .wp-img { opacity: 1; }
 .wp-item.is-broken .wp-img { opacity: 1; }
 
-/* 图片下方的说明区：正常文档流（不再绝对定位压图），名称行 + 标签行 */
-.wp-cap {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 8px 12px 10px;
-  font-size: 13px;
-  color: var(--secondary, #888888);
-  text-align: left;
-}
-.wp-row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  max-width: 100%;
-}
-.wp-name {
-  min-width: 0;
-  font-weight: 700;
-  color: var(--primary, #1f1f1f);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* 标签：全部显示（游戏 / 二次元 / 横屏…），最多 3 个，超出折叠成 +N */
-.wp-tags {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  overflow: hidden;
-}
+/* 标签药丸：列表卡片已不再展示标签，样式保留给详情页 .wpd-tags 使用 */
 .wp-tag {
   flex: none;
   font-size: 11px;
@@ -624,11 +579,6 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
   padding: 1px 8px;
   border-radius: 999px;
   color: var(--secondary, #555555);
-  background: var(--tertiary, #ececec);
-}
-.wp-tag-more {
-  font-weight: 700;
-  color: var(--primary, #1f1f1f);
   background: var(--tertiary, #ececec);
 }
 
@@ -698,25 +648,22 @@ html.a11y-hc[data-theme="dark"] .games-row { border-color: #fff; }
 .wp-notice-ok[disabled] { opacity: 0.55; cursor: default; }
 
 
-/* 小屏：两列改一列不划算，缩到两列、灯箱按钮缩小让出画面 */
+/* 小屏：网格收到两列；标签字号缩小（详情页仍用 .wp-tag） */
 @media (max-width: 520px) {
   .wp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-  .wp-cap { padding: 6px 9px 8px; font-size: 12px; gap: 5px; }
   .wp-tag { font-size: 10px; padding: 1px 6px; }
 }
 
-/* 减少动效：关掉图片缩放与卡片抬升 */
+/* 减少动效：关掉卡片抬升与淡入 */
 html.a11y-calm .wp-item,
 html.a11y-calm .wp-img,
 html.a11y-calm .wp-tab,
 html.a11y-calm .wp-fav { transition: none !important; }
 html.a11y-calm .wp-item:hover { transform: none; }
-html.a11y-calm .wp-item:hover .wp-img { transform: none; }
 html.a11y-calm .wp-fav:hover { transform: none; }
 @media (prefers-reduced-motion: reduce) {
   .wp-item, .wp-img, .wp-tab, .wp-fav { transition: none; }
   .wp-item:hover { transform: none; }
-  .wp-item:hover .wp-img { transform: none; }
   .wp-fav:hover { transform: none; }
 }
 
@@ -1019,13 +966,14 @@ footer.footer { color: var(--primary, #1f1f1f); }
 }
 #snake-canvas, #ms-board, .ttt-board { touch-action: manipulation; }
 
-/* ══ 壁纸详情页（/wallpapers/<slug>/，2026-10-31）══
-   仿图库站的跳转结构：列表 → 独立页（URL 变化），页内大图 + 标签 + 下载 + 翻页 */
-.wp-detail { max-width: 980px; margin: 0 auto; padding: 0 14px 28px; }
-.wpd-top { display: flex; flex-direction: column; gap: 6px; margin: 14px 0 10px; }
+/* ══ 壁纸详情页（/wallpapers/<slug>/）══
+   2026-11-01 用户要求：去掉返回链接下方的标题、上一张/下一张、底部版权说明句，
+   返回文案改为「返回」；下载按钮移到图片正下方居中；
+   并仿图库站补全元信息区（分类 / 分辨率 / 大小 / 发布时间 / 下载量 / 收藏量 / 色系）。 */
+.wp-detail { max-width: 980px; margin: 0 auto; padding: 0 14px 32px; }
+.wpd-top { display: flex; margin: 14px 0 12px; }
 .wpd-back { font-size: 13px; color: var(--secondary, #555); text-decoration: none; }
 .wpd-back:hover { color: var(--primary, #1f1f1f); text-decoration: underline; }
-.wpd-title { font-size: 20px; margin: 0; }
 .wpd-figure { margin: 0; display: flex; justify-content: center; }
 .wpd-img {
   max-width: 100%;
@@ -1033,25 +981,69 @@ footer.footer { color: var(--primary, #1f1f1f); }
   border-radius: 10px;
   box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.55);
 }
-.wpd-bar {
+
+/* 下载按钮：大图下方、水平居中 */
+.wpd-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 22px;
+}
+.wpd-dl {
+  min-height: 40px;
+  padding: 8px 32px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: #3b82f6;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.wpd-dl:hover { background: #2f6fe0; }
+.wpd-dl[disabled] { opacity: 0.6; cursor: default; }
+
+/* 元信息区：自适应多列，每项「标签 + 值」 */
+.wpd-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+  gap: 12px 24px;
+  margin: 0 0 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--border, #e6e6e6);
+  border-radius: 12px;
+  font-size: 13px;
+}
+.wpd-meta-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.wpd-meta-item dt { flex: none; color: var(--secondary, #777); }
+.wpd-meta-item dd {
+  margin: 0;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px 14px;
-  margin: 12px 2px 4px;
-  font-size: 13px;
+  gap: 6px;
+  min-width: 0;
+  color: var(--primary, #1f1f1f);
+  font-weight: 600;
 }
 .wpd-tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-.wpd-meta { color: var(--secondary, #777); font-size: 12px; }
-.wpd-bar .wpd-dl { margin-left: auto; }
-.wpd-nav {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 10px 0 4px;
-  font-size: 14px;
+.wpd-ratio { font-size: 12px; font-weight: 400; color: var(--secondary, #888); }
+.wpd-swatch {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #ddd);
 }
-.wpd-nav-a { text-decoration: none; color: var(--primary, #1f1f1f); padding: 6px 2px; }
-.wpd-nav-a:hover { text-decoration: underline; }
-.wpd-nav-a.is-off { opacity: 0.4; pointer-events: none; }
-.wpd-note { font-size: 12px; color: var(--secondary, #777); }
+.wpd-hex {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--secondary, #888);
+  background: var(--tertiary, #f2f2f2);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.wpd-meta-note { margin: 0; font-size: 11px; color: var(--secondary, #999); }

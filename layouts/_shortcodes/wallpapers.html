@@ -90,13 +90,9 @@
   <div class="wp-grid" id="wp-grid">
     {{- range $i, $e := $ordered }}
     {{- $thumbH := math.Round (div (mul 640.0 .h) .w) -}}
-    {{- /* 卡片右上角标的体积 = 灯箱「下载原图」那份文件的体积：
-           有专属原图 jpg 用 orig_kb，否则是 1920 宽 webp 的 kb */ -}}
-    {{- $dlKb := .kb -}}
-    {{- with .orig_kb }}{{ $dlKb = . }}{{ end -}}
-    {{- /* 首屏 6 张即时加载（LCP 候选），第一张最高优先级；其余懒加载。
-           展示层优先进 AVIF，浏览器不支持时回退 WebP（<picture>）；
-           下载按钮始终给 WebP 大图，体积直接标在按钮上。 */ -}}
+    {{- /* 2026-11-01 用户要求：卡片只留图片本身。
+           原来图片下方那行「名称 + KB 体积 + 标签」整块删掉（挂 .wp-cap），
+           卡片底色改透明、图片不再裁切 —— 见 site.css 的 .wp-item / .wp-img。 */ -}}
     <div class="wp-cell" data-wp-cell="{{ .slug }}">
       <a class="wp-item" href="/wallpapers/{{ .slug }}/" data-wp-key="{{ .slug }}"
          data-wp-tags="{{ delimit .tags "," }}" data-wp-color="{{ .color }}"
@@ -106,24 +102,9 @@
           <source srcset="{{ replace .thumb ".webp" ".avif" }}" type="image/avif">
           <img class="wp-img" src="{{ .thumb }}" width="640" height="{{ $thumbH }}"
                alt="{{ with .title }}{{ . }} 壁纸{{ else }}壁纸{{ end }}"
-               loading="{{ if lt $i 6 }}eager{{ else }}lazy{{ end }}"
-               {{- if lt $i 6 }} fetchpriority="high"{{ end }} decoding="async">
+               loading="{{ if lt $i 3 }}eager{{ else }}lazy{{ end }}"
+               {{- if not $i }} fetchpriority="high"{{ end }} decoding="async">
         </picture>
-        {{- /* 2026-10-22：文字与标签全部排在图片下方（不压图）。
-               第一行 = 名称（左）+ 下载体积（右），第二行 = 标签。 */}}
-        <span class="wp-cap">
-          <span class="wp-row">
-            {{ with .title }}<span class="wp-name">{{ . }}</span>{{ end }}
-            {{- /* 下载次数徽标（本机计数），下载过才显示，wallpapers.js 填充 */}}
-            <span class="wp-dl-n" hidden></span>
-            <span class="wp-size" aria-hidden="true">{{ $dlKb }} KB</span>
-          </span>
-          {{- /* 标签全量展示；超过 3 个时前 3 个照常显示，其余折叠成「+N」 */}}
-          <span class="wp-tags">
-            {{- range first 3 .tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
-            {{- if gt (len .tags) 3 }}<span class="wp-tag wp-tag-more" title="{{ delimit (after 3 .tags) " / " }}">+{{ sub (len .tags) 3 }}</span>{{ end -}}
-          </span>
-        </span>
       </a>
       {{- /* 收藏星标：放在卡片 <a> 外面（链接不套按钮），悬浮在图片右上角。
              状态由 wallpapers.js 按 localStorage 里的收藏清单画。 */}}

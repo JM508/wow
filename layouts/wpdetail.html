@@ -1,17 +1,19 @@
 {{- define "main" }}
-{{- /* 壁纸详情页：大图 + 标签 + 尺寸/体积 + 下载（本机转 JPG）+ 上/下一张。
+{{- /* 壁纸详情页：大图 + 下载 + 元信息。
+       2026-11-01 用户要求：
+         - 删除返回链接下方的标题（原 h1）、上一张/下一张、底部版权说明句
+         - 返回文案由「← 返回壁纸列表」改为「← 返回」
+         - 下载按钮移到图片正下方居中
+         - 仿图库站补全元信息：分类 / 分辨率 / 大小 / 发布时间 / 下载量 / 收藏量 / 色系
        由 content/_content.gotmpl 从 data/wallpapers.yaml 逐张生成。 */}}
 {{- $slug := .Params.wpSlug -}}
 {{- $tags := .Params.wpTags -}}
-{{- $prev := .Params.wpPrev -}}
-{{- $next := .Params.wpNext -}}
 <article class="post-single wp-detail" data-wpd-slug="{{ $slug }}"
          data-wpd-full="{{ .Params.wpFull }}" data-wpd-orig="{{ .Params.wpOrig }}" data-wpd-kb="{{ .Params.wpKb }}"
          data-wpd-w="{{ .Params.wpW }}" data-wpd-h="{{ .Params.wpH }}"
          data-wpd-color="{{ .Params.wpColor }}">
   <header class="wpd-top">
-    <a class="wpd-back" href="/wallpapers/">← 返回壁纸列表</a>
-    <h1 class="post-title wpd-title">{{ .Title }}</h1>
+    <a class="wpd-back" href="/wallpapers/">← 返回</a>
   </header>
 
   <figure class="wpd-figure">
@@ -19,28 +21,51 @@
          alt="{{ delimit $tags " " }}壁纸（{{ $slug }}）" decoding="async" fetchpriority="high">
   </figure>
 
-  <div class="wpd-bar">
-    <span class="wpd-tags">
-      {{- range $tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}
-    </span>
-    <span class="wpd-meta">{{ .Params.wpW }} × {{ .Params.wpH }} · {{ .Params.wpKb }} KB</span>
-    <button type="button" class="wp-lb-dl wpd-dl" id="wpd-dl" aria-label="下载这张壁纸">下载</button>
-    {{- /* 「高清原图」按钮：已备好、暂不上线（hidden + 注释）。
-           上线时去掉 hidden 并把 assetVer 升一版即可。 */}}
+  {{- /* 下载按钮：大图下方居中；「高清原图」按钮已备好、暂不上线 */}}
+  <div class="wpd-actions">
+    <button type="button" class="wpd-dl" id="wpd-dl" aria-label="下载这张壁纸">下载</button>
     {{- /*
-    <button type="button" class="wp-lb-dl wpd-dl wpd-hd" id="wpd-hd" hidden
-            aria-label="下载高清原图">下载高清原图</button>
+    <button type="button" class="wpd-dl wpd-hd" id="wpd-hd" hidden aria-label="下载高清原图">下载高清原图</button>
     */ -}}
   </div>
 
-  <nav class="wpd-nav" aria-label="壁纸翻页">
-    {{- with $prev }}<a class="wpd-nav-a" href="/wallpapers/{{ . }}/">‹ 上一张</a>{{ else }}<span class="wpd-nav-a is-off">‹ 上一张</span>{{ end -}}
-    {{- with $next }}<a class="wpd-nav-a" href="/wallpapers/{{ . }}/">下一张 ›</a>{{ else }}<span class="wpd-nav-a is-off">下一张 ›</span>{{ end -}}
-  </nav>
-
-  <div class="post-content md-content wpd-note">
-    <p>壁纸版权归原作者所有，仅供个人设备背景展示，请勿用于商业用途。完整版权说明见<a href="/wallpapers/">壁纸页</a>。</p>
-  </div>
+  {{- /* 元信息：仿图库站（分类 / 分辨率 / 大小 / 发布时间 / 下载量 / 收藏量 / 色系）。
+         下载量与收藏量取本机 localStorage（本站没有全站统计接口），区下方注明口径。 */}}
+  <dl class="wpd-meta">
+    <div class="wpd-meta-item">
+      <dt>分类</dt>
+      <dd class="wpd-tags">{{- range $tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}</dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>分辨率</dt>
+      <dd><span id="wpd-res">{{ .Params.wpW }} × {{ .Params.wpH }}</span><span class="wpd-ratio" id="wpd-ratio"></span></dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>大小</dt>
+      <dd>{{ .Params.wpKb }} KB</dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>发布时间</dt>
+      <dd>{{ with .Params.wpAdded }}{{ . }}{{ else }}{{ .Date.Format "2006-01-02" }}{{ end }}</dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>下载量</dt>
+      <dd><span id="wpd-dl-n">0</span></dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>收藏量</dt>
+      <dd><span id="wpd-fav-n">0</span></dd>
+    </div>
+    <div class="wpd-meta-item">
+      <dt>色系</dt>
+      <dd class="wpd-color">
+        <span class="wpd-swatch" id="wpd-swatch" aria-hidden="true"></span>
+        <span id="wpd-color-name">——</span>
+        <code class="wpd-hex">{{ .Params.wpColor }}</code>
+      </dd>
+    </div>
+  </dl>
+  <p class="wpd-meta-note">下载量与收藏量按本机记录统计，仅你可见。</p>
 </article>
 
 <script src="/wp-detail.js?v={{ partialCached "assetVer.html" . "v" }}" defer></script>

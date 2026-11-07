@@ -4,6 +4,7 @@ version: 1
 count: 89
 items:
   - slug: wp-01
+    added: 2026-10-17
     kb: 189
     kb_thumb: 38
     w: 8771
@@ -14,6 +15,7 @@ items:
     full: /wp/wp-01-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-02
+    added: 2026-10-17
     kb: 177
     kb_thumb: 34
     w: 8363
@@ -24,6 +26,7 @@ items:
     full: /wp/wp-02-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-03
+    added: 2026-10-17
     kb: 160
     kb_thumb: 32
     w: 8124
@@ -34,6 +37,7 @@ items:
     full: /wp/wp-03-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-04
+    added: 2026-10-17
     kb: 161
     kb_thumb: 31
     w: 8448
@@ -44,6 +48,7 @@ items:
     full: /wp/wp-04-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-05
+    added: 2026-10-17
     kb: 173
     kb_thumb: 34
     w: 8120
@@ -54,6 +59,7 @@ items:
     full: /wp/wp-05-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-06
+    added: 2026-10-17
     kb: 171
     kb_thumb: 34
     w: 8000
@@ -64,6 +70,7 @@ items:
     full: /wp/wp-06-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-07
+    added: 2026-10-17
     kb: 150
     kb_thumb: 29
     w: 8425
@@ -74,6 +81,7 @@ items:
     full: /wp/wp-07-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-08
+    added: 2026-10-17
     kb: 136
     kb_thumb: 29
     w: 8918
@@ -84,6 +92,7 @@ items:
     full: /wp/wp-08-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-09
+    added: 2026-10-17
     kb: 214
     kb_thumb: 37
     w: 8120
@@ -94,6 +103,7 @@ items:
     full: /wp/wp-09-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-10
+    added: 2026-10-17
     kb: 190
     kb_thumb: 37
     w: 9000
@@ -104,6 +114,7 @@ items:
     full: /wp/wp-10-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-11
+    added: 2026-10-17
     kb: 200
     kb_thumb: 40
     w: 8120
@@ -114,6 +125,7 @@ items:
     full: /wp/wp-11-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-12
+    added: 2026-10-17
     kb: 218
     kb_thumb: 39
     w: 8665
@@ -124,6 +136,7 @@ items:
     full: /wp/wp-12-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-13
+    added: 2026-10-17
     kb: 186
     kb_thumb: 34
     w: 8120
@@ -134,6 +147,7 @@ items:
     full: /wp/wp-13-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-14
+    added: 2026-10-17
     kb: 231
     kb_thumb: 38
     w: 8120
@@ -144,6 +158,7 @@ items:
     full: /wp/wp-14-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-15
+    added: 2026-10-17
     kb: 215
     kb_thumb: 39
     w: 8000
@@ -154,6 +169,7 @@ items:
     full: /wp/wp-15-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-16
+    added: 2026-10-17
     kb: 170
     kb_thumb: 29
     w: 8121
@@ -164,6 +180,7 @@ items:
     full: /wp/wp-16-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-17
+    added: 2026-10-17
     kb: 182
     kb_thumb: 28
     w: 9672
@@ -174,6 +191,7 @@ items:
     full: /wp/wp-17-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-18
+    added: 2026-10-17
     kb: 156
     kb_thumb: 30
     w: 7000
@@ -184,6 +202,7 @@ items:
     full: /wp/wp-18-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-19
+    added: 2026-10-17
     kb: 144
     kb_thumb: 28
     w: 8120
@@ -194,6 +213,7 @@ items:
     full: /wp/wp-19-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-20
+    added: 2026-10-17
     kb: 134
     kb_thumb: 24
     w: 8118
@@ -204,6 +224,7 @@ items:
     full: /wp/wp-20-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-21
+    added: 2026-10-17
     kb: 229
     kb_thumb: 41
     w: 3457
@@ -214,6 +235,7 @@ items:
     full: /wp/wp-21-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-22
+    added: 2026-10-17
     kb: 405
     kb_thumb: 60
     w: 16000
@@ -224,6 +246,7 @@ items:
     full: /wp/wp-22-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-23
+    added: 2026-10-17
     kb: 218
     kb_thumb: 38
     w: 8120
@@ -234,6 +257,7 @@ items:
     full: /wp/wp-23-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-24
+    added: 2026-10-17
     kb: 205
     kb_thumb: 35
     w: 7995
@@ -244,6 +268,7 @@ items:
     full: /wp/wp-24-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-25
+    added: 2026-10-17
     kb: 203
     kb_thumb: 33
     w: 8654
@@ -254,6 +279,7 @@ items:
     full: /wp/wp-25-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-26
+    added: 2026-10-17
     kb: 188
     kb_thumb: 37
     w: 8120
@@ -264,6 +290,7 @@ items:
     full: /wp/wp-26-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-27
+    added: 2026-10-17
     kb: 98
     kb_thumb: 20
     w: 8120
@@ -274,6 +301,7 @@ items:
     full: /wp/wp-27-1920.webp
     tags: [游戏, 横屏]
   - slug: wp-28
+    added: 2026-10-17
     kb: 146
     kb_thumb: 33
     w: 1920
@@ -286,6 +314,7 @@ items:
     orig_kb: 416
     tags: [二次元, 横屏]
   - slug: wp-29
+    added: 2026-10-25
     kb: 22
     kb_thumb: 17
     w: 721
@@ -296,6 +325,7 @@ items:
     full: /wp/wp-29-1920.webp
     tags: [党政, 竖屏]
   - slug: wp-30
+    added: 2026-10-25
     kb: 416
     kb_thumb: 79
     w: 2580
@@ -306,6 +336,7 @@ items:
     full: /wp/wp-30-1920.webp
     tags: [党政, 竖屏]
   - slug: wp-31
+    added: 2026-10-25
     kb: 177
     kb_thumb: 44
     w: 2368
@@ -316,6 +347,7 @@ items:
     full: /wp/wp-31-1920.webp
     tags: [党政, 竖屏]
   - slug: wp-32
+    added: 2026-10-25
     kb: 87
     kb_thumb: 20
     w: 2580
@@ -326,6 +358,7 @@ items:
     full: /wp/wp-32-1920.webp
     tags: [党政, 竖屏]
   - slug: wp-33
+    added: 2026-10-25
     kb: 29
     kb_thumb: 19
     w: 890
@@ -336,6 +369,7 @@ items:
     full: /wp/wp-33-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-34
+    added: 2026-10-25
     kb: 23
     kb_thumb: 15
     w: 890
@@ -346,6 +380,7 @@ items:
     full: /wp/wp-34-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-35
+    added: 2026-10-25
     kb: 25
     kb_thumb: 15
     w: 890
@@ -356,6 +391,7 @@ items:
     full: /wp/wp-35-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-36
+    added: 2026-10-25
     kb: 29
     kb_thumb: 18
     w: 890
@@ -366,6 +402,7 @@ items:
     full: /wp/wp-36-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-37
+    added: 2026-10-25
     kb: 38
     kb_thumb: 25
     w: 890
@@ -376,6 +413,7 @@ items:
     full: /wp/wp-37-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-38
+    added: 2026-10-25
     kb: 55
     kb_thumb: 38
     w: 890
@@ -386,6 +424,7 @@ items:
     full: /wp/wp-38-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-39
+    added: 2026-10-25
     kb: 60
     kb_thumb: 47
     w: 890
@@ -396,6 +435,7 @@ items:
     full: /wp/wp-39-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-40
+    added: 2026-10-25
     kb: 27
     kb_thumb: 17
     w: 890
@@ -406,6 +446,7 @@ items:
     full: /wp/wp-40-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-41
+    added: 2026-10-25
     kb: 30
     kb_thumb: 19
     w: 890
@@ -416,6 +457,7 @@ items:
     full: /wp/wp-41-1920.webp
     tags: [二次元, 横屏]
   - slug: wp-42
+    added: 2026-10-25
     kb: 23
     kb_thumb: 5
     w: 4096
@@ -426,6 +468,7 @@ items:
     full: /wp/wp-42-1920.webp
     tags: [党政, 横屏]
   - slug: wp-43
+    added: 2026-10-25
     kb: 18
     kb_thumb: 16
     w: 417
@@ -436,6 +479,7 @@ items:
     full: /wp/wp-43-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-44
+    added: 2026-10-25
     kb: 34
     kb_thumb: 31
     w: 499
@@ -446,6 +490,7 @@ items:
     full: /wp/wp-44-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-45
+    added: 2026-10-25
     kb: 28
     kb_thumb: 27
     w: 407
@@ -456,6 +501,7 @@ items:
     full: /wp/wp-45-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-46
+    added: 2026-10-25
     kb: 29
     kb_thumb: 27
     w: 411
@@ -466,6 +512,7 @@ items:
     full: /wp/wp-46-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-47
+    added: 2026-10-25
     kb: 22
     kb_thumb: 19
     w: 410
@@ -476,6 +523,7 @@ items:
     full: /wp/wp-47-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-48
+    added: 2026-10-25
     kb: 38
     kb_thumb: 33
     w: 496
@@ -486,6 +534,7 @@ items:
     full: /wp/wp-48-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-49
+    added: 2026-10-25
     kb: 43
     kb_thumb: 39
     w: 410
@@ -496,6 +545,7 @@ items:
     full: /wp/wp-49-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-50
+    added: 2026-10-25
     kb: 41
     kb_thumb: 38
     w: 423
@@ -506,6 +556,7 @@ items:
     full: /wp/wp-50-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-51
+    added: 2026-10-25
     kb: 27
     kb_thumb: 24
     w: 411
@@ -516,6 +567,7 @@ items:
     full: /wp/wp-51-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-52
+    added: 2026-10-25
     kb: 42
     kb_thumb: 42
     w: 457
@@ -526,6 +578,7 @@ items:
     full: /wp/wp-52-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-53
+    added: 2026-10-25
     kb: 41
     kb_thumb: 37
     w: 399
@@ -536,6 +589,7 @@ items:
     full: /wp/wp-53-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-54
+    added: 2026-10-25
     kb: 30
     kb_thumb: 27
     w: 411
@@ -546,6 +600,7 @@ items:
     full: /wp/wp-54-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-55
+    added: 2026-10-25
     kb: 33
     kb_thumb: 29
     w: 445
@@ -556,6 +611,7 @@ items:
     full: /wp/wp-55-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-56
+    added: 2026-10-25
     kb: 107
     kb_thumb: 99
     w: 493
@@ -566,6 +622,7 @@ items:
     full: /wp/wp-56-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-57
+    added: 2026-10-25
     kb: 34
     kb_thumb: 31
     w: 404
@@ -576,6 +633,7 @@ items:
     full: /wp/wp-57-1920.webp
     tags: [二次元, 竖屏]
   - slug: wp-58
+    added: 2026-10-25
     kb: 30
     kb_thumb: 29
     w: 411
@@ -586,6 +644,7 @@ items:
     full: /wp/wp-58-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-59
+    added: 2026-10-25
     kb: 64
     kb_thumb: 40
     w: 768
@@ -596,6 +655,7 @@ items:
     full: /wp/wp-59-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-60
+    added: 2026-10-25
     kb: 221
     kb_thumb: 44
     w: 1717
@@ -606,6 +666,7 @@ items:
     full: /wp/wp-60-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-61
+    added: 2026-10-25
     kb: 47
     kb_thumb: 41
     w: 618
@@ -616,6 +677,7 @@ items:
     full: /wp/wp-61-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-62
+    added: 2026-10-25
     kb: 29
     kb_thumb: 27
     w: 401
@@ -626,6 +688,7 @@ items:
     full: /wp/wp-62-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-63
+    added: 2026-10-25
     kb: 16
     kb_thumb: 14
     w: 506
@@ -636,6 +699,7 @@ items:
     full: /wp/wp-63-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-64
+    added: 2026-10-25
     kb: 30
     kb_thumb: 27
     w: 410
@@ -646,6 +710,7 @@ items:
     full: /wp/wp-64-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-65
+    added: 2026-10-25
     kb: 22
     kb_thumb: 21
     w: 410
@@ -656,6 +721,7 @@ items:
     full: /wp/wp-65-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-66
+    added: 2026-10-25
     kb: 27
     kb_thumb: 26
     w: 411
@@ -666,6 +732,7 @@ items:
     full: /wp/wp-66-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-67
+    added: 2026-10-25
     kb: 15
     kb_thumb: 14
     w: 410
@@ -676,6 +743,7 @@ items:
     full: /wp/wp-67-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-68
+    added: 2026-10-25
     kb: 23
     kb_thumb: 20
     w: 482
@@ -686,6 +754,7 @@ items:
     full: /wp/wp-68-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-69
+    added: 2026-10-25
     kb: 26
     kb_thumb: 24
     w: 508
@@ -696,6 +765,7 @@ items:
     full: /wp/wp-69-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-70
+    added: 2026-10-25
     kb: 28
     kb_thumb: 25
     w: 417
@@ -706,6 +776,7 @@ items:
     full: /wp/wp-70-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-71
+    added: 2026-10-25
     kb: 23
     kb_thumb: 21
     w: 512
@@ -716,6 +787,7 @@ items:
     full: /wp/wp-71-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-72
+    added: 2026-10-25
     kb: 14
     kb_thumb: 13
     w: 445
@@ -726,6 +798,7 @@ items:
     full: /wp/wp-72-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-73
+    added: 2026-10-25
     kb: 25
     kb_thumb: 22
     w: 500
@@ -736,6 +809,7 @@ items:
     full: /wp/wp-73-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-74
+    added: 2026-10-25
     kb: 25
     kb_thumb: 23
     w: 623
@@ -746,6 +820,7 @@ items:
     full: /wp/wp-74-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-75
+    added: 2026-10-25
     kb: 16
     kb_thumb: 15
     w: 411
@@ -756,6 +831,7 @@ items:
     full: /wp/wp-75-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-76
+    added: 2026-10-25
     kb: 22
     kb_thumb: 20
     w: 411
@@ -766,6 +842,7 @@ items:
     full: /wp/wp-76-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-77
+    added: 2026-10-25
     kb: 18
     kb_thumb: 16
     w: 469
@@ -776,6 +853,7 @@ items:
     full: /wp/wp-77-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-78
+    added: 2026-10-25
     kb: 28
     kb_thumb: 25
     w: 500
@@ -786,6 +864,7 @@ items:
     full: /wp/wp-78-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-79
+    added: 2026-10-25
     kb: 12
     kb_thumb: 11
     w: 501
@@ -796,6 +875,7 @@ items:
     full: /wp/wp-79-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-80
+    added: 2026-10-25
     kb: 26
     kb_thumb: 23
     w: 500
@@ -806,6 +886,7 @@ items:
     full: /wp/wp-80-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-81
+    added: 2026-10-25
     kb: 57
     kb_thumb: 52
     w: 495
@@ -816,6 +897,7 @@ items:
     full: /wp/wp-81-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-82
+    added: 2026-10-25
     kb: 55
     kb_thumb: 49
     w: 421
@@ -826,6 +908,7 @@ items:
     full: /wp/wp-82-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-83
+    added: 2026-10-25
     kb: 23
     kb_thumb: 21
     w: 501
@@ -836,6 +919,7 @@ items:
     full: /wp/wp-83-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-84
+    added: 2026-10-25
     kb: 21
     kb_thumb: 19
     w: 530
@@ -846,6 +930,7 @@ items:
     full: /wp/wp-84-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-85
+    added: 2026-10-25
     kb: 22
     kb_thumb: 20
     w: 411
@@ -856,6 +941,7 @@ items:
     full: /wp/wp-85-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-86
+    added: 2026-10-25
     kb: 28
     kb_thumb: 25
     w: 500
@@ -866,6 +952,7 @@ items:
     full: /wp/wp-86-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-87
+    added: 2026-10-25
     kb: 7
     kb_thumb: 6
     w: 412
@@ -876,6 +963,7 @@ items:
     full: /wp/wp-87-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-88
+    added: 2026-10-25
     kb: 17
     kb_thumb: 15
     w: 407
@@ -886,6 +974,7 @@ items:
     full: /wp/wp-88-1920.webp
     tags: [人物, 竖屏]
   - slug: wp-89
+    added: 2026-10-25
     kb: 21
     kb_thumb: 19
     w: 410

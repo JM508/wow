@@ -149,25 +149,9 @@
     });
   });
 
-  /* ── 下载计数徽标（本机）：下载过才显示，卡片下方名称行左端 ── */
-  var dlBadges = null;
-  function paintDl() {
-    if (!dlBadges) {
-      dlBadges = [];
-      items.forEach(function (el) {
-        var b = el.querySelector(".wp-dl-n");
-        if (b) dlBadges.push([el, b]);
-      });
-    }
-    dlBadges.forEach(function (pair) {
-      var n = dlCounts[slugOf(pair[0])] || 0;
-      pair[1].hidden = n <= 0;
-      pair[1].textContent = n > 0 ? "已下载 " + n : "";
-    });
-  }
-
+  /* ── 下载计数：卡片不再显示徽标（2026-11-01 卡片只留图片），
+       数据仍参与「最多下载」排序；单张的下载量在详情页展示 ── */
   paintFav();
-  paintDl();
 
   /* ── 版权公告 ──
      首页点「壁纸」进来即弹出；5 秒倒计时后「我已知晓」才可点；
@@ -216,7 +200,20 @@
     }
   });
 
-  applyTag("all");
+  /* 2026-11-01 用户要求：手机打开先看竖屏、电脑打开先看横屏。
+     判断用视口宽度（≤820 与站点其他「手机形态」断点一致，也贴合窄窗桌面）；
+     若该方向一张图都没有，回退「全部」，避免进来就是空页。 */
+  function defaultTag() {
+    var isPhone = false;
+    try { isPhone = window.matchMedia("(max-width: 820px)").matches; } catch (e) { /* 老浏览器按电脑处理 */ }
+    var want = isPhone ? "竖屏" : "横屏";
+    var has = items.some(function (el) {
+      return (el.getAttribute("data-wp-tags") || "").split(",").indexOf(want) >= 0;
+    });
+    return has ? want : "all";
+  }
+
+  applyTag(defaultTag());
 
   /* 供测试与探针读取状态 */
   window.__wpState = function () {

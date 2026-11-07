@@ -78,8 +78,10 @@
   };
 
   CFG.question = "您是否已满 " + CFG.minAge + " 周岁？";
-  /* 2026-10-31：按站点要求移除说明文案（desc / captchaDesc / captchaNote 不再渲染） */
-  CFG.foot = "本站内容可能包含成人向娱乐内容，请确认您已年满 " + CFG.minAge + " 周岁。";
+  /* 2026-10-31：按站点要求移除说明文案（desc / captchaDesc / captchaNote 不再渲染）
+     2026-11-01：用户要求把「本站内容可能包含成人向娱乐内容，请确认您已年满 18 周岁。」
+     这句也去掉 —— CFG.foot 不再定义、界面不再输出。 */
+  CFG.foot = "";
   /* ═══════════════════════════════════════════════════════════ */
 
   var KEY = "age_ok_v" + CFG.ver;
@@ -274,11 +276,12 @@
 
   /* ---------- 遮罩渲染：第一步「是否满 18」→ 第二步「滑块人机验证」 ---------- */
   function cardHtml(inner) {
-    /* 2026-10-31：界面不放表情徽标 */
+    /* 2026-10-31：界面不放表情徽标
+       2026-11-01：按用户要求去掉底部说明句（本站内容可能包含成人向娱乐内容…），
+       整个 .ag-foot 不再输出。 */
     return '<div class="ag-card">' +
         inner +
         '<div class="ag-loading" aria-hidden="true"><span></span></div>' +
-        '<p class="ag-foot">' + CFG.foot + '</p>' +
       '</div>';
   }
 
@@ -341,17 +344,14 @@
             ' aria-label="人机验证滑块：按住并拖到最右端"' +
             ' aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"' +
             ' aria-valuetext="0%，未通过">' + ICON_ARROW + '</div>' +
-        '</div>' +
-        '<div class="ag-actions">' +
-          '<button type="button" class="ag-btn ag-no" id="ag-back">' + CFG.backText + '</button>' +
         '</div>');
+    /* 2026-11-01 用户要求：去掉「返回上一步」按钮，验证步骤只保留滑块与结果提示。 */
 
     var track = el.querySelector("#ag-slider");
     var knob  = el.querySelector("#ag-slider-knob");
     var fill  = el.querySelector("#ag-slider-fill");
     var hint  = el.querySelector("#ag-slider-hint");
     var err   = el.querySelector("#ag-err");
-    var back  = el.querySelector("#ag-back");
 
     var busy = false;                 // 通过 / 返回后锁死，防重复操作
     var done = false;
@@ -461,12 +461,7 @@
       settle();
     });
 
-    back.addEventListener("click", function () {
-      if (busy) return;
-      busy = true;
-      cleanup();
-      showStep1(el);                                   // 回到第一步
-    });
+    /* 2026-11-01：随「返回上一步」按钮一并移除，不再绑定回退事件 */
 
     /* 通过 / 返回后摘掉 document 与 window 上的监听，别给页面留挂载点 */
     function cleanup() {
