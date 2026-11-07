@@ -41,8 +41,8 @@
   var ratioEl = document.getElementById("wpd-ratio");
   if (ratioEl && w && h) {
     var r = w / h;
-    var shape = r >= 1 ? "横屏" : "竖屏";
-    ratioEl.textContent = "· " + shape + " · " + (Math.round(r * 100) / 100) + " : 1";
+    /* 方向（横屏/竖屏）已在「分类」标签里，这里只补比例，避免同一行读两遍 */
+    ratioEl.textContent = "· " + (Math.round(r * 100) / 100) + " : 1";
   }
 
   var dlN = document.getElementById("wpd-dl-n");

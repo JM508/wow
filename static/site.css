@@ -1006,15 +1006,20 @@ footer.footer { color: var(--primary, #1f1f1f); }
 .wpd-dl:hover { background: #2f6fe0; }
 .wpd-dl[disabled] { opacity: 0.6; cursor: default; }
 
-/* 元信息区：自适应多列，每项「标签 + 值」 */
+/* 元信息区：自适应多列，每项「标签 + 值」；实底卡片，压在背景图上也读得清 */
+.wpd-meta-card {
+  margin: 0 0 10px;
+  padding: 16px 18px 12px;
+  background: var(--entry, #ffffff);
+  border: 1px solid var(--border, #e6e6e6);
+  border-radius: 12px;
+}
 .wpd-meta {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
   gap: 12px 24px;
-  margin: 0 0 10px;
-  padding: 16px 18px;
-  border: 1px solid var(--border, #e6e6e6);
-  border-radius: 12px;
+  margin: 0;
+  padding: 0;
   font-size: 13px;
 }
 .wpd-meta-item { display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -1046,4 +1051,4 @@ footer.footer { color: var(--primary, #1f1f1f); }
   padding: 1px 6px;
   border-radius: 4px;
 }
-.wpd-meta-note { margin: 0; font-size: 11px; color: var(--secondary, #999); }
+.wpd-meta-note { margin: 10px 0 0; font-size: 11px; color: var(--secondary, #999); }

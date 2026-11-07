@@ -30,7 +30,9 @@
   </div>
 
   {{- /* 元信息：仿图库站（分类 / 分辨率 / 大小 / 发布时间 / 下载量 / 收藏量 / 色系）。
-         下载量与收藏量取本机 localStorage（本站没有全站统计接口），区下方注明口径。 */}}
+         下载量与收藏量取本机 localStorage（本站没有全站统计接口），区下方注明口径。
+         外层 .wpd-meta-card 给一块实底，避免背景图模式下文字压在壁纸上读不清。 */}}
+  <div class="wpd-meta-card">
   <dl class="wpd-meta">
     <div class="wpd-meta-item">
       <dt>分类</dt>
@@ -66,6 +68,7 @@
     </div>
   </dl>
   <p class="wpd-meta-note">下载量与收藏量按本机记录统计，仅你可见。</p>
+  </div>
 </article>
 
 <script src="/wp-detail.js?v={{ partialCached "assetVer.html" . "v" }}" defer></script>
