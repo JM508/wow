@@ -1205,6 +1205,8 @@ footer.footer { color: var(--primary, #1f1f1f); }
   border-radius: 999px;
 }
 .tool-dl:hover { background: #128a3f; text-decoration: none; }
+/* 还在打包 PNG（或还没出结果）时不给点：没有 href，点了也没反应，视觉上要说清楚 */
+.tool-dl[aria-disabled="true"] { opacity: .55; pointer-events: none; }
 
 .tool-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.85; color: var(--secondary, #666); }
 .tool-list li { margin-bottom: 2px; }

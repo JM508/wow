@@ -70,8 +70,14 @@
       if (anchor.dataset.agSmooth) return;
       anchor.dataset.agSmooth = "1";
       anchor.addEventListener("click", function (e) {
+        /* 这批监听是加载时按 a[href^="#"] 批量绑的，之后脚本可能把 href 换成
+           blob:（工具页「保存图片」就是这么做的）。这种要交还浏览器，
+           否则 e.preventDefault() 会把下载整个吃掉——真机踩过。
+           带 download 属性的锚点一律不当页内锚点处理。 */
+        var raw = anchor.getAttribute("href") || "";
+        if (raw.charAt(0) !== "#" || anchor.hasAttribute("download")) return;
         e.preventDefault();
-        var id = anchor.getAttribute("href").substr(1);
+        var id = raw.substr(1);
         var target = document.querySelector("[id='" + decodeURIComponent(id) + "']");
         if (!target) return;
         if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {

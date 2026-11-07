@@ -148,7 +148,12 @@
     canvas.width = 0;
     canvas.height = 0;
     if (state.outUrl) { try { URL.revokeObjectURL(state.outUrl); } catch (e) {} state.outUrl = ""; }
-    if (dlLink) dlLink.setAttribute("href", "#");
+    /* 没有 href 比 href="#" 安全：theme.js 会给所有 a[href^="#"] 挂「页内平滑滚动」
+       监听并 preventDefault，那会把下载拦掉。这里干脆不写 href，等 blob 好了再挂。 */
+    if (dlLink) {
+      dlLink.removeAttribute("href");
+      dlLink.setAttribute("aria-disabled", "true");
+    }
   }
   function destroyUpscaler() {
     var u = state.upscaler;
@@ -287,7 +292,8 @@
             "（" + FACTOR[model] + " 倍" + (capped === state.bitmap ? "" : "，已先缩输入") + "）";
         }
         progress(100, true);
-        say("完成，可以保存了");
+        /* 完成后的话术由 draw() 的打包回调负责（「正在打包图片…」→「完成，可以保存了」），
+           这里不再写，否则会把「正在打包」覆盖成「完成」，用户点下去还是空链接。 */
         state.busy = false;
         if (runBtn) { runBtn.disabled = false; runBtn.classList.remove("is-busy"); }
         /* 结果已画进 canvas，位图立刻还给浏览器 */
@@ -318,14 +324,29 @@
     if (!ctx) throw new Error("画布不可用");
     ctx.drawImage(bitmap, 0, 0);
     if (outCard) outCard.hidden = false;
-    /* PNG 无损；大图编码要一两秒，转完再挂下载链接 */
-    if (canvas.toBlob && dlLink) {
-      canvas.toBlob(function (blob) {
-        if (!blob) return;
-        state.outUrl = URL.createObjectURL(blob);
-        dlLink.setAttribute("href", state.outUrl);
-        dlLink.setAttribute("download", state.name + "-upscaled.png");
-      }, "image/png");
+    /* 打包状态要如实说：canvastoBlob 是异步的，大图要一两秒。
+       以前这里先写「完成，可以保存了」再异步转码，用户在这段时间点保存只会跳回页首。 */
+    if (dlLink) {
+      dlLink.setAttribute("download", state.name + "-upscaled.png");
+      say("正在打包图片…");
+      if (canvas.toBlob) {
+        canvas.toBlob(function (blob) {
+          if (!blob) { say("打包失败，换一张图再试"); return; }
+          state.outUrl = URL.createObjectURL(blob);
+          dlLink.setAttribute("href", state.outUrl);
+          dlLink.setAttribute("aria-disabled", "false");
+          say("完成，可以保存了");
+        }, "image/png");
+      } else {
+        /* 极老的浏览器没有 toBlob，退回同步 toDataURL（会卡一下，但至少点得动） */
+        try {
+          dlLink.setAttribute("href", canvas.toDataURL("image/png"));
+          dlLink.setAttribute("aria-disabled", "false");
+          say("完成，可以保存了");
+        } catch (e) { say("打包失败，换一张图再试"); }
+      }
+    } else {
+      say("完成，可以保存了");
     }
     try {
       canvas.scrollIntoView({ block: "nearest", behavior: "smooth" });
