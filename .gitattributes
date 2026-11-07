@@ -1,0 +1,4 @@
+# 工具页的模型与运行环境是二进制，禁止任何行尾/编码转换
+*.wasm binary
+*.ort  binary
+*.mjs  text eol=lf
