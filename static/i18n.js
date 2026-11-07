@@ -49,7 +49,31 @@
     "footer.terms": "Terms",
     "footer.disclaimer": "Disclaimer",
     "footer.dmca": "DMCA",
-    "footer.cookies": "Cookies"
+    "footer.cookies": "Cookies",
+
+    /* 工具页 · 图片放大（动态进度/报错仍为中文，与游戏内提示同口径） */
+    "tools.title": "Image upscaler",
+    "tools.sub": "Runs on your own device; the image is never uploaded",
+    "tools.step1": "Pick an image",
+    "tools.step2": "Pick a model",
+    "tools.step3": "Upscale",
+    "tools.step4": "Result",
+    "tools.drop": "Click to choose, or drop an image here",
+    "tools.drops": "JPG / PNG / WebP; 512px on the long edge works best",
+    "tools.m6b": "Anime / illustration",
+    "tools.m6b.d": "Real-ESRGAN 6B · 4× · ~5 MB on first use",
+    "tools.msw": "Photos",
+    "tools.msw.d": "Swin2SR · 2× · ~8 MB on first use",
+    "tools.run": "Upscale",
+    "tools.save": "Save image",
+    "tools.about": "Notes",
+    "tools.about1": "Everything runs in your browser (single-threaded WASM). The image is never uploaded and works offline.",
+    "tools.about2": "The first run downloads the runtime and model (~18 MB), then it comes from the browser cache. The bar may pause for a few seconds while that happens.",
+    "tools.about3": "To keep memory in check, oversized inputs are shrunk first: 512px for the 4× anime model, 384px for the 2× photo model.",
+    "tools.about4": "One image at a time, and memory is released as soon as the job finishes. It runs single-threaded, so a picture usually takes from ten-odd seconds to a minute; bigger images take longer.",
+    "tools.about5": "Use the anime model for line art and illustrations, Swin2SR for real photos and portraits.",
+    "tools.home": "Back home",
+    "tools.wp": "Browse wallpapers"
   };
 
   /* 按路径取页面标题与导语（英文）；没有条目的页面保持中文 */
@@ -97,6 +121,10 @@
     "/account/": {
       t: "Account",
       d: "Sign in to keep achievements, nickname and scores across devices."
+    },
+    "/tools/": {
+      t: "Tools",
+      d: "Upscale images on your own device: Real-ESRGAN 6B (4×) for anime and art, Swin2SR (2×) for photos. Nothing is uploaded."
     }
   };
 

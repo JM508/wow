@@ -26,6 +26,9 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.htm': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.wasm': 'application/wasm',
+  '.ort': 'application/octet-stream',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.webmanifest': 'application/manifest+json; charset=utf-8',
@@ -59,8 +62,10 @@ const HEADERS_FILE = path.join(ROOT, '_headers');
 
 /* 应急兜底：_headers 读不到时用这份（与 _headers 保持同步），站点不能裸奔 */
 const CSP_FALLBACK =
-  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; " +
+  "img-src 'self' data: blob:; " +
   "font-src 'self'; connect-src 'self' https://wow-blog.app.workbuddy.host; " +
+  "worker-src 'self' blob:; " +
   "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; " +
   'upgrade-insecure-requests';
 const SECURITY_FALLBACK = {

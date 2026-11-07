@@ -17,8 +17,8 @@ enableRobotsTXT = true
   assetVer = "devbuild"
   # 站点仓库（首页页脚展示）
   githubUrl = "https://github.com/JM508/wow"
-  # 首页入口：「小游戏」主按钮 + 「壁纸」次级按钮，竖排（壁纸在小游戏下面）
-  homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "<div class=\"games-entry\"><a class=\"games-entry-btn\" href=\"/games/\">小游戏</a><a class=\"games-entry-btn games-entry-ghost\" href=\"/wallpapers/\">壁纸</a></div>"}
+  # 首页入口：「小游戏」主按钮 + 「壁纸」「工具」次级按钮，竖排
+  homeInfoParams = {Title = "欢迎来到我的娱乐小站", Content = "<div class=\"games-entry\"><a class=\"games-entry-btn\" href=\"/games/\">小游戏</a><a class=\"games-entry-btn games-entry-ghost\" href=\"/wallpapers/\">壁纸</a><a class=\"games-entry-btn games-entry-ghost\" href=\"/tools/\">工具</a></div>"}
   ShowReadingTime = true
 
 [markup]

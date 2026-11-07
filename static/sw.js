@@ -28,7 +28,7 @@ function ver(p) {
 /* 预缓存核心清单：几个小游戏离线可玩所需的最小集合 */
 var PRECACHE = [
   '/', '/games/', '/minesweeper/', '/runner/', '/account/', '/tictactoe/', '/snake/', '/2048/',
-  '/privacy/', '/terms/', '/disclaimer/', '/dmca/', '/cookies/', '/wallpapers/', '/settings/',
+  '/privacy/', '/terms/', '/disclaimer/', '/dmca/', '/cookies/', '/wallpapers/', '/settings/', '/tools/',
   '/site.css', '/theme.js', '/minesweeper.js', '/minesweeper.css', '/msrank.js',
   '/tictactoe.js', '/tictactoe.css',
   '/snake.js', '/snake.css', '/grank.js', '/grank.css', '/me.js',
@@ -38,7 +38,7 @@ var PRECACHE = [
   '/account.js', '/account.css', '/age-gate.js', '/age-gate.css',
   '/net-status.js', '/score-queue.js', '/share-card.js', '/vendor/qrcode.js',
   '/tapfx.js', '/meplus.js', '/wallpapers.js', '/settings.js',
-  '/haptics.js', '/pwa.js', '/i18n.js', '/lastplay.js', '/wp-detail.js',
+  '/haptics.js', '/pwa.js', '/i18n.js', '/lastplay.js', '/wp-detail.js', '/tools.js',
   '/vendor/workbuddy-cloud-sdk.global.js',
   '/site.webmanifest',
   '/img/qiaolezi-alt.webp', '/img/qiaolezi.webp',
@@ -93,6 +93,9 @@ self.addEventListener('fetch', function (e) {
   if (url.pathname.indexOf('/.cloud') === 0) return;    // 云网关直连，绝不缓存
   if (url.pathname === '/.ip') return;                  // IP 属地端点直连（按访客实时判定，不缓存）
   if (url.pathname === '/server.js') return;            // 镜像自用文件，无意义
+  /* 工具页的运行环境与模型（.wasm / .ort，合计约 25 MB）交给浏览器 HTTP 缓存，
+     不进 Cache API：这些文件太大，塞进 SW 缓存会挤占离线包的配额。 */
+  if (url.pathname.indexOf('/tools/upscale/') === 0) return;
 
   /* ① 页面导航：网络优先，失败回退缓存（离线可玩的关键） */
   if (req.mode === 'navigate' ||
