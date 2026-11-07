@@ -5,12 +5,22 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+# 同一分支只保留最新一次运行，避免连续 push 排队
+concurrency:
+  group: hugo-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # 主题 PaperMod 是 git 子模块（.gitmodules → themes/PaperMod）；
+      # 不拉子模块时 themes/ 为空，Hugo 会报 partial "author.html" not found 直接失败。
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
 
       - name: 安装 Hugo
         uses: peaceiris/actions-hugo@v3
@@ -39,8 +49,13 @@ jobs:
           fi
           grep -q 'localhost\|127.0.0.1\|::1' static/shop.js || { echo "shop.js 缺少本地限定"; exit 1; }
 
+      - name: 产物自检（首页与壁纸页必须存在）
+        run: |
+          test -f public/index.html || { echo "缺少 public/index.html"; exit 1; }
+          test -f public/wallpapers/index.html || { echo "缺少 public/wallpapers/index.html"; exit 1; }
+
       - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: public
           path: public/
