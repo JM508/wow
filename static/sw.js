@@ -91,6 +91,7 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return;      // 只管同源
   if (url.pathname.indexOf('/.cloud') === 0) return;    // 云网关直连，绝不缓存
+  if (url.pathname.indexOf('/api/') === 0) return;      // 成绩 API（D1）直连：榜单必须实时，缓存住就永远看不到新成绩
   if (url.pathname === '/.ip') return;                  // IP 属地端点直连（按访客实时判定，不缓存）
   if (url.pathname === '/server.js') return;            // 镜像自用文件，无意义
   /* 工具页的运行环境与模型（.wasm / .ort，合计约 25 MB）交给浏览器 HTTP 缓存，

@@ -19,3 +19,6 @@ Thumbs.db
 desktop.ini
 .idea/
 .vscode/
+
+# ── 数据迁移产物（含真实用户昵称与成绩，不入库） ──────────────
+/.migration/

@@ -34,6 +34,64 @@
   /* 滑动式榜单：一次取 100 条、一次性渲染全部，容器自身滚动（2026-10-06 去分页） */
   var cur = { mode: "easy", rows: [], loading: false, err: null };
 
+  /* ═══════════ 数据面：D1 API 优先，失败回退旧云 ═══════════
+     2026-11-07 起扫雷榜是第一条迁到 Cloudflare D1 的链路（/api/scores/ms）。
+     迁移是渐进的：D1 那边没绑好、没建表、或者 Functions 没开，
+     这里必须无声无息地退回原来那条云服务链路，用户不该看到任何异常。
+
+     三态设计：apiState 一旦判定这条链路不可用就记 down，本次会话不再尝试，
+     避免每次翻榜都白等一次 503。
+     判据只有 503（D1 未绑定）/ 501（游戏未迁）/ 404（路由没开）——
+     400 之类是「我们传错了参数」，不该污染状态，但同样回退保证可用。 */
+  var API = "/api/scores/ms";
+  var apiState = "unknown";          // unknown | down
+
+  function apiUrl(params) {
+    var qs = [], k;
+    for (k in params) {
+      if (!Object.prototype.hasOwnProperty.call(params, k)) continue;
+      if (params[k] === null || params[k] === undefined) continue;
+      qs.push(encodeURIComponent(k) + "=" + encodeURIComponent(params[k]));
+    }
+    return API + (qs.length ? "?" + qs.join("&") : "");
+  }
+
+  function apiDown(status) {
+    return status === 503 || status === 501 || status === 404;
+  }
+
+  /* 读：返回解析后的 body，或 null 表示「这条链路不可用」 */
+  function apiJson(params) {
+    /* 没有 fetch 的环境（老浏览器、jsdom 单测）直接当「链路不可用」，走旧云 */
+    if (apiState === "down" || typeof fetch !== "function") return Promise.resolve(null);
+    return fetch(apiUrl(params), { credentials: "omit", cache: "no-store" })
+      .then(function (r) {
+        if (apiDown(r.status)) { apiState = "down"; return null; }
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .catch(function () { return null; });
+  }
+
+  /* 写：同样三态，只有「链路不可用」才回退，业务性拒绝（400/429）不回退，
+     否则会把一条明显不合法的成绩再往旧云塞一遍。 */
+  function apiPost(row) {
+    if (apiState === "down" || typeof fetch !== "function") return Promise.resolve(null);
+    return fetch(API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: "omit",
+      body: JSON.stringify(row)
+    })
+      .then(function (r) {
+        if (apiDown(r.status)) { apiState = "down"; return null; }
+        return r.json().then(function (b) { return { status: r.status, body: b }; })
+          .catch(function () { return { status: r.status, body: null }; });
+      })
+      .catch(function () { return null; });
+  }
+
+
   function cloud() { return global.WowCloud || null; }
   function ready() { var c = cloud(); return !!(c && c.available && c.available() && c.database && c.database()); }
 
@@ -141,12 +199,23 @@
     cur.errMsg = null;
     cur.loading = true; cur.err = null; cur.mode = mode || cur.mode;
     render();
-    top(cur.mode).then(function (r) {
+    readTop(cur.mode).then(function (res) {
       cur.loading = false;
-      if (r && r.error) { cur.err = "error"; cur.rows = []; }
-      else { cur.rows = dedupe((r && r.data) || []); }
+      if (res && res.error) { cur.err = "error"; cur.rows = []; }
+      else { cur.rows = dedupe((res && res.rows) || []); }
       render();
       loadMine();
+    });
+  }
+
+  /* ── 榜单读取门面：先 D1，拿不到再走旧云 ── */
+  function readTop(mode) {
+    return apiJson({ mode: mode, limit: LIMIT }).then(function (b) {
+      if (b && b.rows) return { rows: b.rows };
+      return Promise.resolve(top(mode)).then(function (r) {
+        if (r && r.error) return { rows: [], error: r.error };
+        return { rows: (r && r.data) || [] };
+      });
     });
   }
 
@@ -155,19 +224,30 @@
     if (!mineEl) return;
     var who = me();
     if (!who.name || !ready()) { mineEl.innerHTML = ""; return; }
-    var d = cloud().database();
-    var q = d.from(TABLE).select("seconds, created_at")
-      .eq("mode", cur.mode).eq("nickname", who.name)
-      .order("seconds", { ascending: true }).limit(1);
-    if (cur.mode === "daily") q = q.gte("created_at", dayStartISO());
-    q.then(function (r) {
-        var row = r && r.data && r.data[0];
+    readBest(cur.mode, who.name).then(function (res) {
+        var row = res && res.row;
         if (!row) { mineEl.innerHTML = ""; return; }
         var best = Math.max(0, Math.round(Number(row.seconds) || 0));
         mineEl.innerHTML = "<span class='ms-rank-mine-t'>我的最好成绩：<b>" +
           fmtSec(best) + "</b></span><span class='ms-rank-mine-d'>" + esc(fmtDay(row.created_at)) + "</span>";
         loadNear(who.name, best);
       });
+  }
+
+  /* ── 我的最好成绩：先 D1，再旧云 ── */
+  function readBest(mode, name) {
+    return apiJson({ mode: mode, nickname: name }).then(function (b) {
+      if (b && Object.prototype.hasOwnProperty.call(b, "row")) return { row: b.row || null };
+      var d = cloud().database();
+      var q = d.from(TABLE).select("seconds, created_at")
+        .eq("mode", mode).eq("nickname", name)
+        .order("seconds", { ascending: true }).limit(1);
+      if (mode === "daily") q = q.gte("created_at", dayStartISO());
+      return Promise.resolve(q).then(function (r) {
+        var row = r && r.data && r.data[0];
+        return { row: row || null };
+      });
+    });
   }
 
   /* ── 附近名次：用时榜是升序（越快越前），严格比我快的 5 条 + 比我慢的 5 条 ── */
@@ -183,19 +263,31 @@
     return q;
   }
   function loadNear(myName, best) {
-    nearQuery("above", best).then(function (ra) {
-      var above = dedupe((ra && ra.data) || []).slice(0, NEAR);
+    readNear("above", best).then(function (ra) {
+      var above = dedupe(ra || []).slice(0, NEAR);
       var exact = above.length < NEAR;
       var rank = exact ? above.length + 1 : null;
-      nearQuery("below", best).then(function (rb) {
+      readNear("below", best).then(function (rb) {
         var seen = {}, i;
         for (i = 0; i < above.length; i++) seen[String(above[i].nickname || "")] = true;
-        var belowAll = dedupe((rb && rb.data) || []);
+        var belowAll = dedupe(rb || []);
         var below = [];
         for (i = 0; i < belowAll.length && below.length < NEAR; i++) {
           if (!seen[String(belowAll[i].nickname || "")]) below.push(belowAll[i]);
         }
         paintNear(myName, best, above, rank, below, exact);
+      });
+    });
+  }
+
+  /* ── 附近名次：先 D1，再旧云。语义与旧实现一致（above 取全榜最快的 NEAR+1 条） ── */
+  function readNear(cmp, best) {
+    var p = { mode: cur.mode, limit: NEAR + 1 };
+    if (cmp === "above") p.before = best; else p.after = best;
+    return apiJson(p).then(function (b) {
+      if (b && b.rows) return b.rows;
+      return Promise.resolve(nearQuery(cmp, best)).then(function (r) {
+        return (r && r.data) || [];
       });
     });
   }
@@ -290,7 +382,7 @@
     if (who.guest && !GUEST_RE.test(who.name)) {
       return Promise.resolve({ data: null, error: { kind: "invalid-request" } });
     }
-    var c = cloud(), d = c.database();
+    var c = cloud();
     var row = { mode: mode, nickname: who.name, seconds: sec };
     if (who.guest) row.device_id = c.scores.deviceId();
     var rg = c.scores.region ? c.scores.region() : null;
@@ -301,14 +393,41 @@
       if (av && av.length <= 16384 && av.indexOf("data:image/") === 0) row.avatar = av;
     }
 
-    /* 先看自己的最好成绩：不比它快就不写库（少一堆没意义的行） */
+    /* 先走 D1：成功与业务性拒绝都在这里收口，只有链路不可用才回退旧云 */
+    var apiBody = {
+      mode: row.mode,
+      nickname: row.nickname,
+      seconds: row.seconds,
+      deviceId: row.device_id || null,
+      region: row.region || null,
+      avatar: row.avatar || null
+    };
+    return apiPost(apiBody).then(function (res) {
+      if (!res) return sdkSubmit(row);
+      if (res.status === 200 && res.body && res.body.inserted) {
+        if (isOpen() && cur.mode === mode) load(mode);
+        return {
+          data: [res.body.row || { mode: row.mode, nickname: row.nickname, seconds: row.seconds }],
+          error: null
+        };
+      }
+      /* 200 但 inserted=false：服务端判定不比已有成绩快，等同于「不用上榜」 */
+      if (res.status === 200) return { data: null, error: null, skipped: true };
+      /* 429 是今天的额度用完、400 是数据本身不合法：重试无意义，也不进离线队列 */
+      return { data: null, error: { kind: res.status === 429 ? "rate-limited" : "invalid-request" } };
+    });
+  }
+
+  /* 旧云链路：D1 不可用时的回退，语义与迁移前完全一致 */
+  function sdkSubmit(row) {
+    var c = cloud(), d = c.database();
     return d.from(TABLE).select("seconds")
-      .eq("mode", mode).eq("nickname", who.name)
+      .eq("mode", row.mode).eq("nickname", row.nickname)
       .order("seconds", { ascending: true }).limit(1)
       .then(function (r) {
         var best = r && r.data && r.data[0];
-        if (best && Number(best.seconds) <= sec) return { data: null, error: null, skipped: true };
-        if (!who.guest && c.setNick) c.setNick(who.name);     // 登录昵称顺手落本地
+        if (best && Number(best.seconds) <= row.seconds) return { data: null, error: null, skipped: true };
+        if (c.user() && c.setNick) c.setNick(row.nickname);      // 登录昵称顺手落本地
         return d.from(TABLE).insert(row).select("mode, nickname, seconds, created_at");
       })
       .then(function (r) {
@@ -317,14 +436,14 @@
           /* 网络类失败：进离线队列联网后补榜；参数类失败重试无意义，不进队列 */
           var k = (r && r.error && r.error.kind) || "error";
           if (k !== "invalid-request" && k !== "permission-denied" && k !== "not-found") {
-            queueOffline(mode, sec);
+            queueOffline(row.mode, row.seconds);
             r = r || { data: null, error: { kind: "error" } };
             r.queued = true;
           }
           return r;
         }
         /* 提交成功：如果面板开着且正是这个难度，刷新一下 */
-        if (isOpen() && cur.mode === mode) load(mode);
+        if (isOpen() && cur.mode === row.mode) load(row.mode);
         return r;
       });
   }
