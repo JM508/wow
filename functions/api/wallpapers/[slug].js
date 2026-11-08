@@ -4,8 +4,8 @@
    详情页兜底渲染（functions/wallpapers/[slug].js）与前端排错都用它。
    ══════════════════════════════════════════════════════════════ */
 
-import { preflight } from "../../../_lib/http.js";
-import { handleWallpaperOne } from "../../../_lib/wallpapers.js";
+import { preflight } from "../../_lib/http.js";
+import { handleWallpaperOne } from "../../_lib/wallpapers.js";
 
 export async function onRequest(context) {
   const { request } = context;
