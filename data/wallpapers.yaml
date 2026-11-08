@@ -2,6 +2,7 @@
 # 2026-10-25 起去掉全部壁纸名字（title/hero/skin 已删）；tags = 题材 + 构图
 version: 1
 count: 89
+rev: "89.2026-11-08T00:20:44.000Z"
 items:
   - slug: wp-01
     added: 2026-10-17

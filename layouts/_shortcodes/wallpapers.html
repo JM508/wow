@@ -49,7 +49,11 @@
 }
 </script>
 
-<div class="wp-root" id="wp-root">
+{{- /* 2026-11-08：把构建快照的版本号写到根节点。wallpapers.js 打开页面后
+       拿它和 /api/wallpapers 返回的 version 比，一致就不重绘（零开销），
+       不一致才按 D1 数据重画网格 —— 内容改动不必等构建。数据源见
+       scripts/seed_wallpapers.py 写入的 rev 字段。 */ -}}
+<div class="wp-root" id="wp-root" data-wp-version="{{ $d.rev | default "" }}">
   <div class="wp-head">
     <strong class="wp-title">壁纸</strong>
     <span class="wp-sub">共 {{ len $items }} 张，点击分类筛选</span>

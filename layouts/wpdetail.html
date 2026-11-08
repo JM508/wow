@@ -36,7 +36,10 @@
   <dl class="wpd-meta">
     <div class="wpd-meta-item">
       <dt>分类</dt>
-      <dd class="wpd-tags">{{- range $tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}</dd>
+      {{- /* 外壳页（/wpshell/）把标签块留成一个空占位元素，由 Functions 渲染时按 D1 数据填；
+             普通详情页照旧逐个输出 span。占位元素只在 wpShell 页面出现，真页面零影响。
+             注意不能用 HTML 注释当占位：Go 的 html/template 会把注释整条吞掉。 */}}
+      <dd class="wpd-tags">{{ if .Params.wpShell }}<span class="wp-tag" data-wp-tag-slot></span>{{ else }}{{- range $tags }}<span class="wp-tag">{{ . }}</span>{{ end -}}{{ end }}</dd>
     </div>
     <div class="wpd-meta-item">
       <dt>分辨率</dt>

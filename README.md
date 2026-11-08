@@ -72,6 +72,7 @@ Cloudflare Pages 单部署上限（Free 计划）：**20,000 个文件 / 单文�
 | 链路 | 数据来源 | 状态 |
 |---|---|---|
 | 扫雷排行榜 | `/api/scores/ms` → D1 `ms_scores` | 已接入（第一条） |
+| 壁纸清单 | `/api/wallpapers` → D1 `wallpapers` | 已接入（第二条） |
 | 跑酷成绩 / 钱包 / 成就 | 旧云（WorkBuddy 云服务） | 未迁，接口回 501 |
 | 井字棋 + 贪吃蛇榜 | 旧云 | 未迁 |
 | 设置同步 / 头像 / 登录 | 旧云 | 保留（账号体系不迁） |
@@ -91,8 +92,11 @@ Functions 代码在仓库 `functions/`，随 Pages 构建一起部署，不需�
    - D1 database 选刚建的那个
    - 环境选 **Production**（Preview 也建议加上，否则预览部署拿不到数据）
 3. 建表（二选一）：
-   - 控制台：D1 → 选中库 → Console，把 `schema/001_ms_scores.sql` 全文粘进去执行；
-   - 或用 wrangler：`npx wrangler d1 execute wow-db --file=schema/001_ms_scores.sql --remote`
+   - 控制台：D1 → 选中库 → Console，**逐条**执行 `schema/001_ms_scores.sql`（5 条语句）；
+     `schema/002_wallpapers.sql` 是 3 条（建表 + 2 个索引），同样逐条贴；
+     最后贴 `schema/seed/002_wallpapers_seed.sql`（一条多行 INSERT，89 张一次性灌入）；
+   - 或用 wrangler：`npx wrangler d1 execute wow-db --file=schema/001_ms_scores.sql --remote`，
+     壁纸跑 `002_wallpapers.sql` 与 `schema/seed/002_wallpapers_seed.sql`（`--file` 支持多语句）。
 4. 重新部署一次（绑定变更需要新部署才生效）。
 
 绑定成功后 `GET https://wow-d9s.pages.dev/api/scores/ms?mode=easy` 返回 `200` 与 `{ "rows": [] }`；未绑定时返回 `503 d1_unavailable`，属预期。
@@ -120,6 +124,47 @@ npx wrangler d1 execute wow-db --file=.migration/ms_scores.sql --remote
 ### 跨域口径
 
 镜像域 `wow-blog.app.workbuddy.host` 没有 Functions，因此**只读**：API 只对它的 `GET` 放行 CORS，写入必须回主域。这样两域都能看榜，数据源不会分叉。
+
+### 壁纸元数据（D1 接管内容清单）
+
+壁纸此前是「Python 脚本写 `data/wallpapers.yaml` → Hugo 全量构建 → 部署」，改一个标签也要等一次构建。现在元数据由 D1 承担：
+
+```
+D1 wallpapers ──┬─→ /api/wallpapers（运行时）→ 列表页版本比对 → 需要时重绘
+                │                          └─→ /wallpapers/<slug> 兜底渲染
+                └─→ data/wallpapers.yaml（构建快照）→ 列表页 + 89 张静态详情页
+```
+
+三份产物的分工要说清楚，否则很容易误改：
+
+| 文件 | 角色 | 谁读它 |
+|---|---|---|
+| D1 `wallpapers` 表 | **运行时唯一真相** | `/api/wallpapers`、详情页兜底 |
+| `data/wallpapers.yaml` | **构建快照**（含 `rev`） | Hugo 生成列表页与详情页 |
+| `schema/seed/002_wallpapers_seed.sql` | 由 yaml 生成的种子 | 初始化 / 重建 D1 |
+
+**版本号 `rev`**：格式 `<条数>.<最后更新时间>`。yaml 里的 `rev` 与 API 返回的 `version` 用同一算法；列表页静态 HTML 把快照版本写在 `#wp-root[data-wp-version]`，前端拿到接口后先比版本，**一致就一个节点都不动**，不一致才按 D1 数据重绘（并重新初始化筛选/收藏/排序）。
+
+**详情页是「静态优先，D1 兜底」**：已有构建产物的 slug 直接返回静态文件（最快、SEO 最好）；只有静态 404 时才由 `functions/wallpapers/[slug].js` 用 `/wpshell/` 这份外壳页 + D1 数据现场渲染。外壳页走的是同一个 `wpdetail.html` 布局，所以页头页脚、CSP、脚本引用不会出现两份实现——Function 只做整串替换。
+
+**新增一张壁纸**
+
+```bash
+python scripts/wp_add.py 新图.jpg --tags 游戏,横屏
+# 出图（640 webp+avif / 1920 webp）→ 追加 yaml → 更新 count 与 rev → 生成 schema/seed/add-<slug>.sql
+```
+
+然后把生成的 `INSERT OR REPLACE` 粘进 D1 网页 Console 执行。**注意**：图片仍随仓库部署，所以图片本身要走一次构建；D1 里的元数据（标签、顺序、上下架）改动则是即时生效的。
+
+**只改元数据**（改标签 / 调顺序 / 下架）：直接在 D1 里 `UPDATE`，列表页下次打开就会按新数据重绘；`status` 改成 `hidden` 即下架，不用删行。
+
+**重新生成种子**（改了 yaml 之后）
+
+```bash
+python scripts/seed_wallpapers.py --apply-rev   # 出 SQL，并把 rev 写回 yaml
+```
+
+`_build_check` 会校验 yaml 的 `rev` 与列表页版本号一致——不一致说明有人改了快照没更新版本，会导致每次访问都白重绘一次。
 
 ## CI
 
