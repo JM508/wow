@@ -75,7 +75,11 @@ function cachedJson(request, data, etag) {
   const cors = corsHeaders(request, "GET");
   Object.keys(cors).forEach(function (k) { headers[k] = cors[k]; });
 
-  const inm = request.headers.get("If-None-Match");
+  /* 弱比较：CF 压缩响应时会把 ETag 改写成 W/"..."，浏览器回传的就是带 W/ 的形式。
+     RFC 7232 对 If-None-Match 要求弱比较，所以比较前先去掉 W/ 前缀。 */
+  const inm = String(request.headers.get("If-None-Match") || "")
+    .trim()
+    .replace(/^W\//i, "");
   if (inm && inm === headers.etag) {
     return new Response(null, { status: 304, headers: headers });
   }
