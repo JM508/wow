@@ -194,8 +194,10 @@ export function splitSql(text) {
 
 /* ── 输出 ─────────────────────────────────────────────────── */
 function printRows(rows, meta) {
+  const dur = meta && meta.duration != null ? `，耗时 ${meta.duration}ms` : "";
   if (!rows || !rows.length) {
-    console.log(meta ? `(0 行，耗时 ${meta.duration ?? "?"}ms)` : "(0 行)");
+    const ch = meta && meta.changes != null ? `，变更 ${meta.changes} 行` : "";
+    console.log(`(0 行返回${ch}${dur})`);
     return;
   }
   const cols = Object.keys(rows[0]);
