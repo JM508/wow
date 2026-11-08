@@ -1,0 +1,5 @@
+/* ══ 工具页（/tools/）图片放大 ══
+   全部在本地跑 WASM，卡片同 /settings/ 一套观感；
+   结果画布做棋盘底，透明图也能看出边界。 */
+.tool-root { max-width: 720px; margin: 0 auto; padding: 4px 0 28px; }
+.tool-out-card[hidden] { display: none

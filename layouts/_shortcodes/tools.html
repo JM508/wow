@@ -1,57 +1,57 @@
-{{- /* 工具页（/tools/）：图片放大。
+{{- /* 工具页（/tools/）：超分辨率（2026-11-08 改版）。
+     单列四块：标题 → 模型 → 选图 → 开始增强；不再分「1/2/3/4」步骤，
+     选图与模型都在一屏里，按钮压在下方，手机上不用来回滚。
+
      本地跑 ONNX Runtime（upscalejs v2 + Real-ESRGAN 6B / Swin2SR），
      图片不上传、结果不出浏览器。
      CSP：需要 script-src 'wasm-unsafe-eval' 与 worker-src blob:（见 static/_headers）。
      样式统一在 /site.css；交互在 /tools.js（ESM 动态 import 库本身）。 */ -}}
 <div class="tool-root" id="tool-upscale">
-  <div class="tool-head">
-    <strong class="tool-title" data-i18n="tools.title">图片放大</strong>
-    <span class="tool-sub" data-i18n="tools.sub">在本机算清楚，图片不上传</span>
+  <header class="tool-hero">
+    <h1 class="tool-hero-t" data-i18n="tools.title">超分辨率</h1>
+    <p class="tool-hero-s" data-i18n="tools.sub">画质提升 2× / 4×，图片不出浏览器</p>
+  </header>
+
+  <div class="tool-models" role="radiogroup" aria-label="超分模型">
+    <label class="tool-model is-on">
+      <input type="radio" name="tol-model" value="6B" checked>
+      <span class="tool-model-n" data-i18n="tools.m6b">Real-ESRGAN</span>
+      <span class="tool-model-d" data-i18n="tools.m6b.d">动漫 / 插画专用，4 倍</span>
+    </label>
+    <label class="tool-model">
+      <input type="radio" name="tol-model" value="Swin2SR">
+      <span class="tool-model-n" data-i18n="tools.msw">Swin2SR</span>
+      <span class="tool-model-d" data-i18n="tools.msw.d">实拍照片通用，2 倍</span>
+    </label>
   </div>
 
-  <section class="tool-card">
-    <h2 class="tool-h"><span class="tool-step">1</span><span data-i18n="tools.step1">选一张图片</span></h2>
+  <div class="tool-drop" id="tol-drop" role="button" tabindex="0"
+       aria-label="选择一张图片，也可以把图片拖到这里">
+    <svg class="tool-drop-ico" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" focusable="false">
+      <rect x="2.6" y="4.2" width="14.2" height="13.6" rx="2.6"
+            fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M3.6 14.4l3.5-3.3a1.5 1.5 0 0 1 2 0l2.3 2.2"
+            fill="none" stroke="currentColor" stroke-width="1.6"
+            stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12.4" cy="8.6" r="1.3" fill="currentColor"/>
+      <path d="M18.6 11.6v6.2M15.5 14.7h6.2"
+            fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    </svg>
+    <span class="tool-drop-t" data-i18n="tools.drop">从相册选择一张图片</span>
+    <span class="tool-drop-s" data-i18n="tools.drops">体验画质提升</span>
+    <span class="tool-pick" aria-hidden="true" data-i18n="tools.pick">选择图片</span>
+  </div>
+  <input type="file" id="tol-file" class="tool-file" accept="image/png,image/jpeg,image/webp" tabindex="-1" aria-hidden="true">
+  <p class="tool-fileinfo" id="tol-fileinfo" role="status" aria-live="polite"></p>
 
-    <div class="tool-drop" id="tol-drop" role="button" tabindex="0"
-         aria-label="选择要放大的图片，也可以把图片拖到这里">
-      <span class="tool-drop-ico" aria-hidden="true"></span>
-      <span class="tool-drop-t" data-i18n="tools.drop">点击选择，或把图片拖进来</span>
-      <span class="tool-drop-s" data-i18n="tools.drops">JPG / PNG / WebP，长边 512px 以内最合适</span>
-    </div>
-    <input type="file" id="tol-file" class="tool-file" accept="image/png,image/jpeg,image/webp" tabindex="-1" aria-hidden="true">
-    <p class="tool-fileinfo" id="tol-fileinfo" role="status" aria-live="polite"></p>
-  </section>
+  <button type="button" class="tool-run" id="tol-run" disabled data-i18n="tools.run">开始增强</button>
+  <div class="tool-prog" id="tol-prog" hidden>
+    <div class="tool-prog-bar" id="tol-bar"></div>
+  </div>
+  <p class="tool-status" id="tol-status" role="status" aria-live="polite">先选一张图片，再点「开始增强」</p>
+  <p class="tool-tip" id="tol-tip" hidden></p>
 
-  <section class="tool-card">
-    <h2 class="tool-h"><span class="tool-step">2</span><span data-i18n="tools.step2">选模型</span></h2>
-
-    <div class="tool-models" role="radiogroup" aria-label="放大模型">
-      <label class="tool-model is-on">
-        <input type="radio" name="tol-model" value="6B" checked>
-        <span class="tool-model-n" data-i18n="tools.m6b">动漫 / 插画</span>
-        <span class="tool-model-d" data-i18n="tools.m6b.d">Real-ESRGAN 6B · 放大 4 倍 · 首次下载约 5 MB</span>
-      </label>
-      <label class="tool-model">
-        <input type="radio" name="tol-model" value="Swin2SR">
-        <span class="tool-model-n" data-i18n="tools.msw">实拍照片</span>
-        <span class="tool-model-d" data-i18n="tools.msw.d">Swin2SR · 放大 2 倍 · 首次下载约 8 MB</span>
-      </label>
-    </div>
-  </section>
-
-  <section class="tool-card">
-    <h2 class="tool-h"><span class="tool-step">3</span><span data-i18n="tools.step3">开始放大</span></h2>
-
-    <button type="button" class="tool-run" id="tol-run" disabled data-i18n="tools.run">开始放大</button>
-    <div class="tool-prog" id="tol-prog" hidden>
-      <div class="tool-prog-bar" id="tol-bar"></div>
-    </div>
-    <p class="tool-status" id="tol-status" role="status" aria-live="polite">选好图片和模型后点「开始放大」</p>
-    <p class="tool-tip" id="tol-tip" hidden></p>
-  </section>
-
-  <section class="tool-card tool-out-card" id="tol-outcard" hidden>
-    <h2 class="tool-h"><span class="tool-step">4</span><span data-i18n="tools.step4">结果</span></h2>
+  <section class="tool-out-card" id="tol-outcard" hidden>
     <div class="tool-canvas-wrap">
       <canvas id="tol-canvas" class="tool-canvas"></canvas>
     </div>
@@ -61,8 +61,8 @@
     </div>
   </section>
 
-  <section class="tool-card tool-about">
-    <h2 class="tool-h"><span data-i18n="tools.about">说明</span></h2>
+  <section class="tool-about">
+    <h2 class="tool-about-h" data-i18n="tools.about">说明</h2>
     <ul class="tool-list">
       <li data-i18n="tools.about1">全部在浏览器里跑（WASM 单线程），图片不会上传到任何服务器，断网也能用。</li>
       <li data-i18n="tools.about2">首次使用要下载运行环境与模型（约 18 MB），之后走浏览器缓存；下载期间进度可能停住几秒，属正常。</li>

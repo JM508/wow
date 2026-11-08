@@ -1053,85 +1053,43 @@ footer.footer { color: var(--primary, #1f1f1f); }
 }
 .wpd-meta-note { margin: 10px 0 0; font-size: 11px; color: var(--secondary, #999); }
 
-/* ══ 工具页（/tools/）图片放大 ══
-   全部在本地跑 WASM，卡片同 /settings/ 一套观感；
-   结果画布做棋盘底，透明图也能看出边界。 */
-.tool-root { max-width: 720px; margin: 0 auto; padding: 4px 0 28px; }
-.tool-out-card[hidden] { display: none; }
-.tool-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-.tool-title { font-size: 22px; letter-spacing: 0.02em; }
-.tool-sub { font-size: 13px; color: var(--secondary, #888); }
-
-.tool-card {
-  padding: 16px 18px;
-  margin-bottom: 14px;
+/* ══ 工具页（/tools/）超分辨率 ══
+   2026-11-08 改版：单列四块——标题 / 模型 / 选图 / 开始增强，
+   一屏内能选完，手机上不用来回滚。配色仍走站点主题变量，
+   深浅色都跟着站点走，不另起一套。 */
+.tool-root {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 20px 26px;
+  /* 整块做成实底面板：站点开了背景图模式，卡片若是半透明，
+     文字压在壁纸上根本读不清（2026-11-08 截图实测）。 */
   background: var(--entry, #fff);
   border: 1px solid var(--border, #e0e0e0);
-  border-radius: 14px;
+  border-radius: 18px;
 }
-.tool-h {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px;
-  font-size: 14px;
+.tool-out-card[hidden] { display: none; }
+
+/* 标题区 */
+.tool-hero { margin: 6px 0 20px; text-align: center; }
+.tool-hero-t {
+  margin: 0 0 6px;
+  font-size: 30px;
   font-weight: 800;
-  letter-spacing: 0.04em;
-  color: var(--secondary, #888);
+  line-height: 1.2;
+  letter-spacing: 0.01em;
 }
-.tool-step {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  font-size: 12px;
-  color: #fff;
-  background: #4f8cff;
-  border-radius: 50%;
-}
+.tool-hero-s { margin: 0; font-size: 14px; color: var(--secondary, #888); }
 
-/* 上传区 */
-.tool-drop {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 26px 16px;
-  text-align: center;
-  background: rgba(127, 127, 127, 0.08);
-  border: 2px dashed var(--border, #d5d5d5);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-.tool-drop:hover, .tool-drop.is-over { border-color: #4f8cff; background: rgba(79, 140, 255, 0.08); }
-.tool-drop:focus-visible { outline: 2px solid #4f8cff; outline-offset: 3px; }
-.tool-drop-ico {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background:
-    linear-gradient(#4f8cff, #4f8cff) center 11px / 16px 2px no-repeat,
-    linear-gradient(#4f8cff, #4f8cff) center 16px / 2px 16px no-repeat,
-    rgba(79, 140, 255, 0.14);
-}
-.tool-drop-t { font-size: 14px; font-weight: 700; }
-.tool-drop-s { font-size: 12px; color: var(--secondary, #888); }
-.tool-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-.tool-fileinfo { margin: 10px 0 0; min-height: 18px; font-size: 12px; color: var(--secondary, #888); }
-
-/* 模型选择 */
-.tool-models { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* 模型卡：两列，选中态描边 + 浅底 */
+.tool-models { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .tool-model {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 12px 14px;
-  background: rgba(127, 127, 127, 0.07);
+  padding: 13px 15px;
+  background: rgba(127, 127, 127, 0.05);
   border: 1.5px solid var(--border, #e0e0e0);
-  border-radius: 12px;
+  border-radius: 14px;
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -1139,29 +1097,75 @@ footer.footer { color: var(--primary, #1f1f1f); }
 .tool-model.is-on { border-color: #4f8cff; background: rgba(79, 140, 255, 0.1); }
 .tool-model:focus-within { outline: 2px solid #4f8cff; outline-offset: 2px; }
 .tool-model-n { font-size: 14px; font-weight: 700; }
-.tool-model-d { font-size: 12px; color: var(--secondary, #888); }
+.tool-model-d { font-size: 12px; line-height: 1.45; color: var(--secondary, #888); }
 
-/* 运行 */
+/* 选图区：虚线大框，整块可点；里面的「选择图片」只是视觉按钮 */
+.tool-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 32px 18px 26px;
+  text-align: center;
+  background: rgba(127, 127, 127, 0.06);
+  border: 1.5px dashed var(--border, #d5d5d5);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+.tool-drop:hover, .tool-drop.is-over { border-color: #4f8cff; background: rgba(79, 140, 255, 0.08); }
+.tool-drop:focus-visible { outline: 2px solid #4f8cff; outline-offset: 3px; }
+.tool-drop-ico { margin-bottom: 4px; color: #4f8cff; }
+.tool-drop-t { font-size: 15px; font-weight: 700; }
+.tool-drop-s { font-size: 13px; color: var(--secondary, #888); }
+.tool-pick {
+  margin-top: 12px;
+  padding: 9px 22px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  border: 1px solid rgba(127, 127, 127, 0.45);
+  border-radius: 10px;
+  transition: border-color 0.15s ease;
+}
+.tool-drop:hover .tool-pick { border-color: #4f8cff; }
+.tool-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tool-fileinfo {
+  margin: 8px 0 0;
+  min-height: 18px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--secondary, #888);
+}
+
+/* 主按钮 */
 .tool-run {
   width: 100%;
-  min-height: 44px;
+  min-height: 52px;
+  margin-top: 16px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #fff;
   background: #4f8cff;
-  border: 0;
-  border-radius: 999px;
+  border: 1px solid #4f8cff;
+  border-radius: 16px;
   cursor: pointer;
   transition: background-color 0.15s ease, opacity 0.15s ease;
 }
-.tool-run:hover:not([disabled]) { background: #3574ec; }
-.tool-run[disabled] { opacity: 0.5; cursor: default; }
+.tool-run:hover:not([disabled]) { background: #3574ec; border-color: #3574ec; }
+/* 没选图时是「不可用」而不是「隐藏」，位置固定，选完图不会跳一下 */
+.tool-run[disabled] {
+  color: var(--secondary, #888);
+  background: var(--tertiary, #ececec);
+  border-color: var(--border, #e0e0e0);
+  cursor: default;
+}
 .tool-run.is-busy { opacity: 0.7; }
 
 .tool-prog {
   height: 8px;
-  margin-top: 12px;
+  margin-top: 14px;
   overflow: hidden;
   background: var(--tertiary, #e6e6e6);
   border-radius: 999px;
@@ -1173,10 +1177,17 @@ footer.footer { color: var(--primary, #1f1f1f); }
   border-radius: 999px;
   transition: width 0.2s ease;
 }
-.tool-status { margin: 10px 0 0; min-height: 18px; font-size: 13px; color: var(--secondary, #777); }
-.tool-tip { margin: 6px 0 0; font-size: 12px; color: #c08a00; }
+.tool-status { margin: 10px 0 0; min-height: 18px; font-size: 13px; text-align: center; color: var(--secondary, #777); }
+.tool-tip { margin: 6px 0 0; font-size: 12px; text-align: center; color: #c08a00; }
 
 /* 结果 */
+.tool-out-card {
+  margin-top: 18px;
+  padding: 14px;
+  background: var(--entry, #fff);
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 16px;
+}
 .tool-canvas-wrap {
   display: flex;
   justify-content: center;
@@ -1190,7 +1201,7 @@ footer.footer { color: var(--primary, #1f1f1f); }
   background-position: 0 0, 8px 8px;
 }
 .tool-canvas { display: block; max-width: 100%; height: auto; border-radius: 6px; }
-.tool-dims { margin: 10px 0 0; font-size: 12px; color: var(--secondary, #888); }
+.tool-dims { margin: 10px 0 0; font-size: 12px; text-align: center; color: var(--secondary, #888); }
 .tool-actions { margin-top: 12px; display: flex; justify-content: center; }
 .tool-dl {
   display: inline-flex;
@@ -1208,12 +1219,19 @@ footer.footer { color: var(--primary, #1f1f1f); }
 /* 还在打包 PNG（或还没出结果）时不给点：没有 href，点了也没反应，视觉上要说清楚 */
 .tool-dl[aria-disabled="true"] { opacity: .55; pointer-events: none; }
 
+/* 说明与页脚 */
+.tool-about { margin-top: 26px; padding-top: 16px; border-top: 1px solid var(--border, #e0e0e0); }
+.tool-about-h { margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; color: var(--secondary, #888); }
 .tool-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.85; color: var(--secondary, #666); }
 .tool-list li { margin-bottom: 2px; }
-.tool-foot { margin: 6px 0 0; font-size: 13px; color: var(--secondary, #888); text-align: center; }
+.tool-foot { margin: 14px 0 0; font-size: 13px; color: var(--secondary, #888); text-align: center; }
 .tool-foot a { color: inherit; }
 
 @media (max-width: 520px) {
-  .tool-models { grid-template-columns: 1fr; }
-  .tool-card { padding: 14px 14px; }
+  .tool-root { padding: 18px 14px 22px; border-radius: 16px; }
+  .tool-hero { margin-bottom: 16px; }
+  .tool-hero-t { font-size: 26px; }
+  .tool-models { gap: 8px; }
+  .tool-model { padding: 11px 12px; }
+  .tool-drop { padding: 26px 14px 22px; border-radius: 18px; }
 }

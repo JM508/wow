@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   工具页 · 图片放大（2026-11-07）
+   工具页 · 超分辨率（2026-11-07 上线，2026-11-08 改版）
    ──────────────────────────────────────────────────────────────
    库：upscalejs v2.1.0（ONNX Runtime Web 1.24 内核，MIT）
        → /tools/upscale/upscalejs.es.js（ESM，仅在点开始时动态 import）
@@ -135,7 +135,7 @@
     }
     state.model = pickModel();
     if (state.bitmap && !state.busy) {
-      say("已选好，点「开始放大」即可" + estimateText(state.model, state.inW, state.inH));
+      say("已选好，点「开始增强」即可" + estimateText(state.model, state.inW, state.inH));
     }
   }
 
@@ -221,7 +221,7 @@
       state.inH = bmp.height;
       if (fileInfo) fileInfo.textContent = bmp.width + " × " + bmp.height + " · " + humanSize(file.size);
       if (runBtn) runBtn.disabled = false;
-      say("已选好，点「开始放大」即可" + estimateText(pickModel(), bmp.width, bmp.height));
+      say("已选好，点「开始增强」即可" + estimateText(pickModel(), bmp.width, bmp.height));
     }).catch(function () {
       say("这张图读不出来，换一张试试");
     });
