@@ -137,8 +137,8 @@ def sql_rows(rows, ts):
                 it["sort_order"], ts,
             )
         )
+    # 第一行必须是 INSERT：D1 Console 里若整段都被 -- 注释包住，会报「未检测到 SQL 语句」
     return (
-        "-- 由 scripts/wp_add.py 生成；粘进 D1 网页 Console 即完成上架。\n"
         "INSERT OR REPLACE INTO wallpapers\n"
         "  (slug, added, w, h, ratio, color, kb, kb_thumb, thumb, full, orig, tags, sort_order, status, updated_at)\n"
         "VALUES\n" + ",\n".join(out) + ";\n"
