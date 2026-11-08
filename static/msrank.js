@@ -46,6 +46,17 @@
   var API = "/api/scores/ms";
   var apiState = "unknown";          // unknown | down
 
+  /* ═══════════ 镜像域：读主站，不接写入 ═══════════
+     镜像域 wow-blog.app.workbuddy.host 没有 Pages Functions，/api/scores/ms 会 404，
+     榜单只能一直落到旧云那张空表上。改成跨域读主站的 D1 榜单（主站的 READ_ORIGINS
+     已放行镜像的 GET，无需改服务端）。
+     写不跨域：预检只放行 GET/HEAD，提交会失败；而镜像也不是成绩入口，
+     所以镜像上直接返回 readonly，让调用方静默跳过 —— 不能像旧云链路那样
+     提示「成绩已上榜」却榜上无名。 */
+  var MAIN_ORIGIN = "https://wow-d9s.pages.dev";
+  var onMirror = location.hostname === "wow-blog.app.workbuddy.host";
+  if (onMirror) API = MAIN_ORIGIN + API;
+
   function apiUrl(params) {
     var qs = [], k;
     for (k in params) {
@@ -74,8 +85,9 @@
   }
 
   /* 写：同样三态，只有「链路不可用」才回退，业务性拒绝（400/429）不回退，
-     否则会把一条明显不合法的成绩再往旧云塞一遍。 */
+     否则会把一条明显不合法的成绩再往旧云塞一遍。镜像域一律不走这条链路。 */
   function apiPost(row) {
+    if (onMirror) return Promise.resolve(null);
     if (apiState === "down" || typeof fetch !== "function") return Promise.resolve(null);
     return fetch(API, {
       method: "POST",
@@ -322,7 +334,8 @@
     if (statusEl) {
       if (cur.err === "unavailable") statusEl.textContent = cur.errMsg || "离线或云服务不可用，暂时看不到排行榜（离线也能照常玩）。";
       else if (cur.err === "error") statusEl.textContent = "排行榜加载失败，稍后重试。";
-      else statusEl.textContent = cur.loading ? "加载中…" : "";
+      else statusEl.textContent = cur.loading ? "加载中…"
+        : (onMirror ? "镜像站只读，成绩请回主站提交。" : "");
       statusEl.className = "ms-rank-status" + (cur.err ? " is-err" : "");
     }
 
@@ -372,6 +385,8 @@
   }
 
   function submit(mode, seconds) {
+    /* 镜像域不是成绩入口：不写、不排队、不提示，避免「已上榜但榜上没有」 */
+    if (onMirror) return Promise.resolve({ data: null, error: { kind: "readonly" } });
     if (!ready()) {
       var sec0 = Math.round(Number(seconds) || 0);
       if (sec0 > 0) queueOffline(mode, sec0);
@@ -503,6 +518,7 @@
     reload: function () { load(cur.mode); },
     mode: function () { return cur.mode; },
     modeLabel: modeLabel,
+    apiBase: function () { return API; },                            /* 测试用：当前生效的接口基址 */
     _state: cur                                                    /* 测试用只读快照 */
   };
 })(window);

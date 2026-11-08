@@ -16,6 +16,16 @@
   var root = document.getElementById("wp-root");
   if (!root) return;
 
+  /* ══ 接口基址：镜像域把请求指回主站 ══
+     主站 wow-d9s.pages.dev 上的 /api/wallpapers 是 Cloudflare Pages Functions；
+     镜像域 wow-blog.app.workbuddy.host 只有静态产物托管，同一路径直接 404。
+     所以镜像上改成跨域打主站，主站 functions/_lib/http.js 的 READ_ORIGINS
+     已放行镜像的只读请求，无需再改服务端。
+     镜像只读：写操作不在镜像开放，预检只放行 GET/HEAD。 */
+  var MAIN_ORIGIN = "https://wow-d9s.pages.dev";
+  var MIRROR_HOST = "wow-blog.app.workbuddy.host";
+  var API_BASE = location.hostname === MIRROR_HOST ? MAIN_ORIGIN : "";
+
   var grid = document.getElementById("wp-grid");
   var empty = document.getElementById("wp-empty");
 
@@ -348,7 +358,10 @@
   function refresh() {
     if (typeof fetch !== "function") return;
     var built = root.getAttribute("data-wp-version") || "";
-    fetch("/api/wallpapers", { headers: { accept: "application/json" }, credentials: "same-origin" })
+    fetch(API_BASE + "/api/wallpapers", {
+      headers: { accept: "application/json" },
+      credentials: API_BASE ? "omit" : "same-origin"
+    })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d || !d.rows || !d.version) return;

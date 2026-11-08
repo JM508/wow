@@ -12,6 +12,20 @@
   "use strict";
   if (!window.performance || !window.PerformanceObserver) return;
 
+  /* 自动化流量不计入 RUM（2026-11-08 加）
+     ──────────────────────────────────────────────
+     无头浏览器（本站探针 / CI / 各种巡检）会把页面完整跑一遍，
+     但它们的 TTFB 是沙箱出口的网络延迟，LCP 自然 4 秒以上。
+     这些样本一旦混进来，/stats/ 的 p75 就变成「我机器的网速」，
+     真实用户数据被淹没。判据两条：
+       navigator.webdriver         playwright / puppeteer 系
+       UA 含 Headless              chrome --headless=new 直连 CDP（本站探针走这条）
+     都不采集、不上报，页面行为不受影响。 */
+  try {
+    if (navigator.webdriver) return;
+    if (/headless/i.test(navigator.userAgent || "")) return;
+  } catch (e) { /* 读不到就照常采集 */ }
+
   var rows = [];
   var sent = false;
 
