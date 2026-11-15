@@ -1,8 +1,8 @@
 # 壁纸清单：_make_wallpapers.py 生成旧 28 张；_add_wp_zip.py 并入资料库 zip 的新图
 # 2026-10-25 起去掉全部壁纸名字（title/hero/skin 已删）；tags = 题材 + 构图
 version: 1
-count: 96
-rev: "96.2026-11-15T04:07:15.000Z"
+count: 98
+rev: "98.2026-11-15T04:09:47.000Z"
 items:
   - slug: wp-01
     added: 2026-10-17
@@ -1062,3 +1062,25 @@ items:
     thumb: /wp/wp-96-640.webp
     full: /wp/wp-96-1920.webp
     tags: [党政, 横屏]
+  - slug: wp-97
+    added: 2026-11-15
+    kb: 27
+    kb_thumb: 20
+    w: 750
+    h: 1334
+    ratio: 0.562
+    color: "#bb0e09"
+    thumb: /wp/wp-97-640.webp
+    full: /wp/wp-97-1920.webp
+    tags: [党政, 竖屏]
+  - slug: wp-98
+    added: 2026-11-15
+    kb: 9
+    kb_thumb: 9
+    w: 417
+    h: 800
+    ratio: 0.521
+    color: "#c93c20"
+    thumb: /wp/wp-98-640.webp
+    full: /wp/wp-98-1920.webp
+    tags: [党政, 竖屏]
