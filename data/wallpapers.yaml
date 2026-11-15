@@ -1,8 +1,8 @@
 # 壁纸清单：_make_wallpapers.py 生成旧 28 张；_add_wp_zip.py 并入资料库 zip 的新图
 # 2026-10-25 起去掉全部壁纸名字（title/hero/skin 已删）；tags = 题材 + 构图
 version: 1
-count: 90
-rev: "90.2026-11-08T04:52:27.000Z"
+count: 92
+rev: "92.2026-11-15T04:01:45.000Z"
 items:
   - slug: wp-01
     added: 2026-10-17
@@ -996,3 +996,25 @@ items:
     thumb: /wp/wp-90-640.webp
     full: /wp/wp-90-1920.webp
     tags: [人物, 竖屏]
+  - slug: wp-91
+    added: 2026-11-15
+    kb: 164
+    kb_thumb: 47
+    w: 1638
+    h: 1024
+    ratio: 1.600
+    color: "#8893ad"
+    thumb: /wp/wp-91-640.webp
+    full: /wp/wp-91-1920.webp
+    tags: [二次元, 横屏]
+  - slug: wp-92
+    added: 2026-11-15
+    kb: 80
+    kb_thumb: 24
+    w: 1638
+    h: 1024
+    ratio: 1.600
+    color: "#cbb5b9"
+    thumb: /wp/wp-92-640.webp
+    full: /wp/wp-92-1920.webp
+    tags: [二次元, 横屏]
