@@ -30,7 +30,9 @@
   </div>
 
   {{- /* 元信息：仿图库站（分类 / 分辨率 / 大小 / 发布时间 / 下载量 / 收藏量 / 色系）。
-         下载量与收藏量取本机 localStorage（本站没有全站统计接口），区下方注明口径。
+         下载量与收藏量由 /api/wallpapers/stats 从 D1 全站累计（2026-11-15 起，
+         此前是本机 localStorage，只有自己看得到）。静态快照里先放「—」，
+         脚本取到真实数字再填，避免无 JS 时显示成假的 0。
          外层 .wpd-meta-card 给一块实底，避免背景图模式下文字压在壁纸上读不清。 */}}
   <div class="wpd-meta-card">
   <dl class="wpd-meta">
@@ -55,11 +57,11 @@
     </div>
     <div class="wpd-meta-item">
       <dt>下载量</dt>
-      <dd><span id="wpd-dl-n">0</span></dd>
+      <dd><span id="wpd-dl-n">—</span></dd>
     </div>
     <div class="wpd-meta-item">
       <dt>收藏量</dt>
-      <dd><span id="wpd-fav-n">0</span></dd>
+      <dd><span id="wpd-fav-n">—</span></dd>
     </div>
     <div class="wpd-meta-item">
       <dt>色系</dt>
@@ -70,7 +72,7 @@
       </dd>
     </div>
   </dl>
-  <p class="wpd-meta-note">下载量与收藏量按本机记录统计，仅你可见。</p>
+  <p class="wpd-meta-note">下载量与收藏量由本站统计，全站累计。</p>
   </div>
 </article>
 

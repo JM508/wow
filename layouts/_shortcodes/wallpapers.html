@@ -81,13 +81,10 @@
     <button type="button" class="wp-tab" data-wp-tag="竖屏" aria-pressed="false">
       竖屏<span class="wp-n">{{ $portrait }}</span>
     </button>
-    {{- /* 收藏与最多下载（2026-10-23）：数据只记本机 localStorage，不上云 */}}
+    {{- /* 收藏（2026-10-23）：本机收藏清单只用于星标状态与「收藏」页签；
+           下载量与收藏量本身由 /api/wallpapers/stats 全站累计（2026-11-15）。 */}}
     <button type="button" class="wp-tab" data-wp-tag="fav" aria-pressed="false">
       收藏<span class="wp-n" id="wp-n-fav">0</span>
-    </button>
-    <button type="button" class="wp-tab" id="wp-sort-dl" aria-pressed="false"
-            title="按本机下载次数从多到少排；下载次数只记在这台设备上">
-      最多下载
     </button>
   </div>
 

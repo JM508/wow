@@ -1,12 +1,16 @@
 /* ══ 壁纸页（/wallpapers/）══
-   筛选 + 收藏 + 下载计数（本机 localStorage）。
+   筛选 + 收藏。
    卡片是可点击的 <a href="/wallpapers/<slug>/">，点一下进入独立详情页（网址变化）。
+
+   2026-11-15 起：收藏/下载次数不再记在本机（原「最多下载」排序按钮随之下线），
+   下载量与收藏量由 /api/wallpapers/stats 全站累计；本机只留「我收藏了哪些」
+   这一份清单，用来画星标和「收藏」页签。
 
    2026-11-08 起多一层「运行时校准」：
    静态 HTML 是构建时的快照（SEO 与无 JS 环境靠它），页面打开后再问一次
    /api/wallpapers。版本号与静态快照一致就什么都不做；不一致（D1 里上架/下架/
    改标签/调顺序了）才按接口数据重绘网格 —— 内容改动不必等构建。
-   重绘后会重新初始化一次，筛选、收藏、排序的行为完全不变。
+   重绘后会重新初始化一次，筛选与收藏的行为完全不变。
 
    CSP 是 style-src 'self'，这里改样式一律走 CSSOM（el.style.x = ...），
    不往 innerHTML 里塞 style 属性。 */
@@ -17,11 +21,11 @@
   if (!root) return;
 
   /* ══ 接口基址：镜像域把请求指回主站 ══
-     主站 wow-d9s.pages.dev 上的 /api/wallpapers 是 Cloudflare Pages Functions；
+     主站 wow-d9s.pages.dev 上的 /api/* 是 Cloudflare Pages Functions；
      镜像域 wow-blog.app.workbuddy.host 只有静态产物托管，同一路径直接 404。
      所以镜像上改成跨域打主站，主站 functions/_lib/http.js 的 READ_ORIGINS
-     已放行镜像的只读请求，无需再改服务端。
-     镜像只读：写操作不在镜像开放，预检只放行 GET/HEAD。 */
+     已放行镜像的只读请求，并单独给统计接口开了 POST（收藏计数要写回去），
+     榜单提交仍未放开 —— 镜像对榜单依旧是只读。 */
   var MAIN_ORIGIN = "https://wow-d9s.pages.dev";
   var MIRROR_HOST = "wow-blog.app.workbuddy.host";
   var API_BASE = location.hostname === MIRROR_HOST ? MAIN_ORIGIN : "";
@@ -29,19 +33,44 @@
   var grid = document.getElementById("wp-grid");
   var empty = document.getElementById("wp-empty");
 
-  /* ── 收藏与下载计数（本机 localStorage，不上云） ──
-     dlCounts = slug -> 次数；真正的下载发生在详情页（/wp-detail.js 写回 DL_KEY），
-     这里只读取并展示徽标 / 参与排序。 */
+  /* ── 收藏清单（本机，决定星标亮不亮；计数在服务端） ── */
   var FAV_KEY = "wow-wp-fav-v1";
-  var DL_KEY = "wow-wp-dl-v1";
+  var DEV_KEY = "wow-dev-v1";
   function loadJson(k, fb) {
     try { var v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? fb : v; }
     catch (e) { return fb; }
   }
   function saveJson(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   var favs = loadJson(FAV_KEY, []);
-  var dlCounts = loadJson(DL_KEY, {});
   function isFav(slug) { return favs.indexOf(slug) >= 0; }
+
+  /* 设备号：服务端据此给收藏去重，不含任何个人信息 */
+  function deviceId() {
+    var v = "";
+    try { v = localStorage.getItem(DEV_KEY) || ""; } catch (e) { /* 隐私模式 */ }
+    if (!/^[a-z0-9]{6,40}$/.test(v)) {
+      v = "";
+      var buf = new Uint8Array(8);
+      if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+      else for (var i = 0; i < 8; i++) buf[i] = Math.floor(Math.random() * 256);
+      for (var j = 0; j < 8; j++) v += ("0" + buf[j].toString(16)).slice(-2);
+      try { localStorage.setItem(DEV_KEY, v); } catch (e) { /* 存不住就用临时号 */ }
+    }
+    return v;
+  }
+
+  /* 上报一次收藏/取消：服务端去重后累加，失败静默（星标仍按本机状态走） */
+  var sent = [];
+  function reportFav(slug, action) {
+    sent.push(action + ":" + slug);
+    if (typeof fetch !== "function") return;
+    fetch(API_BASE + "/api/wallpapers/stats", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      credentials: API_BASE ? "omit" : "same-origin",
+      body: JSON.stringify({ slug: slug, action: action, device: deviceId() })
+    }).catch(function () { /* 离线/接口异常时只是这次没统计上 */ });
+  }
 
   function tagListOf(el) { return (el.getAttribute("data-wp-tags") || "").split(","); }
 
@@ -148,8 +177,8 @@
   function boot() {
     if (!grid) return;
     var items = [].slice.call(grid.querySelectorAll(".wp-item"));
-    /* 只收「分类」页签（带 data-wp-tag）；「最多下载」是排序开关，不算分类，
-       混进来会让 applyTag(null) 把所有卡片藏掉 */
+    /* 只收「分类」页签（带 data-wp-tag）；「收藏」也是其中之一，
+       其余非分类控件不能混进来，否则 applyTag(null) 会把所有卡片藏掉 */
     var tabs = [].slice.call(document.querySelectorAll(".wp-tab[data-wp-tag]"));
 
     if (ac) ac.abort();
@@ -217,38 +246,7 @@
       b.addEventListener("click", function () { applyTag(b.getAttribute("data-wp-tag")); });
     });
 
-    /* ── 最多下载排序：按本机下载次数从多到少，同次数保持原顺序 ── */
-    var sortBtn = document.getElementById("wp-sort-dl");
-    var sortOn = false;
-    var cells = [];
-    items.forEach(function (el) {
-      var c = cellOf(el);
-      if (c && cells.indexOf(c) < 0) cells.push(c);
-    });
-    cells.forEach(function (c, i) { c.setAttribute("data-wp-idx", String(i)); });
-    function byOrigIdx(a, b) {
-      return Number(a.getAttribute("data-wp-idx")) - Number(b.getAttribute("data-wp-idx"));
-    }
-    function sortByDl() {
-      cells.slice().sort(function (a, b) {
-        var da = dlCounts[a.getAttribute("data-wp-cell")] || 0;
-        var db = dlCounts[b.getAttribute("data-wp-cell")] || 0;
-        return da !== db ? db - da : byOrigIdx(a, b);
-      }).forEach(function (c) { grid.appendChild(c); });
-    }
-    function restoreOrder() {
-      cells.slice().sort(byOrigIdx).forEach(function (c) { grid.appendChild(c); });
-    }
-    if (sortBtn) {
-      sortBtn.addEventListener("click", function () {
-        sortOn = !sortOn;
-        sortBtn.classList.toggle("is-on", sortOn);
-        sortBtn.setAttribute("aria-pressed", sortOn ? "true" : "false");
-        if (sortOn) sortByDl(); else restoreOrder();
-      });
-    }
-
-    /* ── 收藏（只记本机）：卡片右上角星标 ── */
+    /* ── 收藏：星标状态记本机，计数报给服务端 ── */
     var favN = document.getElementById("wp-n-fav");
     var favBtns = [].slice.call(document.querySelectorAll(".wp-fav"));
     function paintFav() {
@@ -261,9 +259,11 @@
     }
     function toggleFav(slug) {
       var i = favs.indexOf(slug);
-      if (i >= 0) favs.splice(i, 1); else favs.push(slug);
+      var adding = i < 0;
+      if (adding) favs.push(slug); else favs.splice(i, 1);
       saveJson(FAV_KEY, favs);
       paintFav();
+      reportFav(slug, adding ? "fav" : "unfav");
       /* 正看着「收藏」页签时取消收藏，卡片要当场移出列表 */
       if (current === "fav") applyTag("fav");
     }
@@ -312,8 +312,7 @@
         visible: arr.map(function (el) { return el.getAttribute("data-wp-key"); }),
         notice: !!(notice && !notice.hidden),
         favs: favs.slice(),
-        dl: JSON.parse(JSON.stringify(dlCounts)),
-        sortOn: sortOn,
+        sent: sent.slice(),
       };
     };
   }
