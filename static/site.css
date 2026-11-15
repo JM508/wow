@@ -1,6 +1,47 @@
 /* ══ 站点自定义样式 ══
-   注：导航栏（.header-nav）保持主题默认布局——无菜单项时 logo/主题按钮靠左。
+   注：导航栏（.header-nav）保持主题默认布局——无菜单项时 logo/主题按钮靠左；
+   右上角的设置齿轮（.header-actions）例外，它靠右（2026-11-15 用户要求）。
    游戏入口：首页一个大按钮 → /games/ 游戏合集页（卡片式两个游戏入口）。 */
+
+/* ══ 头部右上角「设置」入口（齿轮） ══
+   2026-11-15：用户要求首页右上角放一个齿轮形状的设置按钮，指向 /settings/。
+   位置靠 .header-nav 的 space-between 落到最右，不依赖菜单项是否存在。
+   主题的 .header-nav a { display: block } 特异性 (0,1,1) 会压过单类选择器，
+   这里用 .header-nav a.header-gear (0,2,1) 抢回来。 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.header-nav a.header-gear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  border-radius: 50%;
+  /* 首页有背景图模式：跟站名同色（--primary）才看得清，--secondary 压在图里几乎消失 */
+  color: var(--primary, #1f1f1f);
+  background: transparent;
+  opacity: 0.72;
+  transition: color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.header-nav a.header-gear:hover,
+.header-nav a.header-gear:focus-visible {
+  /* 颜色不在这里改：背景图模式下由 html[data-ag-bg] .header-gear 决定明暗 */
+  background: var(--tertiary, #ececec);
+  opacity: 1;
+  outline: none;
+}
+
+.header-nav a.header-gear svg {
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+}
 
 /* ══ 首页正文区的「小游戏 / 壁纸」入口按钮 ══
    入口来自 hugo.toml 的 homeInfoParams.Content 里的原生 HTML（unsafe=true）。
@@ -272,9 +313,11 @@ html[data-ag-bg] .footer-repo {
   color: #1f1f1f;
   text-shadow: none;
 }
-/* 页头右侧的主题切换图标走 currentColor，白蒙版上必须转深色 */
+/* 页头右侧的主题切换图标走 currentColor，白蒙版上必须转深色；
+   设置齿轮同排，跟着一起转（2026-11-15）。 */
 html[data-ag-bg] .theme-toggle,
-html[data-ag-bg] .logo-switches a {
+html[data-ag-bg] .logo-switches a,
+html[data-ag-bg] .header-gear {
   color: #1f1f1f;
 }
 html[data-ag-bg] .footer a,
@@ -300,7 +343,8 @@ html[data-theme="dark"][data-ag-bg] .footer-repo {
   text-shadow: none;
 }
 html[data-theme="dark"][data-ag-bg] .theme-toggle,
-html[data-theme="dark"][data-ag-bg] .logo-switches a {
+html[data-theme="dark"][data-ag-bg] .logo-switches a,
+html[data-theme="dark"][data-ag-bg] .header-gear {
   color: #f2f2f2;
 }
 html[data-theme="dark"][data-ag-bg] .footer a,

@@ -14,6 +14,9 @@
    因此第三方站点无法借用本站当作绕过 Origin 校验的跳板。
    ══════════════════════════════════════════════════════════════ */
 
+/* 属地（省级）的唯一口径在 _lib/region.js，本文件与提交成绩的接口共用 */
+import { regionOf } from "./_lib/region.js";
+
 const UPSTREAM_ORIGIN = "https://wow-blog.app.workbuddy.host";
 const CLOUD_PREFIX = "/.cloud";
 
@@ -79,150 +82,9 @@ function deny(reason) {
    镜像域页面（connect-src 允许）会跨域 GET 本端点，所以带精确 Origin 白名单的 CORS。
    ══════════════════════════════════════════════════════════════ */
 
-/* 中国省级行政区：CF 的 region/regionCode/city 里常见的中英名 → 属地名。
-   注意：港/澳/台按规范冠以「中国」。 */
-const CN_REGIONS = [
-  ["北京", "beijing", "北京", "bj"],
-  ["天津", "tianjin", "天津", "tj"],
-  ["上海", "shanghai", "上海", "sh"],
-  ["重庆", "chongqing", "重庆", "cq"],
-  ["河北", "hebei", "河北", "he"],
-  ["山西", "shanxi", "山西", "sx"],
-  ["辽宁", "liaoning", "辽宁", "ln"],
-  ["吉林", "jilin", "吉林", "jl"],
-  ["黑龙江", "heilongjiang", "黑龙江", "hl"],
-  ["江苏", "jiangsu", "江苏", "js"],
-  ["浙江", "zhejiang", "浙江", "zj"],
-  ["安徽", "anhui", "安徽", "ah"],
-  ["福建", "fujian", "福建", "fj"],
-  ["江西", "jiangxi", "江西", "jx"],
-  ["山东", "shandong", "山东", "sd"],
-  ["河南", "henan", "河南", "ha"],
-  ["湖北", "hubei", "湖北", "hb"],
-  ["湖南", "hunan", "湖南", "hn"],
-  ["广东", "guangdong", "广东", "gd"],
-  ["海南", "hainan", "海南", "hi"],
-  ["四川", "sichuan", "四川", "sc"],
-  ["贵州", "guizhou", "贵州", "gz"],
-  ["云南", "yunnan", "云南", "yn"],
-  ["陕西", "shaanxi", "陕西", "sn"],
-  ["甘肃", "gansu", "甘肃", "gs"],
-  ["青海", "qinghai", "青海", "qh"],
-  ["广西", "guangxi", "广西", "gx"],
-  ["内蒙古", "neimenggu", "inner mongolia", "内蒙古", "nm"],
-  ["宁夏", "ningxia", "宁夏", "nx"],
-  ["新疆", "xinjiang", "新疆", "xj"],
-  ["西藏", "xizang", "tibet", "西藏", "xz"],
-  ["中国香港", "hong kong", "香港", "hk"],
-  ["中国澳门", "macau", "macao", "澳门", "mo"],
-  ["中国台湾", "taiwan", "台湾", "tw"]
-];
-
-/* 常见海外国家/地区 ISO 码 → 中文名；表外一律「海外」 */
-const COUNTRY_ZH = {
-  US: "美国", JP: "日本", KR: "韩国", SG: "新加坡", MY: "马来西亚",
-  TH: "泰国", VN: "越南", PH: "菲律宾", ID: "印度尼西亚", IN: "印度",
-  GB: "英国", FR: "法国", DE: "德国", IT: "意大利", ES: "西班牙",
-  NL: "荷兰", PT: "葡萄牙", IE: "爱尔兰", AT: "奥地利", CH: "瑞士",
-  SE: "瑞典", NO: "挪威", DK: "丹麦", FI: "芬兰", PL: "波兰",
-  CZ: "捷克", HU: "匈牙利", GR: "希腊", RU: "俄罗斯", UA: "乌克兰",
-  TR: "土耳其", IL: "以色列", AE: "阿联酋", SA: "沙特阿拉伯",
-  CA: "加拿大", MX: "墨西哥", BR: "巴西", AR: "阿根廷",
-  AU: "澳大利亚", NZ: "新西兰", ZA: "南非"
-};
-
-function cnRegionName(cf) {
-  const candidates = [cf.region, cf.regionCode, cf.city];
-  for (let i = 0; i < CN_REGIONS.length; i++) {
-    const aliases = CN_REGIONS[i];
-    for (let j = 0; j < candidates.length; j++) {
-      const v = candidates[j];
-      if (!v) continue;
-      const lv = String(v).toLowerCase();
-      for (let k = 1; k < aliases.length; k++) {
-        if (lv === aliases[k] || lv.indexOf(aliases[k]) === 0) return aliases[0];
-      }
-    }
-  }
-  /* 兜底：CF 有时只给 city，用主要城市名映射 */
-  const lv = String(cf.city || "").toLowerCase();
-  if (lv) {
-    for (let i = 0; i < CN_CITIES.length; i++) {
-      if (lv.indexOf(CN_CITIES[i][1]) === 0) return CN_CITIES[i][0];
-    }
-  }
-  return null;
-}
-
-/* 主要城市 → 省级行政区（拼音小写前缀匹配） */
-const CN_CITIES = [
-  ["广东", "guangzhou"], ["广东", "shenzhen"], ["广东", "dongguan"], ["广东", "foshan"],
-  ["江苏", "nanjing"], ["江苏", "suzhou"], ["江苏", "wuxi"], ["江苏", "changzhou"],
-  ["浙江", "hangzhou"], ["浙江", "ningbo"], ["浙江", "wenzhou"],
-  ["山东", "jinan"], ["山东", "qingdao"], ["山东", "yantai"],
-  ["河南", "zhengzhou"], ["河南", "luoyang"],
-  ["湖北", "wuhan"], ["湖北", "yichang"],
-  ["湖南", "changsha"], ["湖南", "zhuzhou"],
-  ["四川", "chengdu"], ["四川", "mianyang"],
-  ["福建", "fuzhou"], ["福建", "xiamen"], ["福建", "quanzhou"],
-  ["安徽", "hefei"], ["河北", "shijiazhuang"], ["河北", "tangshan"],
-  ["山西", "taiyuan"], ["江西", "nanchang"],
-  ["辽宁", "shenyang"], ["辽宁", "dalian"],
-  ["吉林", "changchun"], ["黑龙江", "haerbin"], ["黑龙江", "harbin"],
-  ["陕西", "xian"], ["陕西", "xianyang"],
-  ["甘肃", "lanzhou"], ["贵州", "guiyang"], ["云南", "kunming"],
-  ["广西", "nanning"], ["海南", "haikou"], ["海南", "sanya"],
-  ["新疆", "wulumuqi"], ["新疆", "urumqi"], ["内蒙古", "huhehaote"],
-  ["内蒙古", "hohhot"], ["宁夏", "yinchuan"], ["青海", "xining"], ["西藏", "lhasa"]
-];
-
-/* 2026-10-05 用户要求属地精确到市：CF 的 cf.city 是英文城市名 → 中文名。
-   覆盖国内主要城市；表外城市沿用省级展示（不至于空白）。 */
-const CN_CITY_ZH = {
-  beijing:"北京", tianjin:"天津", shanghai:"上海", chongqing:"重庆",
-  guangzhou:"广州", shenzhen:"深圳", dongguan:"东莞", foshan:"佛山", zhuhai:"珠海", zhongshan:"中山", huizhou:"惠州",
-  nanjing:"南京", suzhou:"苏州", wuxi:"无锡", changzhou:"常州", nantong:"南通", xuzhou:"徐州", yangzhou:"扬州",
-  hangzhou:"杭州", ningbo:"宁波", wenzhou:"温州", jiaxing:"嘉兴", shaoxing:"绍兴", jinhua:"金华",
-  jinan:"济南", qingdao:"青岛", yantai:"烟台", weifang:"潍坊", linyi:"临沂",
-  zhengzhou:"郑州", luoyang:"洛阳", kaifeng:"开封", xinxiang:"新乡",
-  wuhan:"武汉", yichang:"宜昌", xiangyang:"襄阳",
-  changsha:"长沙", zhuzhou:"株洲", xiangtan:"湘潭", hengyang:"衡阳",
-  chengdu:"成都", mianyang:"绵阳", deyang:"德阳",
-  fuzhou:"福州", xiamen:"厦门", quanzhou:"泉州", zhangzhou:"漳州",
-  hefei:"合肥", wuhu:"芜湖",
-  shijiazhuang:"石家庄", tangshan:"唐山", baoding:"保定",
-  taiyuan:"太原", nanchang:"南昌", ganzhou:"赣州",
-  shenyang:"沈阳", dalian:"大连", anshan:"鞍山",
-  changchun:"长春", jilin:"吉林", harbin:"哈尔滨", haerbin:"哈尔滨", daqing:"大庆",
-  xian:"西安", xianyang:"咸阳",
-  lanzhou:"兰州", guiyang:"贵阳", kunming:"昆明", qujing:"曲靖",
-  nanning:"南宁", liuzhou:"柳州", haikou:"海口", sanya:"三亚",
-  wulumuqi:"乌鲁木齐", urumqi:"乌鲁木齐", huhehaote:"呼和浩特", hohhot:"呼和浩特",
-  yinchuan:"银川", xining:"西宁", lhasa:"拉萨"
-};
-
-/* 属地字符串（≤32 字，与库约束一致）；取不到就 null，前端静默跳过。
-   2026-10-05 用户要求精确到市：国内输出「省 市」（如「广东 深圳」），
-   直辖市与省级同名时只输出一遍（如「上海」）；海外仍到国家。 */
-function regionOf(request) {
-  const cf = request.cf;
-  if (!cf) return null;
-  const country = cf.country || null;
-  if (country === "CN") {
-    const prov = cnRegionName(cf);
-    const city = cf.city ? CN_CITY_ZH[String(cf.city).toLowerCase()] : null;
-    if (prov && city && city !== prov) return (prov + " " + city);
-    if (prov) return prov;
-    if (city) return city;
-    return "中国";
-  }
-  if (country === "HK") return "中国香港";
-  if (country === "MO") return "中国澳门";
-  if (country === "TW") return "中国台湾";
-  if (country && COUNTRY_ZH[country]) return COUNTRY_ZH[country];
-  if (country) return "海外";
-  return null;
-}
+/* 属地判定（省级）统一放在 _lib/region.js：/.ip 与提交成绩的接口共用同一份表，
+   避免两处中文名映射各写一遍、改一处漏一处。
+   2026-11-15 起只到省（此前是「省 市」两段，榜单一行太长）。 */
 
 /* /.ip 只允许本站页面（same-origin）与镜像域页面（白名单 Origin）读取 */
 function ipInfo(request, url) {

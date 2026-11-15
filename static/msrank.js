@@ -112,6 +112,12 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  /* 属地只显示省级（2026-11-15 用户要求）：老行里存的是「广东 深圳」两段，
+     取第一段；服务端新写入的本来就是省名，取到的是同一个值。 */
+  function provOf(v) {
+    var s = String(v == null ? "" : v).trim();
+    return s ? s.split(/\s+/)[0].slice(0, 32) : "";
+  }
   function fmtDay(iso) {
     if (!iso) return "";
     var d = new Date(iso);
@@ -345,12 +351,12 @@
     } else {
       var html = "";
       for (i = 0; i < rows.length; i++) {
-        var r = rows[i], no = i + 1;
+        var r = rows[i], no = i + 1, rg = provOf(r.region);
         html += "<li class='ms-rank-row'>" +
           "<b class='ms-rank-no" + (no <= 3 ? " is-top" : "") + "'>" + no + "</b>" +
           avatarHtml(r) +
           "<span class='ms-rank-name' title='" + esc(r.nickname) + "'>" + esc(r.nickname) +
-            (r.region ? "<small class='ms-rank-rg'>IP " + esc(r.region) + "</small>" : "") + "</span>" +
+            (rg ? "<small class='ms-rank-rg'>IP " + esc(rg) + "</small>" : "") + "</span>" +
           "<span class='ms-rank-sec'>" + fmtSec(r.seconds) + "</span>" +
           "<span class='ms-rank-day'>" + esc(fmtDay(r.created_at)) + "</span>" +
           "</li>";

@@ -70,6 +70,7 @@
     "tools.about4": "One image at a time, and memory is released as soon as the job finishes. It runs single-threaded, so a picture usually takes from ten-odd seconds to a minute; bigger images take longer.",
     "tools.about5": "Use the anime model for line art and illustrations, Swin2SR for real photos and portraits.",
     "tools.home": "Back home",
+    "tools.back": "Back to tools",
     "tools.wp": "Browse wallpapers"
   };
 
@@ -121,6 +122,10 @@
     },
     "/tools/": {
       t: "Tools",
+      d: "Small tools that run entirely on this site: super resolution and whatever comes next."
+    },
+    "/tools/upscale/": {
+      t: "Super resolution",
       d: "Upscale images on your own device: Real-ESRGAN 6B (4×) for anime and art, Swin2SR (2×) for photos. Nothing is uploaded."
     }
   };

@@ -18,6 +18,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 import { json, fail } from "./http.js";
+import { regionOf, provinceOnly } from "./region.js";
 
 /* 各难度用时上限（秒）：与旧云触发器同口径。
    低于 1 秒的「通关」不存在，下限统一 1。 */
@@ -170,10 +171,14 @@ async function submit(request, env) {
     return fail(request, 400, "missing_device_id", "访客成绩必须带 deviceId");
   }
 
-  const region = cleanText(body.region) || null;
-  if (region !== null && region.length > MAX_REGION) {
+  /* 属地：优先用边缘判定（request.cf，浏览器伪造不了），拿不到才退回前端带的值。
+     2026-11-15 起只记省名：老客户端带「广东 深圳」也会被裁成「广东」，
+     榜单上不再出现城市，长度也稳定在一两个字。 */
+  const clientRegion = cleanText(body.region) || null;
+  if (clientRegion !== null && clientRegion.length > MAX_REGION) {
     return fail(request, 400, "invalid_region", "region 不能超过 " + MAX_REGION + " 字");
   }
+  const region = regionOf(request) || provinceOnly(clientRegion);
 
   const avatar = typeof body.avatar === "string" ? body.avatar : null;
   if (avatar !== null && (avatar.length > MAX_AVATAR || avatar.indexOf("data:image/") !== 0)) {

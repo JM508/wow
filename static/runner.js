@@ -1437,8 +1437,10 @@
   function renderRegion() {
     if (!elMeRegion) return;
     var rg = (CLOUD && CLOUD.scores && CLOUD.scores.region) ? CLOUD.scores.region() : "";
+    /* 只显示省份（2026-11-15）：老缓存里可能是「广东 深圳」，取第一段 */
+    rg = String(rg || "").trim().split(/\s+/)[0];
     if (rg) {
-      elMeRegion.textContent = "IP " + String(rg).slice(0, 32);
+      elMeRegion.textContent = "IP " + rg.slice(0, 32);
       elMeRegion.classList.remove("hidden");
     } else {
       elMeRegion.textContent = "";

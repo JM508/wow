@@ -37,6 +37,11 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  /* 属地只显示省级（2026-11-15）：老行里是「广东 深圳」两段，取第一段 */
+  function provOf(v) {
+    var s = String(v == null ? "" : v).trim();
+    return s ? s.split(/\s+/)[0].slice(0, 32) : "";
+  }
   function fmtDay(iso) {
     var d = new Date(iso);
     if (isNaN(d.getTime())) return "";
@@ -105,8 +110,8 @@
       var r = rows[i];
       var no = i + 1;
       var mine = mineSet && mineSet[r.nickname];
-      /* IP 属地（省级/国家级，来自提交成绩时的边缘判定；老行/取不到时不显示） */
-      var rg = r && r.region ? String(r.region).slice(0, 32) : "";
+      /* IP 属地（省级，来自提交成绩时的边缘判定；老行/取不到时不显示） */
+      var rg = provOf(r && r.region);
       html += "<li class='rank-row" + (mine ? " is-me" : "") + "'>" +
         "<b class='rank-no " + (no <= 3 ? "rank-top" + no : "") + "'>" + no + "</b>" +
         avatarHtml(r) +

@@ -385,7 +385,17 @@
     var d = db();
     if (!d) return Promise.resolve({ data: null, error: envUnavailable() });
     submitInflight = true;
-    return scoreSubmitGo(entry)["finally"](function () { submitInflight = false; });
+    /* 属地缓存为空时先补取一次（最多等 2 秒）：
+       以前只读缓存，缓存没取到这一局就永久没有属地，榜单上那一行只剩昵称。
+       拉不到也不拦提交，2 秒后照常写库。 */
+    var ready = regionGet()
+      ? Promise.resolve(null)
+      : Promise.race([
+          regionFetch(true)["catch"](function () { return null; }),
+          new Promise(function (r) { global.setTimeout(r, 2000); })
+        ]);
+    return ready.then(function () { return scoreSubmitGo(entry); })
+      ["finally"](function () { submitInflight = false; });
   }
 
   function scoreSubmitGo(entry) {
