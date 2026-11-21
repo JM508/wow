@@ -10,7 +10,8 @@
   /* 画布近乎纯黑，木鱼是白剪影，嘴缝直接用画布色「咬」出来 */
   --wf-canvas: #0d0d0f;
   --wf-fish: #ffffff;
-  --wf-mark: #ffffff;
+  /* 飘字固定用白 + difference 混合，深浅两套主题都读得清，浅色块不再覆盖 */
+  --wf-plus: #ffffff;
   /* 纯黑画布上 #888 的灰字会发闷，说明文字统一提到这个亮度；描边也一起提，
      否则按钮只剩两行字挂在黑底上（与设置页 .set-btn 同一个坑）。 */
   --wf-soft: rgba(255, 255, 255, 0.7);
@@ -31,7 +32,6 @@
 html[data-theme="light"] #wf-root {
   --wf-canvas: #ffffff;
   --wf-fish: #131315;
-  --wf-mark: #131315;
   --wf-soft: rgba(0, 0, 0, 0.66);
   --wf-line: rgba(0, 0, 0, 0.2);
   border-color: rgba(0, 0, 0, 0.14);
@@ -78,7 +78,7 @@ html[data-theme="light"] #wf-root {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0 4px;
+  padding: 20px 0 12px;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -118,9 +118,9 @@ html[data-theme="light"] #wf-root {
 .wf-fish-btn.is-hit .wf-fish { transform: scale(0.968, 0.94) translateY(4px); }
 
 /* ── 功德 +1 飘字 ──
-   位置必须落在木鱼「头顶」上方：木鱼本体占舞台八成高，早先 bottom:42% 落在鱼肚上，
-   飘字又是木色系，压在同色木鱼上等于看不见（2026-11-21 截图核对后上移）。
-   换成黑白稿后飘字跟木鱼同色，靠「在头顶上方不重叠」保证可读。 */
+   黑白稿里飘字与木鱼同色，压在木鱼上就看不见；卡片又只有木鱼头顶那点空，
+   单靠挪位必然撞顶栏。改用 difference 混合：白字压白鱼变黑、压黑底仍是白，
+   从鱼身升到头顶全程可读，也不必为它加留白。 */
 .wf-float {
   position: absolute;
   inset: 0;
@@ -129,42 +129,28 @@ html[data-theme="light"] #wf-root {
 }
 .wf-plus {
   position: absolute;
-  bottom: 88%;
+  bottom: 74%;
   transform: translateX(-50%);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  color: var(--wf-mark);
+  /* 白字 + difference：深色主题下白字落黑底是白、落白鱼变黑；
+     浅色主题下白字落白底变黑、落黑鱼变白。两套主题都读得清，故不跟随 --wf-fish。 */
+  color: var(--wf-plus);
+  mix-blend-mode: difference;
   animation: wf-rise 0.95s ease-out forwards;
 }
 @keyframes wf-rise {
   0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
   14% { opacity: 1; }
   70% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -64px) scale(1.04); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -58px) scale(1.04); }
 }
 
 .wf-hint {
   margin: 10px 0 0;
   font-size: 13px;
-  color: var(--wf-soft);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-.wf-hint-off { opacity: 0; transform: translateY(-4px); }
-
-.wf-sub {
-  margin: 14px 0 0;
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-  color: var(--wf-soft);
-}
-.wf-note {
-  margin: 6px 0 0;
-  font-size: 12px;
-  line-height: 1.7;
-  text-align: center;
   color: var(--wf-soft);
 }
 

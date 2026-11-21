@@ -16,15 +16,12 @@
   if (!root) return;
 
   var KEY = "wow-wf-count-v1";
-  var MILESTONE = 10000;
   var SEND_EVERY = 12;          // 每敲 12 下上报一次
   var SEND_IDLE_MS = 10000;     // 或者停手 10 秒后补一次
   var FLY_MAX = 6;              // 同时存在的飘字上限（连击已合并，留几个就够）
   var COMBO_MS = 400;           // 这个窗口内的连点合并到同一个飘字
 
   var elCount = document.getElementById("wf-count");
-  var elSub = document.getElementById("wf-sub");
-  var elHint = document.getElementById("wf-hint");
   var elFloat = document.getElementById("wf-float");
   var elFish = document.getElementById("wf-fish");
   var elStage = document.getElementById("wf-stage");
@@ -118,12 +115,6 @@
 
   function paint() {
     if (elCount) elCount.textContent = fmt(count);
-    if (elSub) {
-      var left = MILESTONE - count;
-      elSub.textContent = left > 0
-        ? "累计敲击 " + fmt(count) + " 次 · 再敲 " + fmt(left) + " 次解锁成就「手指酸痛者」"
-        : "累计敲击 " + fmt(count) + " 次 · 已解锁成就「手指酸痛者」";
-    }
   }
 
   /* ── 成就引擎对齐 ──
@@ -215,14 +206,7 @@
     if (document.visibilityState === "hidden") send();
   });
 
-  /* 提示语随第一次敲击消失，别一直占着位置 */
-  function hideHint() {
-    if (elHint && !elHint.classList.contains("wf-hint-off")) {
-      elHint.classList.add("wf-hint-off");
-    }
-  }
-  if (elFish) elFish.addEventListener("click", hideHint, { once: true });
-
+  /* 下面两段说明已按用户要求去掉，提示语就这一行，常驻不淡出 */
   count = loadCount();
   paint();
   syncAch();
