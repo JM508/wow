@@ -19,7 +19,8 @@
   var MILESTONE = 10000;
   var SEND_EVERY = 12;          // 每敲 12 下上报一次
   var SEND_IDLE_MS = 10000;     // 或者停手 10 秒后补一次
-  var FLY_MAX = 14;             // 同时存在的飘字上限，避免连点把 DOM 撑爆
+  var FLY_MAX = 6;              // 同时存在的飘字上限（连击已合并，留几个就够）
+  var COMBO_MS = 400;           // 这个窗口内的连点合并到同一个飘字
 
   var elCount = document.getElementById("wf-count");
   var elSub = document.getElementById("wf-sub");
@@ -76,9 +77,29 @@
   }
 
   /* ── 飘字：功德 +1 ──
-     位置用 CSSOM 赋值（CSP 只拦 HTML 里的 style 属性，不拦 JS 赋值） */
+     位置用 CSSOM 赋值（CSP 只拦 HTML 里的 style 属性，不拦 JS 赋值）。
+     连点合并：0.4 秒内的连击不再各长一个新字（那样会在木鱼头顶糊成一坨），
+     而是把同一个飘字的数字往上加、动画重放一次，显示成「功德 +3」。 */
+  var lastPlus = null, lastPlusAt = 0, comboN = 0;
+
   function flyPlus() {
-    if (!elFloat || flying >= FLY_MAX) return;
+    if (!elFloat) return;
+    var now = Date.now();
+    if (lastPlus && lastPlus.parentNode && now - lastPlusAt < COMBO_MS && flying < FLY_MAX) {
+      comboN += 1;
+      lastPlus.textContent = "功德 +" + comboN;
+      lastPlus.style.left = (44 + Math.random() * 12).toFixed(1) + "%";
+      lastPlus.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
+      /* 重启动画：先摘掉再强制重排，最后交还给样式表里的原动画 */
+      lastPlus.style.animation = "none";
+      /* eslint-disable-next-line no-unused-expressions */
+      void lastPlus.offsetWidth;
+      lastPlus.style.animation = "";
+      lastPlusAt = now;
+      return;
+    }
+    if (flying >= FLY_MAX) return;
+    comboN = 1;
     var el = document.createElement("span");
     el.className = "wf-plus";
     el.textContent = "功德 +1";
@@ -86,9 +107,12 @@
     el.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
     elFloat.appendChild(el);
     flying++;
+    lastPlus = el;
+    lastPlusAt = now;
     setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
       flying = Math.max(0, flying - 1);
+      if (lastPlus === el) lastPlus = null;
     }, 1000);
   }
 
