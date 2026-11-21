@@ -35,7 +35,11 @@ CREATE INDEX IF NOT EXISTS idx_ms_mode_time ON ms_scores (mode, seconds, created
 CREATE INDEX IF NOT EXISTS idx_ms_device_day ON ms_scores (device_id, created_at);
 
 -- 「我的最好成绩」与去重：WHERE mode = ? AND nickname = ?
-CREATE INDEX IF NOT EXISTS idx_ms_name_best ON ms_scores (mode, nickname, seconds);
+-- 2026-11-21 把 created_at 并入（原来是 mode, nickname, seconds）：
+-- 查询是 ORDER BY seconds ASC, created_at ASC LIMIT 1 且要 SELECT created_at，
+-- 三列版排序后仍得回表取 created_at，优化器因此宁愿用 idx_ms_mode_time 扫整个 mode
+-- （EXPLAIN 实测 mode=? 后用不上 nickname）。四列版覆盖整条查询，SEARCH + COVERING。
+CREATE INDEX IF NOT EXISTS idx_ms_name_best ON ms_scores (mode, nickname, seconds, created_at);
 
 -- 单日按昵称防刷（登录玩家没有 device_id，只能按昵称限流）
 CREATE INDEX IF NOT EXISTS idx_ms_name_day ON ms_scores (nickname, created_at);
