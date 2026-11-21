@@ -1,18 +1,20 @@
 /* ══════════════════════════════════════════════════════════════
    敲木鱼（/woodfish/，2026-11-21）
    ──────────────────────────────────────────────────────────────
-   木鱼与槌子都是内联 SVG，颜色全部走下面的 --wf-* 变量（深浅两套），
+   视觉按用户给的黑白稿走：纯色画布 + 一块实心木鱼剪影 + 一道豁到右缘的嘴缝，
+   没有木纹、眼睛、槌子和投影。木鱼、嘴缝、飘字全部走 --wf-* 变量（深浅两套），
    不写死在 path 上；动效只用 transform / opacity，减少动效模式下自动关掉。
    ══════════════════════════════════════════════════════════════ */
 
 #wf-root {
-  --wf-wood: #b0763c;
-  --wf-wood-d: #7f4f22;
-  --wf-wood-l: #d8a66c;
-  --wf-stick-c: #a9713c;
-  --wf-stick-h: #c98f56;
-  --wf-shadow: rgba(0, 0, 0, 0.16);
-  --wf-gold: #ffd76a;      /* 飘字用亮金：压在木鱼或深色卡片上都看得清 */
+  /* 画布近乎纯黑，木鱼是白剪影，嘴缝直接用画布色「咬」出来 */
+  --wf-canvas: #0d0d0f;
+  --wf-fish: #ffffff;
+  --wf-mark: #ffffff;
+  /* 纯黑画布上 #888 的灰字会发闷，说明文字统一提到这个亮度；描边也一起提，
+     否则按钮只剩两行字挂在黑底上（与设置页 .set-btn 同一个坑）。 */
+  --wf-soft: rgba(255, 255, 255, 0.7);
+  --wf-line: rgba(255, 255, 255, 0.22);
   --wf-focus: #4f8cff;
   max-width: 560px;
   /* 卡片承载：页面底色透明、整屏壁纸会直接从下面透上来，
@@ -20,17 +22,19 @@
   box-sizing: border-box;
   margin: 16px auto 24px;
   padding: 18px 16px 20px;
-  border: 1px solid var(--border, #e0e0e0);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
-  background: var(--code-bg, #f6f6f6);
+  background: var(--wf-canvas);
 }
 
+/* 浅色主题整体反相：白画布 + 黑木鱼，对比关系与深色版一致 */
 html[data-theme="light"] #wf-root {
-  --wf-wood: #bd8347;
-  --wf-wood-d: #7a4a1e;
-  --wf-wood-l: #e2b47c;
-  --wf-shadow: rgba(0, 0, 0, 0.1);
-  --wf-gold: #8a5f00;      /* 浅色卡片上用深金，亮金在白底上会发虚 */
+  --wf-canvas: #ffffff;
+  --wf-fish: #131315;
+  --wf-mark: #131315;
+  --wf-soft: rgba(0, 0, 0, 0.66);
+  --wf-line: rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.14);
 }
 
 /* ── 顶栏：功德数 + 两个入口 ── */
@@ -50,7 +54,7 @@ html[data-theme="light"] #wf-root {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
 }
-.wf-merit-l { font-size: 12px; color: var(--secondary, #888); }
+.wf-merit-l { font-size: 12px; color: var(--wf-soft); }
 
 .wf-actions { display: flex; gap: 8px; flex: none; }
 .wf-btn {
@@ -60,7 +64,7 @@ html[data-theme="light"] #wf-root {
   font-weight: 700;
   color: var(--primary, #1f1f1f);
   background: transparent;
-  border: 1px solid var(--border, #ddd);
+  border: 1px solid var(--wf-line);
   border-radius: 10px;
   cursor: pointer;
   transition: background-color 0.18s ease, border-color 0.18s ease;
@@ -92,8 +96,8 @@ html[data-theme="light"] #wf-root {
 .wf-fish-wrap {
   position: relative;
   display: block;
-  /* 280 是量出来的：木鱼再大就把「头顶」挤没了，飘字只能贴着顶栏走 */
-  width: min(66vw, 280px);
+  /* 300 是量出来的：木鱼再大就把「头顶」挤没了，飘字只能贴着顶栏走 */
+  width: min(72vw, 300px);
 }
 
 .wf-fish {
@@ -101,37 +105,22 @@ html[data-theme="light"] #wf-root {
   width: 100%;
   height: auto;
   overflow: visible;
-  transform-origin: 50% 82%;
+  /* 支点压在底部偏下：敲下去像整块木头往下沉，而不是绕中心转 */
+  transform-origin: 50% 88%;
   transition: transform 0.11s ease-out;
 }
 
-.wf-body { fill: var(--wf-wood); stroke: var(--wf-wood-d); stroke-width: 3; }
-.wf-mouth { fill: var(--wf-wood-d); opacity: 0.82; }
-.wf-line { fill: none; stroke: var(--wf-wood-l); stroke-width: 3.4; stroke-linecap: round; opacity: 0.8; }
-.wf-line-2 { opacity: 0.55; }
-.wf-eye { fill: var(--wf-wood-d); }
-.wf-shadow { fill: var(--wf-shadow); }
+.wf-body { fill: var(--wf-fish); }
+/* 嘴缝用画布色：形状一路豁到右缘，白块自然被切成上下两瓣 */
+.wf-mouth { fill: var(--wf-canvas); }
 
-.wf-stick {
-  position: absolute;
-  right: -4%;
-  top: -10%;
-  width: 44%;
-  height: auto;
-  transform-origin: 58% 82%;
-  transform: rotate(-10deg);
-  transition: transform 0.12s ease-out;
-}
-.wf-stick-handle { fill: var(--wf-stick-h); }
-.wf-stick-head { fill: var(--wf-stick-c); stroke: var(--wf-wood-d); stroke-width: 2; }
-
-/* 敲下去：木鱼轻微下压，槌子再压一点 —— 用 transition 回弹，连点也不卡 */
-.wf-fish-btn.is-hit .wf-fish { transform: scale(0.972, 0.952) translateY(3px); }
-.wf-fish-btn.is-hit .wf-stick { transform: rotate(-27deg); }
+/* 敲下去：整块下沉并略压扁，用 transition 回弹，连点也不卡 */
+.wf-fish-btn.is-hit .wf-fish { transform: scale(0.968, 0.94) translateY(4px); }
 
 /* ── 功德 +1 飘字 ──
    位置必须落在木鱼「头顶」上方：木鱼本体占舞台八成高，早先 bottom:42% 落在鱼肚上，
-   飘字又是木色系，压在同色木鱼上等于看不见（2026-11-21 截图核对后上移并提亮）。 */
+   飘字又是木色系，压在同色木鱼上等于看不见（2026-11-21 截图核对后上移）。
+   换成黑白稿后飘字跟木鱼同色，靠「在头顶上方不重叠」保证可读。 */
 .wf-float {
   position: absolute;
   inset: 0;
@@ -140,25 +129,26 @@ html[data-theme="light"] #wf-root {
 }
 .wf-plus {
   position: absolute;
-  bottom: 84%;
+  bottom: 88%;
   transform: translateX(-50%);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  color: var(--wf-gold);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 10px rgba(0, 0, 0, 0.3);
+  color: var(--wf-mark);
   animation: wf-rise 0.95s ease-out forwards;
 }
 @keyframes wf-rise {
-  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.86); }
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
   14% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -70px) scale(1.06); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -64px) scale(1.04); }
 }
 
 .wf-hint {
   margin: 10px 0 0;
   font-size: 13px;
-  color: var(--secondary, #888);
+  color: var(--wf-soft);
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 .wf-hint-off { opacity: 0; transform: translateY(-4px); }
@@ -168,19 +158,18 @@ html[data-theme="light"] #wf-root {
   font-size: 13px;
   font-weight: 600;
   text-align: center;
-  color: var(--secondary, #888);
+  color: var(--wf-soft);
 }
 .wf-note {
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.7;
   text-align: center;
-  color: var(--secondary, #888);
+  color: var(--wf-soft);
 }
 
 /* 减少动效：不再缩放 / 飘动，只保留数字变化（无障碍开关来自 /settings/） */
-html.a11y-calm .wf-fish,
-html.a11y-calm .wf-stick { transition: none; }
+html.a11y-calm .wf-fish { transition: none; }
 html.a11y-calm .wf-fish-btn.is-hit .wf-fish { transform: none; }
 html.a11y-calm .wf-plus { animation-duration: 0.45s; }
 
