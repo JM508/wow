@@ -829,10 +829,14 @@ html.a11y-calm .wp-fav:hover { transform: none; }
   text-align: center;
   text-decoration: none;
   background: transparent;
-  border: 1px solid var(--border, #ddd);
+  /* 边框不用 --border：暗色主题下它是 #333，压在 #2a2a2a 的卡片上看不出边缘，
+     整行按钮会变成「一行飘着的字」。半透明灰在明暗两套主题里都立得住。 */
+  border: 1px solid rgba(127, 127, 127, 0.45);
   border-radius: 10px;
   cursor: pointer;
 }
+/* 正文链接的通用下划线会打到 <a class="set-btn"> 上，这里按同一特异性收回来 */
+.md-content a.set-btn { text-decoration: none; }
 .set-btn:hover { background: var(--tertiary, rgba(127, 127, 127, 0.1)); }
 .set-btn.is-on { color: #4f8cff; border-color: #4f8cff; }
 
