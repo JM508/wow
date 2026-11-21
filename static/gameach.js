@@ -15,11 +15,12 @@
 
   var SCOPE = document.getElementById("ms-root") ? "ms"
     : document.getElementById("snake-root") ? "snake"
+    : document.getElementById("wf-root") ? "wf"
     : document.getElementById("ttt-root") ? "ttt" : null;
-  if (!SCOPE) return;                       // 只在三个游戏页启用
+  if (!SCOPE) return;                       // 只在游戏页启用
 
-  var GAME_NAME = { ms: "扫雷", ttt: "井字棋", snake: "贪吃蛇" }[SCOPE];
-  var KEY = { ms: "ms-ach", ttt: "ttt-ach", snake: "snake-ach" }[SCOPE];
+  var GAME_NAME = { ms: "扫雷", ttt: "井字棋", snake: "贪吃蛇", wf: "敲木鱼" }[SCOPE];
+  var KEY = { ms: "ms-ach", ttt: "ttt-ach", snake: "snake-ach", wf: "wf-ach" }[SCOPE];
 
   /* ═══════════════ 成就定义 ═══════════════
      c = { s: 累计统计, e: 本次事件 }。
@@ -131,6 +132,16 @@
         test: function (c) { return c.s.games >= 20; } },
       { id: "all_done", name: "达成全部成就", desc: "？？？",
         hidden: true, test: function () { return false; } }
+    ],
+
+    /* ─────────── 敲木鱼（2026-11-21）───────────
+       用户要求先做一个：累计敲 1 万次解锁「手指酸痛者」。
+       其余成就等他想好了再加，这里只留这一条 + 隐藏的全成就。 */
+    wf: [
+      { id: "clicks10000", name: "手指酸痛者", desc: "累计敲击 10000 次",
+        test: function (c) { return c.s.clicks >= 10000; } },
+      { id: "all_done", name: "达成全部成就", desc: "？？？",
+        hidden: true, test: function () { return false; } }
     ]
   }[SCOPE];
 
@@ -141,7 +152,8 @@
              w_easy: 0, w_mid: 0, w_hard: 0, bsec_easy: 0, bsec_mid: 0, bsec_hard: 0 },
     ttt:   { games: 0, wins: 0, losses: 0, draws: 0, streak: 0,
              w_easy: 0, w_mid: 0, w_hard: 0, l_easy: 0, l_mid: 0, l_hard: 0 },
-    snake: { games: 0, apples: 0, best: 0, bestLen: 0, b_easy: 0, b_mid: 0, b_hard: 0 }
+    snake: { games: 0, apples: 0, best: 0, bestLen: 0, b_easy: 0, b_mid: 0, b_hard: 0 },
+    wf:    { clicks: 0 }
   }[SCOPE];
 
   var data = load();
@@ -236,6 +248,9 @@
           if (sc2 > s[bk2]) s[bk2] = sc2;
         }
       }
+    } else if (SCOPE === "wf") {
+      /* 敲一下报一次 tap：这里只累加，判定交给 evaluate */
+      if (ev.kind === "tap") s.clicks += Math.max(1, ev.n | 0 || 1);
     }
   }
 

@@ -492,6 +492,12 @@
     notify(false);
   }
 
+  /* 个人中心里改完昵称或头像，已经开着的榜单要立刻换成新资料（2026-11-21 用户要求）。
+     只重取不清空：失败时保留旧的一屏，不至于白屏。 */
+  ["rank:nick-changed", "rank:avatar-changed"].forEach(function (ev) {
+    document.addEventListener(ev, function () { if (isOpen()) load(cur.mode); });
+  });
+
   if (btnOpen) btnOpen.addEventListener("click", function () { open(cur.mode); });
   if (btnClose) btnClose.addEventListener("click", close);
   panel.addEventListener("click", function (e) { if (e.target === panel) close(); });

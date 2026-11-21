@@ -92,14 +92,15 @@
   .games-entry-btn { min-width: 196px; padding: 12px 38px; font-size: 16px; }
 }
 
-/* 次级入口（首页「壁纸」）：同为透明底，整钮降一档透明度，不跟主按钮抢注意力。
-   首页按钮压在背景图上，主题的 --border/--secondary 在深色下太暗会隐身，
-   所以边框/文字用带透明度的中性白，明暗主题都可读。 */
+/* 首页三个入口（游戏 / 壁纸 / 工具）：2026-11-21 用户要求统一颜色，
+   ghost 不再降透明度、不再换边框色，肉眼看上去与主按钮完全一致。
+   保留这个类名是因为无障碍高对比与背景图模式（data-ag-bg）还有针对它的
+   配色规则，直接删类会让那两种模式下少一层兜底。 */
 .games-entry-btn.games-entry-ghost {
   color: var(--primary, #1f1f1f);
   background: transparent;
-  border: 1px solid rgba(128, 128, 128, 0.8);
-  opacity: 0.78;
+  border: 1px solid var(--primary, #1f1f1f);
+  opacity: 1;
 }
 .games-entry-btn.games-entry-ghost:hover {
   color: var(--primary, #1f1f1f);
@@ -813,6 +814,28 @@ html.a11y-calm .wp-fav:hover { transform: none; }
 .set-note:last-child { margin-bottom: 0; }
 .set-note a { text-decoration: underline; }
 
+/* 设置页的动作按钮（打开统计面板 / 安装到桌面 / 界面语言）：整行描边按钮 */
+.set-btn {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--primary, #1f1f1f);
+  text-align: center;
+  text-decoration: none;
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.set-btn:hover { background: var(--tertiary, rgba(127, 127, 127, 0.1)); }
+.set-btn.is-on { color: #4f8cff; border-color: #4f8cff; }
+
 .set-foot {
   display: flex;
   align-items: center;
@@ -951,6 +974,8 @@ footer.footer { color: var(--primary, #1f1f1f); }
   transition: width 0.4s ease;
 }
 .games-2048:hover { background: linear-gradient(135deg, #f59e0b, #ef4444); box-shadow: 0 12px 26px -12px rgba(245, 158, 11, 0.9); }
+/* 敲木鱼（2026-11-21）：木色到暖金，跟木鱼的木纹一个色系 */
+.games-wf:hover { background: linear-gradient(135deg, #b0763c, #d8a94b); box-shadow: 0 12px 26px -12px rgba(176, 118, 60, 0.9); }
 
 /* ═══ PWA 安装条（static/pwa.js 动态插入） ═══
    贴底显示、安全区留白；样式全在类里，JS 只建节点不写内联样式（CSP） */
@@ -1097,7 +1122,7 @@ footer.footer { color: var(--primary, #1f1f1f); }
 }
 .wpd-meta-note { margin: 10px 0 0; font-size: 11px; color: var(--secondary, #999); }
 
-/* ══ 工具页（/tools/）超分辨率 ══
+/* ══ 工具页（/tools/upscale/）画质提升 ══
    2026-11-08 改版：单列四块——标题 / 模型 / 选图 / 开始增强，
    一屏内能选完，手机上不用来回滚。配色仍走站点主题变量，
    深浅色都跟着站点走，不另起一套。 */
@@ -1173,6 +1198,22 @@ footer.footer { color: var(--primary, #1f1f1f); }
   transition: border-color 0.15s ease;
 }
 .tool-drop:hover .tool-pick { border-color: #4f8cff; }
+/* 选好图之后：占位文案收起，换成缩略图（2026-11-21 用户要求） */
+.tool-drop-img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  margin: 0 auto 10px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: rgba(127, 127, 127, 0.08);
+}
+.tool-drop-img[hidden] { display: none; }
+.tool-drop.has-img { border-style: solid; padding: 12px; }
+.tool-drop.has-img .tool-drop-ico,
+.tool-drop.has-img .tool-drop-t,
+.tool-drop.has-img .tool-drop-s { display: none; }
+.tool-drop.has-img .tool-pick { margin-top: 2px; }
 .tool-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .tool-fileinfo {
   margin: 8px 0 0;
@@ -1219,7 +1260,8 @@ footer.footer { color: var(--primary, #1f1f1f); }
   height: 100%;
   background: #4f8cff;
   border-radius: 999px;
-  transition: width 0.2s ease;
+  /* 0.45s 让计算阶段的分块进度看起来是连续走的（用户反馈 25% 一跳） */
+  transition: width 0.45s ease;
 }
 .tool-status { margin: 10px 0 0; min-height: 18px; font-size: 13px; text-align: center; color: var(--secondary, #777); }
 .tool-tip { margin: 6px 0 0; font-size: 12px; text-align: center; color: #c08a00; }

@@ -79,17 +79,12 @@
       <span class="me-nick-lab" data-i18n="me.cloud">云账号</span>
       <div class="me-acc-row" id="me-acc-guest">
         <span class="me-acc-who">未登录 · 成绩以「访客 N」上榜</span>
-        <button type="button" class="me-btn me-btn-main" id="me-login-open" data-i18n="me.login">登录云账号</button>
+        {{- /* 2026-11-21 用户要求：点这个按钮直接去账号页，不再就地展开邮箱密码表单 */}}
+        <a class="me-btn me-btn-main" href="/account/" id="me-login-open" data-i18n="me.login">登录云账号</a>
       </div>
       <div class="me-acc-row hidden" id="me-acc-on">
         <span class="me-acc-who" id="me-acc-who">已登录</span>
         <button type="button" class="me-btn" id="me-logout" data-i18n="me.logout">退出登录</button>
-      </div>
-      <div class="me-login hidden" id="me-login-box">
-        <input id="me-login-email" type="email" placeholder="邮箱" autocomplete="email" inputmode="email">
-        <input id="me-login-pass" type="password" placeholder="密码（至少 8 位）" autocomplete="current-password">
-        <button type="button" class="me-btn me-btn-main" id="me-login-go">登录</button>
-        <p class="me-hint" id="me-login-hint">还没有账号？去 <a href="/account/">账号页</a> 用邮箱验证码注册；忘记密码也在那里找回。</p>
       </div>
     </section>
 
@@ -129,27 +124,13 @@
       <button type="button" class="me-btn me-btn-wide" id="me-game-set" data-i18n="me.gameset">打开本游戏设置</button>
       <p class="me-hint" data-i18n="me.disp.hint">显示设置只记在这台设备上，不影响账号数据。</p>
     </section>
-    <section class="me-card">
-      <span class="me-nick-lab" data-i18n="me.stats">统计面板</span>
-      <a class="me-btn me-btn-wide" href="/stats/" data-i18n="me.stats.open">打开统计面板</a>
-      <p class="me-hint" data-i18n="me.stats.hint">各游戏游玩局数、最佳成绩与成就完成度都在这里。</p>
-    </section>
-    <section class="me-card">
-      <span class="me-nick-lab" data-i18n="me.install">安装到桌面</span>
-      <button type="button" class="me-btn me-btn-wide" id="me-pwa-btn">安装 / 添加到主屏幕</button>
-      <p class="me-hint" id="me-pwa-hint">装好后断网也能玩，打开更快，不占额外空间。</p>
-    </section>
-    <section class="me-card">
-      <span class="me-nick-lab" data-i18n="me.lang">界面语言</span>
-      <div class="me-switches" role="group" aria-label="界面语言">
-        <button type="button" class="me-sw" id="me-lang-sw" aria-pressed="false">中文</button>
-      </div>
-      <p class="me-hint">切换后页标题、设置项与页脚链接会跟着变；游戏内的玩法说明仍是中文。</p>
-    </section>
+    {{- /* 2026-11-21 用户要求：统计面板、安装到桌面、界面语言三块搬到首页设置页（/settings/），
+           这里不再重复。留在本页签的只剩「本机显示设置」与云账号退出。 */}}
     <section class="me-card">
       <span class="me-nick-lab" data-i18n="me.cloud">云账号</span>
       <button type="button" class="me-btn me-btn-wide hidden" id="me-set-logout" data-i18n="me.logout">退出登录</button>
       <p class="me-hint" id="me-set-logout-hint">未登录。要退出登录，请先在「个人」页登录。</p>
+      <p class="me-hint"><a href="/settings/">显示设置、安装到桌面、界面语言</a> 都挪到首页的设置页了。</p>
     </section>
   </div>
 </div>

@@ -1,0 +1,191 @@
+/* ══════════════════════════════════════════════════════════════
+   敲木鱼（/woodfish/，2026-11-21）
+   ──────────────────────────────────────────────────────────────
+   木鱼与槌子都是内联 SVG，颜色全部走下面的 --wf-* 变量（深浅两套），
+   不写死在 path 上；动效只用 transform / opacity，减少动效模式下自动关掉。
+   ══════════════════════════════════════════════════════════════ */
+
+#wf-root {
+  --wf-wood: #b0763c;
+  --wf-wood-d: #7f4f22;
+  --wf-wood-l: #d8a66c;
+  --wf-stick-c: #a9713c;
+  --wf-stick-h: #c98f56;
+  --wf-shadow: rgba(0, 0, 0, 0.16);
+  --wf-gold: #ffd76a;      /* 飘字用亮金：压在木鱼或深色卡片上都看得清 */
+  --wf-focus: #4f8cff;
+  max-width: 560px;
+  /* 卡片承载：页面底色透明、整屏壁纸会直接从下面透上来，
+     没有这层底板时功德数、提示语直接压在图上看不清（与扫雷页 #ms-root 同一套做法）。 */
+  box-sizing: border-box;
+  margin: 16px auto 24px;
+  padding: 18px 16px 20px;
+  border: 1px solid var(--border, #e0e0e0);
+  border-radius: 14px;
+  background: var(--code-bg, #f6f6f6);
+}
+
+html[data-theme="light"] #wf-root {
+  --wf-wood: #bd8347;
+  --wf-wood-d: #7a4a1e;
+  --wf-wood-l: #e2b47c;
+  --wf-shadow: rgba(0, 0, 0, 0.1);
+  --wf-gold: #8a5f00;      /* 浅色卡片上用深金，亮金在白底上会发虚 */
+}
+
+/* ── 顶栏：功德数 + 两个入口 ── */
+.wf-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wf-merit { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.wf-merit-n {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+.wf-merit-l { font-size: 12px; color: var(--secondary, #888); }
+
+.wf-actions { display: flex; gap: 8px; flex: none; }
+.wf-btn {
+  padding: 8px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary, #1f1f1f);
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+.wf-btn:hover { background: var(--tertiary, rgba(127, 127, 127, 0.1)); border-color: var(--primary, #1f1f1f); }
+.wf-btn:focus-visible { outline: 2px solid var(--wf-focus); outline-offset: 2px; }
+
+/* ── 舞台 ── */
+.wf-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0 4px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wf-fish-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.wf-fish-btn:focus-visible { outline: 2px solid var(--wf-focus); outline-offset: 6px; border-radius: 18px; }
+
+.wf-fish-wrap {
+  position: relative;
+  display: block;
+  /* 280 是量出来的：木鱼再大就把「头顶」挤没了，飘字只能贴着顶栏走 */
+  width: min(66vw, 280px);
+}
+
+.wf-fish {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  transform-origin: 50% 82%;
+  transition: transform 0.11s ease-out;
+}
+
+.wf-body { fill: var(--wf-wood); stroke: var(--wf-wood-d); stroke-width: 3; }
+.wf-mouth { fill: var(--wf-wood-d); opacity: 0.82; }
+.wf-line { fill: none; stroke: var(--wf-wood-l); stroke-width: 3.4; stroke-linecap: round; opacity: 0.8; }
+.wf-line-2 { opacity: 0.55; }
+.wf-eye { fill: var(--wf-wood-d); }
+.wf-shadow { fill: var(--wf-shadow); }
+
+.wf-stick {
+  position: absolute;
+  right: -4%;
+  top: -10%;
+  width: 44%;
+  height: auto;
+  transform-origin: 58% 82%;
+  transform: rotate(-10deg);
+  transition: transform 0.12s ease-out;
+}
+.wf-stick-handle { fill: var(--wf-stick-h); }
+.wf-stick-head { fill: var(--wf-stick-c); stroke: var(--wf-wood-d); stroke-width: 2; }
+
+/* 敲下去：木鱼轻微下压，槌子再压一点 —— 用 transition 回弹，连点也不卡 */
+.wf-fish-btn.is-hit .wf-fish { transform: scale(0.972, 0.952) translateY(3px); }
+.wf-fish-btn.is-hit .wf-stick { transform: rotate(-27deg); }
+
+/* ── 功德 +1 飘字 ──
+   位置必须落在木鱼「头顶」上方：木鱼本体占舞台八成高，早先 bottom:42% 落在鱼肚上，
+   飘字又是木色系，压在同色木鱼上等于看不见（2026-11-21 截图核对后上移并提亮）。 */
+.wf-float {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.wf-plus {
+  position: absolute;
+  bottom: 84%;
+  transform: translateX(-50%);
+  font-size: 15px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--wf-gold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55), 0 0 10px rgba(0, 0, 0, 0.3);
+  animation: wf-rise 0.95s ease-out forwards;
+}
+@keyframes wf-rise {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.86); }
+  14% { opacity: 1; }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -70px) scale(1.06); }
+}
+
+.wf-hint {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--secondary, #888);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.wf-hint-off { opacity: 0; transform: translateY(-4px); }
+
+.wf-sub {
+  margin: 14px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--secondary, #888);
+}
+.wf-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  color: var(--secondary, #888);
+}
+
+/* 减少动效：不再缩放 / 飘动，只保留数字变化（无障碍开关来自 /settings/） */
+html.a11y-calm .wf-fish,
+html.a11y-calm .wf-stick { transition: none; }
+html.a11y-calm .wf-fish-btn.is-hit .wf-fish { transform: none; }
+html.a11y-calm .wf-plus { animation-duration: 0.45s; }
+
+@media (max-width: 520px) {
+  .wf-merit-n { font-size: 26px; }
+  .wf-btn { padding: 7px 12px; font-size: 12px; }
+  .wf-stage { padding-top: 14px; }
+}

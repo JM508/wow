@@ -1,4 +1,4 @@
-{{- /* 工具页（/tools/）：超分辨率（2026-11-08 改版）。
+{{- /* 工具页（/tools/upscale/）：画质提升（2026-11-08 改版，2026-11-21 由「超分辨率」改名）。
      单列四块：标题 → 模型 → 选图 → 开始增强；不再分「1/2/3/4」步骤，
      选图与模型都在一屏里，按钮压在下方，手机上不用来回滚。
 
@@ -8,11 +8,11 @@
      样式统一在 /site.css；交互在 /tools.js（ESM 动态 import 库本身）。 */ -}}
 <div class="tool-root" id="tool-upscale">
   <header class="tool-hero">
-    <h1 class="tool-hero-t" data-i18n="tools.title">超分辨率</h1>
+    <h1 class="tool-hero-t" data-i18n="tools.title">画质提升</h1>
     <p class="tool-hero-s" data-i18n="tools.sub">画质提升 2× / 4×，图片不出浏览器</p>
   </header>
 
-  <div class="tool-models" role="radiogroup" aria-label="超分模型">
+  <div class="tool-models" role="radiogroup" aria-label="画质提升模型">
     <label class="tool-model is-on">
       <input type="radio" name="tol-model" value="6B" checked>
       <span class="tool-model-n" data-i18n="tools.m6b">Real-ESRGAN</span>
@@ -27,6 +27,8 @@
 
   <div class="tool-drop" id="tol-drop" role="button" tabindex="0"
        aria-label="选择一张图片，也可以把图片拖到这里">
+    {{- /* 选好图之后这里变成预览：占位文案收起，换成缩略图 + 「重新选择」 */}}
+    <img class="tool-drop-img" id="tol-preview" alt="已选择的图片预览" hidden>
     <svg class="tool-drop-ico" viewBox="0 0 24 24" width="36" height="36" aria-hidden="true" focusable="false">
       <rect x="2.6" y="4.2" width="14.2" height="13.6" rx="2.6"
             fill="none" stroke="currentColor" stroke-width="1.6"/>

@@ -48,13 +48,9 @@
     viewLabel: "只看背景图（隐藏页面其他内容）",
     viewExitLabel: "退出看图（恢复页面）",
 
-    // 选「否」时随机跳转的目标（可自由增删）
+    // 选「否」时跳转的目标（2026-11-21 用户要求：固定跳 B 站移动版，不再随机分散）
     noTargets: [
-      { name: "哔哩哔哩", url: "https://www.bilibili.com/" },
-      { name: "快手",     url: "https://www.kuaishou.com/" },
-      { name: "抖音",     url: "https://www.douyin.com/" },
-      { name: "小红书",   url: "https://www.xiaohongshu.com/" },
-      { name: "西瓜视频", url: "https://www.ixigua.com/" }
+      { name: "哔哩哔哩", url: "https://m.bilibili.com/" }
     ],
     noDelay: 1100,   // 选「否」后停留多久（毫秒）再跳转
 
@@ -496,7 +492,7 @@
     }, 320);
   }
 
-  /* ── 拒绝：不写入任何缓存 → 随机跳转短视频官网 ──
+  /* ── 拒绝：不写入任何缓存 → 跳转 B 站移动版 ──
      reason 为 null 时用默认文案（选「否」）；传入文案时用于出生日期核验未满 */
   function reject(el, reason) {
     clearStore();

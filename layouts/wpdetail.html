@@ -45,7 +45,8 @@
     </div>
     <div class="wpd-meta-item">
       <dt>分辨率</dt>
-      <dd><span id="wpd-res">{{ .Params.wpW }} × {{ .Params.wpH }}</span><span class="wpd-ratio" id="wpd-ratio"></span></dd>
+      {{- /* 2026-11-21 用户要求：分辨率后面的比例小字（如 1.96:1）去掉，只留宽 × 高 */}}
+      <dd><span id="wpd-res">{{ .Params.wpW }} × {{ .Params.wpH }}</span></dd>
     </div>
     <div class="wpd-meta-item">
       <dt>大小</dt>
@@ -63,16 +64,7 @@
       <dt>收藏量</dt>
       <dd><span id="wpd-fav-n">—</span></dd>
     </div>
-    <div class="wpd-meta-item">
-      <dt>色系</dt>
-      <dd class="wpd-color">
-        <span class="wpd-swatch" id="wpd-swatch" aria-hidden="true"></span>
-        <span id="wpd-color-name">——</span>
-        <code class="wpd-hex">{{ .Params.wpColor }}</code>
-      </dd>
-    </div>
   </dl>
-  <p class="wpd-meta-note">下载量与收藏量由本站统计，全站累计。</p>
   </div>
 </article>
 

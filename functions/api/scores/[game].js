@@ -12,9 +12,10 @@
 
 import { preflight, fail } from "../../_lib/http.js";
 import { handleMs } from "../../_lib/ms.js";
+import { handleWf } from "../../_lib/wf.js";
 
-const MIGRATED = ["ms"];                        // 已迁到 D1 的游戏
-const KNOWN = ["ms", "runner", "ttt", "snake"]; // 站内存在的游戏，未迁的也要认得，好给准确提示
+const MIGRATED = ["ms", "wf"];                        // 已迁到 D1 的游戏
+const KNOWN = ["ms", "runner", "ttt", "snake", "wf"]; // 站内存在的游戏，未迁的也要认得，好给准确提示
 
 export async function onRequest(context) {
   const { request, params } = context;
@@ -32,5 +33,6 @@ export async function onRequest(context) {
   }
 
   if (game === "ms") return handleMs(context);
+  if (game === "wf") return handleWf(context);
   return fail(request, 501, "game_not_migrated", "该游戏尚未迁到 D1，请走原有云链路");
 }

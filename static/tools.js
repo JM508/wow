@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   工具页 · 超分辨率（2026-11-07 上线，2026-11-08 改版）
+   工具页 · 画质提升（2026-11-07 上线，2026-11-08 改版，2026-11-21 改名）
    ──────────────────────────────────────────────────────────────
    库：upscalejs v2.1.0（ONNX Runtime Web 1.24 内核，MIT）
        → /tools/upscale/upscalejs.es.js（ESM，仅在点开始时动态 import）
@@ -34,6 +34,7 @@
   var MAX_DECODE = 6000;                       // 超过就不解，直接提示先缩小
   var MAX_FILE_MB = 20;
   var SPEED_KEY = "wow-tool-speed-v1";         // { "6B": 每块毫秒, "Swin2SR": 每块毫秒 }
+  var PRE_PCT = 22;                            // 进度条前 22% 给「下载运行环境与模型」，剩下给计算
 
   var root = document.getElementById("tool-upscale");
   if (!root) return;
@@ -50,6 +51,7 @@
   var canvas = document.getElementById("tol-canvas");
   var dimsEl = document.getElementById("tol-dims");
   var dlLink = document.getElementById("tol-dl");
+  var previewEl = document.getElementById("tol-preview");
 
   /* 版本号：跟着 tools.js 的 ?v= 走，库改动后不会吃一年强缓存 */
   var ver = "";
@@ -86,6 +88,97 @@
   function humanSize(bytes) {
     if (bytes >= 1048576) return (Math.round(bytes / 104857.6) / 10) + " MB";
     return Math.round(bytes / 1024) + " KB";
+  }
+
+  /* ── 运行环境预热（2026-11-21）────────────────────────────
+     用户反馈两件事：模型下载慢、进度条一格一格地跳（25% 一跳）。
+     模型走 CDN 且带一年强缓存，首访那十几 MB 省不掉；能做的是
+       ① 选好图就在后台开始下，把「看说明的时间」用来下载；
+       ② 自己用流式 fetch 读字节，进度按真实字节连续走，
+          不再等库在 worker 里下完才从 0 直接跳到下一档。
+     库随后仍会 fetch 同一批 URL，命中 HTTP 缓存不再走网络。 */
+  var WARM = {
+    "6B": [
+      "upscalejs.es.js",
+      "js/ort-wasm-simd-threaded.mjs",
+      "js/ort-wasm-simd-threaded.wasm",
+      "models/RealESRGAN/RealESRGAN_x4plus_anime_6B_uint8.ort"
+    ],
+    Swin2SR: [
+      "upscalejs.es.js",
+      "js/ort-wasm-simd-threaded.mjs",
+      "js/ort-wasm-simd-threaded.wasm",
+      "models/Swin2SR/swin2SR_uint8.ort"
+    ]
+  };
+  var warmed = {};                    // model -> Promise（同一模型只下一次）
+
+  /* 读一个文件并按字节回调；拿不到 content-length 就按「读完算 1」处理 */
+  function bytesDone(url, onBytes) {
+    return fetch(url, { cache: "force-cache" }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      var total = Number(r.headers.get("content-length") || 0);
+      if (!r.body || typeof r.body.getReader !== "function") {
+        return r.arrayBuffer().then(function () { onBytes(1, 1); });
+      }
+      var reader = r.body.getReader();
+      var got = 0;
+      function pump() {
+        return reader.read().then(function (x) {
+          if (x.done) return;
+          got += x.value.length;
+          onBytes(got, total || 1);
+          return pump();
+        });
+      }
+      return pump();
+    });
+  }
+
+  function warmModel(model, onPct) {
+    if (warmed[model]) return warmed[model];
+    var files = WARM[model] || [];
+    var Q = ver ? "?v=" + ver : "";
+    var parts = [];
+    for (var i = 0; i < files.length; i++) parts.push(0);
+    /* 并行下：每个文件一条连接，总时长按最慢的那个算，比串行快一倍多 */
+    var report = function () {
+      if (!onPct) return;
+      var s = 0;
+      for (var k = 0; k < parts.length; k++) s += parts[k];
+      onPct(files.length ? Math.min(1, s / files.length) : 1);
+    };
+    var jobs = files.map(function (rel, idx) {
+      return bytesDone(BASE + rel + Q, function (got, total) {
+        parts[idx] = Math.min(1, got / (total || 1));
+        report();
+      }).then(function () { parts[idx] = 1; report(); },
+              function () { parts[idx] = 1; report(); });  // 单个失败不阻断，事后库自己还会再试
+    });
+    warmed[model] = Promise.all(jobs);
+    return warmed[model];
+  }
+
+  /* ── 选图预览（2026-11-21）────────────────────────────────
+     以前选完图只多出一行「1920 × 1080 · 2 MB」，占位区还是那三个字，
+     看不出到底选中了哪张。现在占位区直接换成缩略图，点一下就能重选。 */
+  function clearPreview() {
+    if (!previewEl) return;
+    var old = previewEl.getAttribute("data-url") || "";
+    if (old) { try { URL.revokeObjectURL(old); } catch (e) {} previewEl.removeAttribute("data-url"); }
+    previewEl.removeAttribute("src");
+    previewEl.hidden = true;
+    if (drop) drop.classList.remove("has-img");
+  }
+
+  function showPreview(file) {
+    if (!previewEl) return;
+    clearPreview();
+    var url = URL.createObjectURL(file);
+    previewEl.setAttribute("data-url", url);
+    previewEl.src = url;
+    previewEl.hidden = false;
+    if (drop) drop.classList.add("has-img");
   }
 
   /* ── 耗时估算：按上次实测的「每块耗时」换算 ──
@@ -136,6 +229,8 @@
     state.model = pickModel();
     if (state.bitmap && !state.busy) {
       say("已选好，点「开始增强」即可" + estimateText(state.model, state.inW, state.inH));
+      /* 换了模型就顺手预取对应的运行环境与模型文件 */
+      warmModel(state.model);
     }
   }
 
@@ -204,6 +299,7 @@
     }
     tip("");
     freeCanvas();
+    clearPreview();
     if (outCard) outCard.hidden = true;
     freeBitmap();
     state.name = (file.name || "image").replace(/\.[^.]+$/, "");
@@ -219,6 +315,10 @@
       state.bitmap = bmp;
       state.inW = bmp.width;
       state.inH = bmp.height;
+      showPreview(file);
+      /* 选好图就开始后台下运行环境与模型：用户读说明、调模型的时间里下完，
+         点「开始增强」时就不用再干等十几 MB。失败无妨，run() 里还会再要一次。 */
+      warmModel(pickModel());
       if (fileInfo) fileInfo.textContent = bmp.width + " × " + bmp.height + " · " + humanSize(file.size);
       if (runBtn) runBtn.disabled = false;
       say("已选好，点「开始增强」即可" + estimateText(pickModel(), bmp.width, bmp.height));
@@ -267,17 +367,23 @@
       })
       .then(function (input) {
         capped = input;
-        say(model === "6B"
-          ? "正在计算…（首次要先下载运行环境与模型，约 18 MB）"
-          : "正在计算…（首次要先下载运行环境与模型，约 21 MB）");
-        return getUpscaler(model);
+        /* 先报下载进度（真实字节），再进计算阶段；两段共用一条进度条，
+           所以不会再出现「停在 25% 好几秒」那种一格一格的观感。 */
+        say("正在准备运行环境…");
+        return warmModel(model, function (p) {
+          var v = p * PRE_PCT;
+          progress(v, true);
+          say(p >= 1 ? "运行环境已就绪，开始计算…" : "正在准备运行环境… " + Math.round(v) + "%");
+        }).then(function () {
+          return getUpscaler(model);
+        });
       })
       .then(function (up) {
         tStart = Date.now();
         return up.upscale(capped, {
           onProgress: function (pct) {
-            var p = Math.round(pct || 0);
-            progress(p, true);
+            var p = Math.max(0, Math.min(100, Math.round(pct || 0)));
+            progress(PRE_PCT + p * (100 - PRE_PCT) / 100, true);
             say("正在计算… " + p + "%");
           }
         });
@@ -395,6 +501,7 @@
   window.addEventListener("pagehide", function () {
     freeCanvas();
     freeBitmap();
+    clearPreview();
     destroyUpscaler();
   });
 

@@ -385,9 +385,13 @@
   });
 
   /* 取名入口已挪到个人中心「个人」页（me.js）——这里不再渲染昵称输入行。
-     me.js 改名成功后会派发 rank:nick-changed，本模块据此刷新榜单与重名状态。 */
+     me.js 改名成功后会派发 rank:nick-changed，本模块据此刷新榜单与重名状态。
+     头像同理（2026-11-21）：换头像后榜上那一行要立刻换脸。 */
   document.addEventListener("rank:nick-changed", function () {
     flushPending();
+    if (isOpen()) refresh();
+  });
+  document.addEventListener("rank:avatar-changed", function () {
     if (isOpen()) refresh();
   });
 

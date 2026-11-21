@@ -242,7 +242,11 @@
     return CLOUD.avatar.set(dataUrl).then(function (r) {
       renderAvatar();
       if (r && r.error) toast("头像保存失败：" + (CLOUD.describe ? CLOUD.describe(r.error) : "未知错误"));
-      else toast(dataUrl ? "头像已保存" : "已移除头像");
+      else {
+        toast(dataUrl ? "头像已保存" : "已移除头像");
+        /* 2026-11-21：榜上那行头像是快照，改完要让各榜单立刻重取，不用刷新页面 */
+        document.dispatchEvent(new CustomEvent("rank:avatar-changed"));
+      }
     });
   }
 

@@ -51,8 +51,8 @@
     "footer.dmca": "DMCA",
     "footer.cookies": "Cookies",
 
-    /* 工具页 · 超分辨率（动态进度/报错仍为中文，与游戏内提示同口径） */
-    "tools.title": "Super resolution",
+    /* 工具页 · 画质提升（动态进度/报错仍为中文，与游戏内提示同口径） */
+    "tools.title": "Image upscaling",
     "tools.sub": "2x / 4x upscale, image never leaves your device",
     "tools.drop": "Choose a photo from your device",
     "tools.drops": "See the difference",
@@ -122,10 +122,10 @@
     },
     "/tools/": {
       t: "Tools",
-      d: "Small tools that run entirely on this site: super resolution and whatever comes next."
+      d: "Small tools that run entirely on this site: image upscaling and whatever comes next."
     },
     "/tools/upscale/": {
-      t: "Super resolution",
+      t: "Image upscaling",
       d: "Upscale images on your own device: Real-ESRGAN 6B (4×) for anime and art, Swin2SR (2×) for photos. Nothing is uploaded."
     }
   };

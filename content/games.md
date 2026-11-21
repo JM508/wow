@@ -2,7 +2,7 @@
 date = '2026-10-06T08:00:00+08:00'
 draft = false
 title = '游戏合集'
-description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑、井字棋、贪吃蛇，点开即玩。'
+description = 'Wow 娱乐小站的游戏合集：经典扫雷、火柴人快跑、井字棋、贪吃蛇、2048 与敲木鱼，点开即玩。'
 # 页面上不显示大标题与描述行（卡片里已有「游戏合集」），title/description 仍用于 SEO
 hideTitle = true
 hideDescription = true
@@ -15,9 +15,10 @@ backLabel = '返回首页'
 
 <div class="games-card" aria-label="游戏合集">
 <div class="games-card-head"><strong>游戏合集</strong></div>
-<a class="games-row games-ms" href="/minesweeper/"><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-11-15</span></span><span class="games-go">点击进入 →</span></a>
-<a class="games-row games-run" href="/runner/"><span class="games-info"><span class="games-name">火柴人快跑</span><span class="games-meta">更新：2026-11-15</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-ms" href="/minesweeper/"><span class="games-info"><span class="games-name">扫雷</span><span class="games-meta">更新：2026-11-21</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-run" href="/runner/"><span class="games-info"><span class="games-name">火柴人快跑</span><span class="games-meta">更新：2026-11-21</span></span><span class="games-go">点击进入 →</span></a>
 <a class="games-row games-ttt" href="/tictactoe/"><span class="games-info"><span class="games-name">井字棋</span><span class="games-meta">更新：2026-11-15</span></span><span class="games-go">点击进入 →</span></a>
 <a class="games-row games-snake" href="/snake/"><span class="games-info"><span class="games-name">贪吃蛇</span><span class="games-meta">更新：2026-11-15</span></span><span class="games-go">点击进入 →</span></a>
 <a class="games-row games-2048" href="/2048/"><span class="games-info"><span class="games-name">2048</span><span class="games-meta">更新：2026-11-15</span></span><span class="games-go">点击进入 →</span></a>
+<a class="games-row games-wf" href="/woodfish/"><span class="games-info"><span class="games-name">敲木鱼</span><span class="games-meta">功德 +1 · 更新：2026-11-21</span></span><span class="games-go">点击进入 →</span></a>
 </div>
