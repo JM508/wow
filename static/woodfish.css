@@ -10,6 +10,9 @@
   /* 画布近乎纯黑，木鱼是白剪影，嘴缝直接用画布色「咬」出来 */
   --wf-canvas: #0d0d0f;
   --wf-fish: #ffffff;
+  /* 木鱼头顶的空白通道高度：飘字只在这条带子里升起，绝不落到鱼身上。
+     舞台顶部留白与通道高度共用这一个值，改一处两边同步。 */
+  --wf-lane: 56px;
   /* 纯黑画布上 #888 的灰字会发闷，说明文字统一提到这个亮度；描边也一起提，
      否则按钮只剩两行字挂在黑底上（与设置页 .set-btn 同一个坑）。 */
   --wf-soft: rgba(255, 255, 255, 0.7);
@@ -71,12 +74,14 @@ html[data-theme="light"] #wf-root {
 .wf-btn:focus-visible { outline: 2px solid var(--wf-focus); outline-offset: 2px; }
 
 /* ── 舞台 ── */
+/* 顶部多留一条 --wf-lane 的空白：木鱼头顶要空出来给飘字，
+   不留这块空档，飘字就只能压在鱼身上。 */
 .wf-stage {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 0 12px;
+  padding: calc(var(--wf-lane) + 10px) 0 12px;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -114,31 +119,34 @@ html[data-theme="light"] #wf-root {
 .wf-fish-btn.is-hit .wf-fish { transform: scale(0.968, 0.94) translateY(4px); }
 
 /* ── 功德 +1 飘字 ──
-   木鱼永远是与画布相反的颜色，飘字又全程落在鱼身上，所以直接用画布色：
-   深色主题是黑字压白鱼、浅色主题是白字压黑鱼，两套都最大对比。
-   飘字节点排在木鱼之后，天然盖在鱼上面（不再用 z-index，避免自成合成层）。 */
+   只占木鱼头顶那条空白带（--wf-lane），从带子底部升起、到带子顶部淡出，
+   全程不与木鱼相交，所以直接用木鱼色（画布反色）即可，对比最大。
+   飘字节点排在木鱼之后，天然盖在鱼上面（不用 z-index，避免自成合成层）。 */
 .wf-float {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: var(--wf-lane);
   pointer-events: none;
   overflow: visible;
 }
 .wf-plus {
   position: absolute;
-  bottom: 62%;
+  bottom: 0;
   transform: translateX(-50%);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  color: var(--wf-canvas);
+  color: var(--wf-fish);
   animation: wf-rise 0.95s ease-out forwards;
 }
 @keyframes wf-rise {
-  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.9); }
   14% { opacity: 1; }
   70% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -52px) scale(1.04); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -30px) scale(1.04); }
 }
 
 .wf-hint {
@@ -153,7 +161,7 @@ html.a11y-calm .wf-fish-btn.is-hit .wf-fish { transform: none; }
 html.a11y-calm .wf-plus { animation-duration: 0.45s; }
 
 @media (max-width: 520px) {
+  #wf-root { --wf-lane: 46px; }
   .wf-merit-n { font-size: 26px; }
   .wf-btn { padding: 7px 12px; font-size: 12px; }
-  .wf-stage { padding-top: 14px; }
 }

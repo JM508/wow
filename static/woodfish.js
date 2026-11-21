@@ -18,8 +18,6 @@
   var KEY = "wow-wf-count-v1";
   var SEND_EVERY = 12;          // 每敲 12 下上报一次
   var SEND_IDLE_MS = 10000;     // 或者停手 10 秒后补一次
-  var FLY_MAX = 6;              // 同时存在的飘字上限（连击已合并，留几个就够）
-  var COMBO_MS = 400;           // 这个窗口内的连点合并到同一个飘字
 
   var elCount = document.getElementById("wf-count");
   var elFloat = document.getElementById("wf-float");
@@ -74,46 +72,24 @@
   }
 
   /* ── 飘字：功德 +1 ──
-     位置用 CSSOM 赋值（CSP 只拦 HTML 里的 style 属性，不拦 JS 赋值）。
-     连点合并：0.4 秒内的连击不再各长一个新字（那样会在木鱼头顶糊成一坨），
-     而是换成一个写着累计数字的新字（功德 +3），旧字直接移除。
-     之所以换节点而不是原地改 textContent：改字会在同一层留下旧字形，
-     截图上能看到「+1」和「+2」叠在一起。 */
-  var lastPlus = null, lastPlusAt = 0, comboN = 0;
+     每敲一下长一个新字，一律是「功德 +1」，不做连点累加（用户 2026-11-21 明确要求
+     不要出现 +1/+2/+3 那种合并数字）。位置用 CSSOM 赋值（CSP 只拦 HTML 里的
+     style 属性，不拦 JS 赋值）；水平位置与漂移各自随机，同时几个也不会叠在一起。 */
+  var FLY_MAX = 6;              // 同时存在的飘字上限，纯为防连点把 DOM 撑爆
 
-  function spawnPlus(n, left) {
+  function flyPlus() {
+    if (!elFloat || flying >= FLY_MAX) return;
     var el = document.createElement("span");
     el.className = "wf-plus";
-    el.textContent = "功德 +" + n;
-    el.style.left = left;
+    el.textContent = "功德 +1";
+    el.style.left = (30 + Math.random() * 40).toFixed(1) + "%";
     el.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
     elFloat.appendChild(el);
     flying++;
-    lastPlus = el;
-    lastPlusAt = Date.now();
     setTimeout(function () {
       if (el.parentNode) el.parentNode.removeChild(el);
       flying = Math.max(0, flying - 1);
-      if (lastPlus === el) lastPlus = null;
     }, 1000);
-    return el;
-  }
-
-  function flyPlus() {
-    if (!elFloat) return;
-    var now = Date.now();
-    if (lastPlus && lastPlus.parentNode && now - lastPlusAt < COMBO_MS && flying < FLY_MAX) {
-      comboN += 1;
-      var left = lastPlus.style.left || "50%";
-      lastPlus.parentNode.removeChild(lastPlus);
-      flying = Math.max(0, flying - 1);
-      lastPlus = null;
-      spawnPlus(comboN, left);
-      return;
-    }
-    if (flying >= FLY_MAX) return;
-    comboN = 1;
-    spawnPlus(1, (44 + Math.random() * 12).toFixed(1) + "%");
   }
 
   function paint() {
