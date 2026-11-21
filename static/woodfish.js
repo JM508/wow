@@ -76,41 +76,44 @@
   /* ── 飘字：功德 +1 ──
      位置用 CSSOM 赋值（CSP 只拦 HTML 里的 style 属性，不拦 JS 赋值）。
      连点合并：0.4 秒内的连击不再各长一个新字（那样会在木鱼头顶糊成一坨），
-     而是把同一个飘字的数字往上加、动画重放一次，显示成「功德 +3」。 */
+     而是换成一个写着累计数字的新字（功德 +3），旧字直接移除。
+     之所以换节点而不是原地改 textContent：改字会在同一层留下旧字形，
+     截图上能看到「+1」和「+2」叠在一起。 */
   var lastPlus = null, lastPlusAt = 0, comboN = 0;
+
+  function spawnPlus(n, left) {
+    var el = document.createElement("span");
+    el.className = "wf-plus";
+    el.textContent = "功德 +" + n;
+    el.style.left = left;
+    el.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
+    elFloat.appendChild(el);
+    flying++;
+    lastPlus = el;
+    lastPlusAt = Date.now();
+    setTimeout(function () {
+      if (el.parentNode) el.parentNode.removeChild(el);
+      flying = Math.max(0, flying - 1);
+      if (lastPlus === el) lastPlus = null;
+    }, 1000);
+    return el;
+  }
 
   function flyPlus() {
     if (!elFloat) return;
     var now = Date.now();
     if (lastPlus && lastPlus.parentNode && now - lastPlusAt < COMBO_MS && flying < FLY_MAX) {
       comboN += 1;
-      lastPlus.textContent = "功德 +" + comboN;
-      lastPlus.style.left = (44 + Math.random() * 12).toFixed(1) + "%";
-      lastPlus.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
-      /* 重启动画：先摘掉再强制重排，最后交还给样式表里的原动画 */
-      lastPlus.style.animation = "none";
-      /* eslint-disable-next-line no-unused-expressions */
-      void lastPlus.offsetWidth;
-      lastPlus.style.animation = "";
-      lastPlusAt = now;
+      var left = lastPlus.style.left || "50%";
+      lastPlus.parentNode.removeChild(lastPlus);
+      flying = Math.max(0, flying - 1);
+      lastPlus = null;
+      spawnPlus(comboN, left);
       return;
     }
     if (flying >= FLY_MAX) return;
     comboN = 1;
-    var el = document.createElement("span");
-    el.className = "wf-plus";
-    el.textContent = "功德 +1";
-    el.style.left = (44 + Math.random() * 12).toFixed(1) + "%";
-    el.style.setProperty("--wf-drift", (Math.random() * 26 - 13).toFixed(1) + "px");
-    elFloat.appendChild(el);
-    flying++;
-    lastPlus = el;
-    lastPlusAt = now;
-    setTimeout(function () {
-      if (el.parentNode) el.parentNode.removeChild(el);
-      flying = Math.max(0, flying - 1);
-      if (lastPlus === el) lastPlus = null;
-    }, 1000);
+    spawnPlus(1, (44 + Math.random() * 12).toFixed(1) + "%");
   }
 
   function paint() {

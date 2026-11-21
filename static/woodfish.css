@@ -10,8 +10,6 @@
   /* 画布近乎纯黑，木鱼是白剪影，嘴缝直接用画布色「咬」出来 */
   --wf-canvas: #0d0d0f;
   --wf-fish: #ffffff;
-  /* 飘字固定用白 + difference 混合，深浅两套主题都读得清，浅色块不再覆盖 */
-  --wf-plus: #ffffff;
   /* 纯黑画布上 #888 的灰字会发闷，说明文字统一提到这个亮度；描边也一起提，
      否则按钮只剩两行字挂在黑底上（与设置页 .set-btn 同一个坑）。 */
   --wf-soft: rgba(255, 255, 255, 0.7);
@@ -111,16 +109,14 @@ html[data-theme="light"] #wf-root {
 }
 
 .wf-body { fill: var(--wf-fish); }
-/* 嘴缝用画布色：形状一路豁到右缘，白块自然被切成上下两瓣 */
-.wf-mouth { fill: var(--wf-canvas); }
 
 /* 敲下去：整块下沉并略压扁，用 transition 回弹，连点也不卡 */
 .wf-fish-btn.is-hit .wf-fish { transform: scale(0.968, 0.94) translateY(4px); }
 
 /* ── 功德 +1 飘字 ──
-   黑白稿里飘字与木鱼同色，压在木鱼上就看不见；卡片又只有木鱼头顶那点空，
-   单靠挪位必然撞顶栏。改用 difference 混合：白字压白鱼变黑、压黑底仍是白，
-   从鱼身升到头顶全程可读，也不必为它加留白。 */
+   木鱼永远是与画布相反的颜色，飘字又全程落在鱼身上，所以直接用画布色：
+   深色主题是黑字压白鱼、浅色主题是白字压黑鱼，两套都最大对比。
+   飘字节点排在木鱼之后，天然盖在鱼上面（不再用 z-index，避免自成合成层）。 */
 .wf-float {
   position: absolute;
   inset: 0;
@@ -129,23 +125,20 @@ html[data-theme="light"] #wf-root {
 }
 .wf-plus {
   position: absolute;
-  bottom: 74%;
+  bottom: 62%;
   transform: translateX(-50%);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  /* 白字 + difference：深色主题下白字落黑底是白、落白鱼变黑；
-     浅色主题下白字落白底变黑、落黑鱼变白。两套主题都读得清，故不跟随 --wf-fish。 */
-  color: var(--wf-plus);
-  mix-blend-mode: difference;
+  color: var(--wf-canvas);
   animation: wf-rise 0.95s ease-out forwards;
 }
 @keyframes wf-rise {
   0% { opacity: 0; transform: translate(-50%, 6px) scale(0.9); }
   14% { opacity: 1; }
   70% { opacity: 1; }
-  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -58px) scale(1.04); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--wf-drift, 0px)), -52px) scale(1.04); }
 }
 
 .wf-hint {
